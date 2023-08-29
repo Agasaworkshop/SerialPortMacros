@@ -1,0 +1,8 @@
+startF
+1
+True
+False
+False
+False
+*%1000%0x20
+True
