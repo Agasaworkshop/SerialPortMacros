@@ -1,21 +1,21 @@
 # SerialPortMacros
 This is a C# program used to read up to 4 configurable serial ports and write to them, it is still a WIP but it does work quite a bit already, it will have a lot of unhandled errors tho...  
 ![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/7aad28a2-f5ec-4e63-9603-f375e05a9e6d)
-
+  
 This program is meant to interact with your electrical projects through the serial port, the idea is to associate a string sent by your device to an action made by your computer, I will refine and add functionalities probably, currently, it can press a button in response to a certain string or send a string to the selected ports in response to a string on the selected ports(to coordinate multiple devices).  
-
+  
 Each port can be selected and configured to read and write on the serial ports with different settings, the text received or sent will then be displayed with different colors based on the sender:  
 ![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/32f5f7ad-ac02-49c2-99a0-e8922e756a08)
-
+  
 The color for the port is the same as the cog for the settings above the combobox, the text sent by you will be black and the text sent by a script will be brown.  
-
+  
 To interact with the port you have to select it, you could also set some variables but there are some standard ones, then check the checkbox near the port name and click the connect button.  
-
+  
 You can clear the display by clicking the eraser button, you can also enable and disable auto-scroll with the lock button.  
-
+  
 # Macro Menu
 ![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/057b1100-a02f-4a6a-84e4-77cb438d2151)
-
+  
 You can easily make your macros with this menu, use "New File" to create a new macro (you will have to close and reopen the window to see it in the list), you can then:  
   
   1)see the name  
