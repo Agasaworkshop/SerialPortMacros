@@ -17,30 +17,42 @@ You can clear the display by clicking the eraser button, you can also enable and
 ![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/057b1100-a02f-4a6a-84e4-77cb438d2151)
 
 You can easily make your macros with this menu, use "New File" to create a new macro (you will have to close and reopen the window to see it in the list), you can then:  
+  
   1)see the name  
-  2)Set the key, this will let you decide the keyworld that will trigger the action   
+    
+  2)Set the key, this will let you decide the keyworld that will trigger the action  
+    
   3)Set the ports that will be monitored for the key of this script  
+    
   4)Set the effect (currently just "keypress" and "write back")    
+    
   5)If you select keypress you will want to set the keypress(***)  
+    
   6)If you select "write back" you will want to set the reply and check on which ports it will be sent  
 
 Once you've made the macro you will be able to enable it or disable it by checking his checkbox (remember to apply the changes tho).  
 
 # (***)Keypress format
-In the keypress text box you can:
+In the keypress text box you can:  
+  
   1)Use a character by his virtual-key code value (https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes):  
     to do so: add a * at the start    
       example: "*0x20" will press the 'SPACE' key;  
+        
   2)Write a single character you want to press, this is mostly meant to be used with alphanumeric characters, for letters you will have to use the capital letter  
       example: "A" will press the a key;  
+      
   3)Add a '+' before the key to press down the key '-' to release the key  
       example: "+A" will start pressing the 'a' key;   
       example: "-A" will stop pressing the 'a' key;  
       example: "*+0x20" will start pressing the 'SPACE' key;  
+      
   4)Add a '%' before and after the key (it's either +/-/%) and then a time to press it, the program will keep the button pressed for the specified time  
       example: "%1000%A" will keep the 'a' key pressed for 1000ms or 1s;   
       example: "%1000%0x20" will keep the 'SPACE' key pressed for 1000ms or 1s;  
+      
   5)Write a string that will typed out  
+  
   6)There are three other strings that you can use for useful stuff  
       !LMB will press the left mouse button;  
       !RMB will press the right mouse button;  
