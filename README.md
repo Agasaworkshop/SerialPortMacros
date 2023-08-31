@@ -57,3 +57,7 @@ In the keypress text box you can:
       !LMB will press the left mouse button;  
       !RMB will press the right mouse button;  
       !MMB will press the middle mouse button;  
+
+  7)If you set the macro key and keypress to "===" and send through the serial port a message beginning in "===" followed by a keypress the program will interpret and press that key (all previous formats apply)
+      example: "===+A" sent by your device through the serial port will make the program start pressing the A key;
+
