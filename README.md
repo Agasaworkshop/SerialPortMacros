@@ -20,7 +20,7 @@ You can easily make your macros with this menu, use "New File" to create a new m
   
   1)see the name  
     
-  2)Set the key, this will let you decide the keyworld that will trigger the action  
+  2)Set the key*, this will let you decide the keyworld that will trigger the action  
     
   3)Set the ports that will be monitored for the key of this script  
     
@@ -31,6 +31,9 @@ You can easily make your macros with this menu, use "New File" to create a new m
   6)If you select "write back" you will want to set the reply and check on which ports it will be sent  
 
 Once you've made the macro you will be able to enable it or disable it by checking his checkbox (remember to apply the changes tho).  
+
+# (*) Key
+Your device will have to send through the right serial port the key that triggers the macro, the lines sent in the serial port must end with ';', this character will not be included in the key it's just used to better determinate the end of the string and avoid splitting it.
 
 # (***)Keypress format
 In the keypress text box you can:  
