@@ -26,7 +26,7 @@ You can easily make your macros with this menu, use "New File" to create a new m
     
   4)Set the effect (currently just "keypress" and "write back")    
     
-  5)If you select keypress you will want to set the keypress(***)  
+  5)If you select keypress you will want to set the keypress(**)  
     
   6)If you select "write back" you will want to set the reply and check on which ports it will be sent  
 
@@ -35,7 +35,7 @@ Once you've made the macro you will be able to enable it or disable it by checki
 # (*) Key
 Your device will have to send through the right serial port the key that triggers the macro, the lines sent in the serial port must end with ';', this character will not be included in the key it's just used to better determinate the end of the string and avoid splitting it.
 
-# (***)Keypress format
+# (**)Keypress format
 In the keypress text box you can:  
   
   1)Use a character by his virtual-key code value (https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes):  
