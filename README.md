@@ -1,3 +1,7 @@
+[![EXAMPLE OF IT BEING USED ON YT](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/a785ef58-23f0-4f1d-bcc0-874639a85045)](https://youtu.be/_WUgxwexwJY?si=_f_kOgHKnj9xxQWI)
+
+
+
 # SerialPortMacros
 This is a C# program used to read up to 4 configurable serial ports and write to them, it is still a WIP but it does work quite a bit already, it will have a lot of unhandled errors tho...  
 ![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/7aad28a2-f5ec-4e63-9603-f375e05a9e6d)
