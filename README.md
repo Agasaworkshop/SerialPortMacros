@@ -1,5 +1,6 @@
-[![EXAMPLE OF IT BEING USED ON YT](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/a785ef58-23f0-4f1d-bcc0-874639a85045)](https://youtu.be/_WUgxwexwJY?si=_f_kOgHKnj9xxQWI)
+[![YT Video showing an example of it being used](http://img.youtube.com/vi/_WUgxwexwJY/0.jpg)](http://www.youtube.com/watch?v=_WUgxwexwJY "Repurpose any old controller or create your own quirky one with my new software")
 
+https://www.youtube.com/watch?v=_WUgxwexwJY
 
 
 # SerialPortMacros
