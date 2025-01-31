@@ -1,8 +1,3 @@
-[![YT Video showing an example of it being used](http://img.youtube.com/vi/_WUgxwexwJY/0.jpg)](http://www.youtube.com/watch?v=_WUgxwexwJY "Repurpose any old controller or create your own quirky one with my new software")
-
-https://www.youtube.com/watch?v=_WUgxwexwJY
-
-
 # SerialPortMacros
 This is a C# program used to read up to 4 configurable serial ports and write to them, it is still a WIP but it does work quite a bit already, it will have a lot of unhandled errors tho...  
 ![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/7aad28a2-f5ec-4e63-9603-f375e05a9e6d)
