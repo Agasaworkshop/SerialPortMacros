@@ -5,14 +5,19 @@ This is a C# program used to read up to 4 configurable serial ports,log them and
 Each port can be selected and configured to read and write on the serial ports with different settings, the text received or sent will then be displayed with different colors based on the sender:  
 ![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/32f5f7ad-ac02-49c2-99a0-e8922e756a08)
   
-The color for the port is the same as the cog for the settings above the combobox, the text sent by you will be black and the text sent by a script will be brown.  
-  
-To interact with the port you have to select it, you could also set some variables but there are some standard ones, then check the checkbox near the port name and click the connect button.  
-  
-You can clear the display by clicking the eraser button, you can also enable and disable auto-scroll with the lock button.  
+The color for the port is the same as the cog for the settings above the combobox; the text sent by you will be black and the text sent by a script will be brown.  
+
+To open a serial port you need to select it from the combobox and click the connect button, you can also customize the serial port settings.
+After connecting, you can select which ports you receive your messages by checking the checkbox near the port name. 
+
+You can clear the display by clicking the eraser button, you can also toggle auto-scroll with the lock button and toggle the timestamp with the clock button.  
 
 # Logging
+<img width="808" height="525" alt="image" src="https://github.com/user-attachments/assets/bccc8efd-499a-40b9-96f9-53bbb5de5511" />
 
+By checking the log option under a port, you will enable logging for that port. If you do, when using the logging feature, a text file corresponding to that port will be created in the logs folder in the same directory as the exe file. This file will contain the log of all that was written by that port, if the timestamp option is enabled, the timestamp will also be written (the name of the sender is only visible if the sender is the user in this case).
+If two or more ports are selected, the software will write an additional file containing the log of all ports (in this case, the name of the sender will also be written).
+By checking the log option near the text box, you will also be logging user inputs. 
   
 # Macro Menu
 ![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/057b1100-a02f-4a6a-84e4-77cb438d2151)
