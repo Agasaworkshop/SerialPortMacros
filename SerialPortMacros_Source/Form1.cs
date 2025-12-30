@@ -391,6 +391,7 @@ namespace SerialPortMacros
         }
         public void ScanScripts()
         {
+            Directory.CreateDirectory("./scripts");
             string[] paths = Directory.GetFiles("./scripts");
             int i = 0;
             scripts = new Script[paths.Length];
@@ -635,7 +636,7 @@ namespace SerialPortMacros
                     // Invoca UI
                     this.Invoke((Action)(() =>
                     {
-                        if (opn && checkbox.Checked)
+                        if (opn)
                         {
                             if (logging)
                                 write_logs(po1, po2, po3, po4, mess,port.PortName);
