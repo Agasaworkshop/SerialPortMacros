@@ -1,10 +1,12 @@
 # SerialPortMacros
 This is a C# program used to read up to 4 configurable serial ports,log them and write to them, it is still a WIP but it does work quite a bit already.
-![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/7aad28a2-f5ec-4e63-9603-f375e05a9e6d)
+<img width="798" height="522" alt="image" src="https://github.com/user-attachments/assets/77848a25-0070-46ca-a038-75219a26d727" />
+
   
 Each port can be selected and configured to read and write on the serial ports with different settings, the text received or sent will then be displayed with different colors based on the sender:  
-![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/32f5f7ad-ac02-49c2-99a0-e8922e756a08)
-  
+<img width="665" height="348" alt="image" src="https://github.com/user-attachments/assets/53cbb20f-4cac-4a7a-aea2-ad0de78163bb" />
+
+
 The color for the port is the same as the cog for the settings above the combobox; the text sent by you will be black and the text sent by a script will be brown.  
 
 To open a serial port you need to select it from the combobox and click the connect button, you can also customize the serial port settings.
