@@ -13,7 +13,9 @@ After connecting, you can select which ports you receive your messages by checki
 You can clear the display by clicking the eraser button, you can also toggle auto-scroll with the lock button and toggle the timestamp with the clock button.  
 
 # Logging
-<img width="808" height="525" alt="image" src="https://github.com/user-attachments/assets/bccc8efd-499a-40b9-96f9-53bbb5de5511" />
+
+![image](https://github.com/user-attachments/assets/cff43e3a-5dc9-41bd-8fe6-9315ededc376)
+
 
 By checking the log option under a port, you will enable logging for that port. If you do, when using the logging feature, a text file corresponding to that port will be created in the logs folder in the same directory as the exe file. This file will contain the log of all that was written by that port, if the timestamp option is enabled, the timestamp will also be written (the name of the sender is only visible if the sender is the user in this case).
 If two or more ports are selected, the software will write an additional file containing the log of all ports (in this case, the name of the sender will also be written).
