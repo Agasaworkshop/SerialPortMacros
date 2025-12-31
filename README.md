@@ -4,7 +4,7 @@ This is a C# program used to read up to 4 configurable serial ports,log them and
 
   
 Each port can be selected and configured to read and write on the serial ports with different settings, the text received or sent will then be displayed with different colors based on the sender:  
-<img width="665" height="348" alt="image" src="https://github.com/user-attachments/assets/53cbb20f-4cac-4a7a-aea2-ad0de78163bb" />
+<img width="800" height="522" alt="image" src="https://github.com/user-attachments/assets/2177ce21-547c-4c7b-aadb-743807c38790" />
 
 
 The color for the port is the same as the cog for the settings above the combobox; the text sent by you will be black and the text sent by a script will be brown.  
