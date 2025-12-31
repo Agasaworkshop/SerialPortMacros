@@ -307,7 +307,8 @@ namespace SerialPortMacros
             {
                 string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
                 line = $"{timestamp} | {usr}: {inputText}";
-            }else
+            }
+            else
                 line = $"{usr}: {inputText}";
             textBox2.SelectionStart = textBox2.TextLength;
             textBox2.SelectionLength = 0;
@@ -639,7 +640,7 @@ namespace SerialPortMacros
                         if (opn)
                         {
                             if (logging)
-                                write_logs(po1, po2, po3, po4, mess,port.PortName);
+                                write_logs(po1, po2, po3, po4, mess, port.PortName);
 
                             aggiungi_a_textbox2(mess, port.PortName, color);
                             scriptcheck(mess, po1, po2, po3, po4);
@@ -653,7 +654,7 @@ namespace SerialPortMacros
         }
 
 
-        private void write_logs(bool po1, bool po2, bool po3, bool po4, string line,string usr)
+        private void write_logs(bool po1, bool po2, bool po3, bool po4, string line, string usr)
         {
             string multilog_line = $"{usr}: {line}";
             if (time_log)
