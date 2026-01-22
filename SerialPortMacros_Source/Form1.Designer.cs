@@ -67,6 +67,18 @@
             button14 = new Button();
             checkBox9 = new CheckBox();
             button15 = new Button();
+            numericUpDown1 = new NumericUpDown();
+            button16 = new Button();
+            numericUpDown2 = new NumericUpDown();
+            button17 = new Button();
+            numericUpDown3 = new NumericUpDown();
+            button18 = new Button();
+            numericUpDown4 = new NumericUpDown();
+            button19 = new Button();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown2).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown3).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown4).BeginInit();
             SuspendLayout();
             // 
             // button1
@@ -438,7 +450,7 @@
             // button14
             // 
             button14.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            button14.Location = new Point(678, 439);
+            button14.Location = new Point(678, 445);
             button14.Name = "button14";
             button14.Size = new Size(110, 29);
             button14.TabIndex = 35;
@@ -468,11 +480,107 @@
             button15.UseVisualStyleBackColor = true;
             button15.Click += button15_Click;
             // 
+            // numericUpDown1
+            // 
+            numericUpDown1.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            numericUpDown1.Location = new Point(72, 492);
+            numericUpDown1.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
+            numericUpDown1.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            numericUpDown1.Name = "numericUpDown1";
+            numericUpDown1.Size = new Size(43, 27);
+            numericUpDown1.TabIndex = 38;
+            numericUpDown1.Value = new decimal(new int[] { 1, 0, 0, 0 });
+            // 
+            // button16
+            // 
+            button16.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            button16.Image = (Image)resources.GetObject("button16.Image");
+            button16.Location = new Point(121, 490);
+            button16.Name = "button16";
+            button16.Size = new Size(32, 29);
+            button16.TabIndex = 39;
+            button16.UseVisualStyleBackColor = true;
+            button16.Click += button16_Click;
+            // 
+            // numericUpDown2
+            // 
+            numericUpDown2.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            numericUpDown2.Location = new Point(211, 492);
+            numericUpDown2.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
+            numericUpDown2.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            numericUpDown2.Name = "numericUpDown2";
+            numericUpDown2.Size = new Size(43, 27);
+            numericUpDown2.TabIndex = 38;
+            numericUpDown2.Value = new decimal(new int[] { 1, 0, 0, 0 });
+            // 
+            // button17
+            // 
+            button17.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            button17.Image = (Image)resources.GetObject("button17.Image");
+            button17.Location = new Point(260, 490);
+            button17.Name = "button17";
+            button17.Size = new Size(32, 29);
+            button17.TabIndex = 39;
+            button17.UseVisualStyleBackColor = true;
+            button17.Click += button17_Click;
+            // 
+            // numericUpDown3
+            // 
+            numericUpDown3.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            numericUpDown3.Location = new Point(353, 492);
+            numericUpDown3.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
+            numericUpDown3.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            numericUpDown3.Name = "numericUpDown3";
+            numericUpDown3.Size = new Size(43, 27);
+            numericUpDown3.TabIndex = 38;
+            numericUpDown3.Value = new decimal(new int[] { 1, 0, 0, 0 });
+            // 
+            // button18
+            // 
+            button18.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            button18.Image = (Image)resources.GetObject("button18.Image");
+            button18.Location = new Point(402, 490);
+            button18.Name = "button18";
+            button18.Size = new Size(32, 29);
+            button18.TabIndex = 39;
+            button18.UseVisualStyleBackColor = true;
+            button18.Click += button18_Click;
+            // 
+            // numericUpDown4
+            // 
+            numericUpDown4.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            numericUpDown4.Location = new Point(491, 492);
+            numericUpDown4.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
+            numericUpDown4.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            numericUpDown4.Name = "numericUpDown4";
+            numericUpDown4.Size = new Size(43, 27);
+            numericUpDown4.TabIndex = 38;
+            numericUpDown4.Value = new decimal(new int[] { 1, 0, 0, 0 });
+            // 
+            // button19
+            // 
+            button19.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            button19.Image = (Image)resources.GetObject("button19.Image");
+            button19.Location = new Point(540, 490);
+            button19.Name = "button19";
+            button19.Size = new Size(32, 29);
+            button19.TabIndex = 39;
+            button19.UseVisualStyleBackColor = true;
+            button19.Click += button19_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 487);
+            ClientSize = new Size(800, 531);
+            Controls.Add(button19);
+            Controls.Add(numericUpDown4);
+            Controls.Add(button18);
+            Controls.Add(numericUpDown3);
+            Controls.Add(button17);
+            Controls.Add(numericUpDown2);
+            Controls.Add(button16);
+            Controls.Add(numericUpDown1);
             Controls.Add(button15);
             Controls.Add(checkBox9);
             Controls.Add(button14);
@@ -515,6 +623,10 @@
             Name = "Form1";
             Text = "SerialPortMacros";
             Load += Form1_Load;
+            ((System.ComponentModel.ISupportInitialize)numericUpDown1).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown2).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown3).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDown4).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -559,5 +671,13 @@
         private Button button14;
         private CheckBox checkBox9;
         private Button button15;
+        private NumericUpDown numericUpDown1;
+        private Button button16;
+        private NumericUpDown numericUpDown2;
+        private Button button17;
+        private NumericUpDown numericUpDown3;
+        private Button button18;
+        private NumericUpDown numericUpDown4;
+        private Button button19;
     }
 }

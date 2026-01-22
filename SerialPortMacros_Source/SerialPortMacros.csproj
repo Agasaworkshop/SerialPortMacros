@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="H.InputSimulator" Version="1.4.0" />
+    <PackageReference Include="ScottPlot" Version="5.1.57" />
+    <PackageReference Include="ScottPlot.WinForms" Version="5.1.57" />
     <PackageReference Include="System.IO.Ports" Version="7.0.0" />
     <PackageReference Include="System.Threading.Tasks" Version="4.3.0" />
   </ItemGroup>

@@ -15,6 +15,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
 using System.Runtime.InteropServices;
 using System;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
+using System.Text.RegularExpressions;
 
 namespace SerialPortMacros
 {
@@ -49,6 +50,8 @@ namespace SerialPortMacros
         public StreamWriter _writer5;
         private string _logFilePath5;
         public bool multilog = false;
+        public Dictionary<string, List<Form4>> openGraphs = new Dictionary<string, List<Form4>>();
+
 
         public Form1()
         {
@@ -300,7 +303,7 @@ namespace SerialPortMacros
                 comboBox4.Items.Add(portName);
             }
         }
-        const int MaxChars = 500_000; 
+        const int MaxChars = 500_000;
 
         private void aggiungi_a_textbox2(string inputText, string usr, Color color)
         {
@@ -664,6 +667,29 @@ namespace SerialPortMacros
                             scriptcheck(mess, po1, po2, po3, po4);
                         }
                     }));
+                    if (opn && openGraphs.ContainsKey(port.PortName))
+                    {
+                        string messCopy = mess; // copia sicura
+                        var forms = openGraphs[port.PortName];
+
+                        // Esegui in un thread separato solo il parsing
+                        Task.Run(() =>
+                        {
+                            var nums = Regex.Matches(messCopy, @"-?\d+(\.\d+)?")
+                                            .Cast<Match>()
+                                            .Select(m => double.Parse(m.Value))
+                                            .ToList();
+
+                            for (int i = 0; i < forms.Count; i++)
+                            {
+                                if (i < nums.Count)
+                                {
+                                    forms[i].AddDataPoint(nums[i]);
+                                }
+                            }
+                        });
+                    }
+
                 }
             }
 
@@ -838,6 +864,53 @@ namespace SerialPortMacros
 
             }
         }
+
+        private void button16_Click(object sender, EventArgs e)
+        {
+            if (comboBox2.Text != "")
+                launch_graphs((int)numericUpDown1.Value, comboBox2.Text);
+        }
+
+        private void button17_Click(object sender, EventArgs e)
+        {
+            if (comboBox2.Text != "")
+                launch_graphs((int)numericUpDown2.Value, comboBox1.Text);
+        }
+
+        private void button18_Click(object sender, EventArgs e)
+        {
+            if (comboBox2.Text != "")
+                launch_graphs((int)numericUpDown3.Value, comboBox3.Text);
+        }
+
+        private void button19_Click(object sender, EventArgs e)
+        {
+            if (comboBox2.Text != "")
+                launch_graphs((int)numericUpDown4.Value, comboBox4.Text);
+        }
+        private void launch_graphs(int n_grafici, string nome_porta)
+        {
+            if (openGraphs.ContainsKey(nome_porta))
+            {
+                foreach (var form in openGraphs[nome_porta])
+                {
+                    form.Close();
+                }
+                openGraphs[nome_porta].Clear();
+            }
+            else
+            {
+                openGraphs[nome_porta] = new List<Form4>();
+            }
+            for (int i = 1; i <= n_grafici; i++)
+            {
+                var form = new Form4();
+                form.Text = $"{nome_porta} {i}";  // nome della finestra
+                form.Show();
+                openGraphs[nome_porta].Add(form);
+            }
+        }
+
     }
 
     public class Script
