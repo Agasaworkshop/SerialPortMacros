@@ -25,7 +25,7 @@ By checking the log option near the text box, you will also be logging user inpu
 # Plotting
 <img width="1918" height="1017" alt="image" src="https://github.com/user-attachments/assets/45806a8a-a646-4166-a092-6dba3f148d7b" />   
 Under each port, you can find a button to open the graphs; the number near the button decides how many plots will be opened. When reading the lines in the serial port the software will associate the first number in the line to the first graph, the second number to the second graph, and so on. There are no defined delimiters; just make sure to add something between your numbers. In the plot window, you can also select how long the time window should be. Note that due to how it's coded, moving the window or interacting in some other ways might ruin the signal a bit. 
-
+As of right now, it's not super optimized. If you give it a very fast signal, it will display artefacts and even freeze; the images are taken with 10 samples per second; you can still see the shape clearly, but with some distorsion at 100 samples per second. 
 
   
 # Macro Menu
