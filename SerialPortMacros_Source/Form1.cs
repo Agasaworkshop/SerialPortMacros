@@ -300,6 +300,8 @@ namespace SerialPortMacros
                 comboBox4.Items.Add(portName);
             }
         }
+        const int MaxChars = 500_000; 
+
         private void aggiungi_a_textbox2(string inputText, string usr, Color color)
         {
             string line;
@@ -310,18 +312,34 @@ namespace SerialPortMacros
             }
             else
                 line = $"{usr}: {inputText}";
+
+            // Testo da aggiungere (con newline se serve)
+            string toAppend = (textBox2.TextLength == 0)
+                ? line
+                : Environment.NewLine + line;
+
+            // --- LIMITE DI CARATTERI ---
+            int newLength = textBox2.TextLength + toAppend.Length;
+            if (newLength > MaxChars)
+            {
+                int excess = newLength - MaxChars;
+
+                // Rimuove dall'inizio i caratteri in eccesso
+                textBox2.Select(0, excess);
+                textBox2.SelectedText = "";
+            }
+
+            // --- APPEND COLORATO ---
             textBox2.SelectionStart = textBox2.TextLength;
             textBox2.SelectionLength = 0;
             textBox2.SelectionColor = color;
 
-            if (textBox2.Text.Length == 0)
-                textBox2.Text = line;
-            else
-                textBox2.AppendText(Environment.NewLine + line);
+            textBox2.AppendText(toAppend);
 
             if (is_locked)
                 textBox2.ScrollToCaret();
         }
+
 
         private void text_color(int start, int end, Color color)
         {
