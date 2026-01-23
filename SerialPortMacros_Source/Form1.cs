@@ -16,6 +16,7 @@ using System.Runtime.InteropServices;
 using System;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace SerialPortMacros
 {
@@ -677,7 +678,7 @@ namespace SerialPortMacros
                         {
                             var nums = Regex.Matches(messCopy, @"-?\d+(\.\d+)?")
                                             .Cast<Match>()
-                                            .Select(m => double.Parse(m.Value))
+                                            .Select(m => double.Parse(m.Value, CultureInfo.InvariantCulture))
                                             .ToList();
 
                             for (int i = 0; i < forms.Count; i++)
