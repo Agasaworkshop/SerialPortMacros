@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -26,6 +27,7 @@ namespace SerialPortMacros
         private double timeWindow; // ultimi 10 secondi
         private DataLogger logger;
         private double startTime;
+        private Stopwatch sw = new Stopwatch();
 
         public Form4()
         {
@@ -35,7 +37,7 @@ namespace SerialPortMacros
             timerPlot = new System.Windows.Forms.Timer();
             timerPlot.Interval = 50;
             timerPlot.Tick += TimerPlot_Tick;
-            startTime = DateTime.Now.TimeOfDay.TotalSeconds;
+            sw.Start();
             timerPlot.Start();
         }
 
@@ -45,14 +47,14 @@ namespace SerialPortMacros
 
         public void AddDataPoint(double value)
         {
-            double now = DateTime.Now.TimeOfDay.TotalSeconds - startTime;
+            double now = sw.Elapsed.TotalSeconds;
             dataQueue.Enqueue((now, value));
         }
 
         private void TimerPlot_Tick(object sender, EventArgs e)
         {
             bool updated = false;
-            double now = DateTime.Now.TimeOfDay.TotalSeconds - startTime;
+            double now = sw.Elapsed.TotalSeconds;
             while (dataQueue.TryDequeue(out var point))
             {
                 logger.Add(point.t, point.y);
