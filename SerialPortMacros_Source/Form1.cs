@@ -60,7 +60,10 @@ namespace SerialPortMacros
         }
         private void Form1_Load(object sender, EventArgs e)
         {
-            Searchports();
+            for (int k = 1; k < 5; k++)
+            {
+                Searchports(k);
+            }
             setports();
             ScanScripts();
         }
@@ -204,7 +207,7 @@ namespace SerialPortMacros
 
         private void button7_Click(object sender, EventArgs e)
         {
-            Searchports();
+
         }
 
         private void button8_Click(object sender, EventArgs e)
@@ -289,19 +292,26 @@ namespace SerialPortMacros
                 setting_form.ShowDialog();
             }
         }
-        private void Searchports()
+        private void Searchports(int n)
         {
-            comboBox1.Items.Clear();
-            comboBox2.Items.Clear();
-            comboBox3.Items.Clear();
-            comboBox4.Items.Clear();
-            string[] availablePorts = SerialPort.GetPortNames();
-            foreach (string portName in availablePorts)
+            ComboBox c1 = null;
+            if (n == 1)
+                c1 = comboBox2;
+            else if (n == 2)
+                c1 = comboBox1;
+            else if (n == 3)
+                c1 = comboBox3;
+            else if (n == 4)
+                c1 = comboBox4;
+            if (c1 != null)
             {
-                comboBox1.Items.Add(portName);
-                comboBox2.Items.Add(portName);
-                comboBox3.Items.Add(portName);
-                comboBox4.Items.Add(portName);
+                c1.Items.Clear();
+
+                string[] availablePorts = SerialPort.GetPortNames();
+                foreach (string portName in availablePorts)
+                {
+                    c1.Items.Add(portName);
+                }
             }
         }
         const int MaxChars = 500_000;
@@ -912,6 +922,29 @@ namespace SerialPortMacros
             }
         }
 
+        private void comboBox2_Click(object sender, EventArgs e)
+        {
+            Searchports(1);
+        }
+
+        private void comboBox1_Click(object sender, EventArgs e)
+        {
+            Searchports(2);
+        }
+
+        private void comboBox3_Click(object sender, EventArgs e)
+        {
+            Searchports(3);
+        }
+
+        private void comboBox4_Click(object sender, EventArgs e)
+        {
+            Searchports(4);
+        }
+
+        private void comboBox2_MouseClick(object sender, MouseEventArgs e)
+        {
+        }
     }
 
     public class Script

@@ -48,7 +48,6 @@
             label2 = new Label();
             label3 = new Label();
             label4 = new Label();
-            button7 = new Button();
             button8 = new Button();
             button9 = new Button();
             button10 = new Button();
@@ -202,6 +201,8 @@
             comboBox2.Name = "comboBox2";
             comboBox2.Size = new Size(71, 28);
             comboBox2.TabIndex = 11;
+            comboBox2.Click += comboBox2_Click;
+            comboBox2.MouseClick += comboBox2_MouseClick;
             // 
             // comboBox1
             // 
@@ -212,6 +213,7 @@
             comboBox1.Name = "comboBox1";
             comboBox1.Size = new Size(71, 28);
             comboBox1.TabIndex = 12;
+            comboBox1.Click += comboBox1_Click;
             // 
             // comboBox3
             // 
@@ -222,6 +224,7 @@
             comboBox3.Name = "comboBox3";
             comboBox3.Size = new Size(71, 28);
             comboBox3.TabIndex = 13;
+            comboBox3.Click += comboBox3_Click;
             // 
             // comboBox4
             // 
@@ -233,6 +236,7 @@
             comboBox4.Size = new Size(71, 28);
             comboBox4.TabIndex = 14;
             comboBox4.SelectedIndexChanged += comboBox4_SelectedIndexChanged;
+            comboBox4.Click += comboBox4_Click;
             // 
             // label1
             // 
@@ -273,17 +277,6 @@
             label4.Size = new Size(43, 20);
             label4.TabIndex = 18;
             label4.Text = "baud";
-            // 
-            // button7
-            // 
-            button7.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            button7.Image = (Image)resources.GetObject("button7.Image");
-            button7.Location = new Point(578, 391);
-            button7.Name = "button7";
-            button7.Size = new Size(28, 29);
-            button7.TabIndex = 19;
-            button7.UseVisualStyleBackColor = true;
-            button7.Click += button7_Click;
             // 
             // button8
             // 
@@ -599,7 +592,6 @@
             Controls.Add(button10);
             Controls.Add(button9);
             Controls.Add(button8);
-            Controls.Add(button7);
             Controls.Add(label4);
             Controls.Add(label3);
             Controls.Add(label2);
@@ -652,7 +644,6 @@
         private Label label2;
         private Label label3;
         private Label label4;
-        private Button button7;
         private Button button8;
         private Button button9;
         private Button button10;

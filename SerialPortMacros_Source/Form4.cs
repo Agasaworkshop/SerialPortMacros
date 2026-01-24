@@ -31,6 +31,7 @@ namespace SerialPortMacros
         {
             InitializeComponent();
             logger = formsPlot1.Plot.Add.DataLogger();
+            formsPlot1.Plot.Axes.ContinuouslyAutoscale = true;
             timerPlot = new System.Windows.Forms.Timer();
             timerPlot.Interval = 50;
             timerPlot.Tick += TimerPlot_Tick;

@@ -157,6 +157,9 @@ namespace SerialPortMacros
                 File.WriteAllLines(filePath, newfile);
                 textBox5.Text = "";
             }
+            form1.ScanScripts();
+            checkedListBox1.DataSource = form1.scripts;
+            checkedListBox1.DisplayMember = "name";
         }
         public void displayscript()
         {
