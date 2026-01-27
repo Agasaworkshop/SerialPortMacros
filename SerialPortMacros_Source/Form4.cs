@@ -17,7 +17,7 @@ namespace SerialPortMacros
     {
         private System.Windows.Forms.Timer timerPlot;
         private Stopwatch sw = new Stopwatch();
-        private double timeWindow = 10;
+        private double timeWindow = 30;
         private bool legend_on = true;
 
         // Ruolo della form
@@ -241,8 +241,10 @@ namespace SerialPortMacros
 
             if (updated)
             {
+                timeWindow = (double)numericUpDown1.Value;
                 double xMax = now;
                 double xMin = now - timeWindow;
+                formsPlot1.Plot.Axes.ContinuouslyAutoscale = false;
                 formsPlot1.Plot.Axes.SetLimitsX(xMin, xMax);
 
                 if (isMaster)
