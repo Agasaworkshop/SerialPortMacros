@@ -965,30 +965,65 @@ namespace SerialPortMacros
         }
         public void CreateParasiticForm(Form4 f1, Form4 f2)
         {
-            // Creo la form master
+            // 1) raccogli tutti gli slave reali dai due grafici
+            var slaves = new List<Form4>();
+
+            void Collect(Form4 f)
+            {
+                if (f.isMaster)
+                {
+                    if (f.child1 != null) slaves.Add(f.child1);
+                    if (f.child2 != null) slaves.Add(f.child2);
+                    if (f.child3 != null) slaves.Add(f.child3);
+                    if (f.child4 != null) slaves.Add(f.child4);
+                }
+                else
+                {
+                    slaves.Add(f);
+                }
+            }
+
+            Collect(f1);
+            Collect(f2);
+
+            // 2) rimuove eventuali duplicati
+            slaves = slaves.Distinct().ToList();
+
+            // 3) controllo limite 4
+            if (slaves.Count > 4)
+                throw new Exception("Troppi grafici da unire: massimo 4 slave totali.");
+
+            // 4) creo la form master
             var master = new Form4(this, true)
             {
                 Text = $"Merged: {f1.Text} + {f2.Text}"
             };
 
-            // Imposto i figli nella master
-            master.child1 = f1;
-            master.child2 = f2;
+            // 5) assegno slot fissi solo se il figlio esiste
+            if (slaves.Count > 0) master.child1 = slaves[0];
+            if (slaves.Count > 1) master.child2 = slaves[1];
+            if (slaves.Count > 2) master.child3 = slaves[2];
+            if (slaves.Count > 3) master.child4 = slaves[3];
 
-            // Impostiamo il master nei figli
-            f1.MasterForm = master;
-            f2.MasterForm = master;
+            // 6) aggiorna MasterForm dei figli e nascondili
+            foreach (var s in slaves)
+            {
+                s.MasterForm = master;
+                s.reset_merge();
+                s.Visible = false; // non mostrare i vecchi grafici
+            }
 
-            f1.reset_merge();
-            f2.reset_merge();
-            // Nascondo i figli se vuoi solo vedere il master
-            f1.Visible = false;
-            f2.Visible = false;
+            // 7) chiudi i vecchi master se necessario
+            if (f1.isMaster)
+                f1.Close();
 
+            if (f2.isMaster)
+                f2.Close();
 
-            // Mostro il master
+            // 8) mostra il nuovo master
             master.Show();
         }
+
 
 
 

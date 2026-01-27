@@ -108,7 +108,7 @@
 
         #endregion
 
-        private ScottPlot.WinForms.FormsPlot formsPlot1;
+        public ScottPlot.WinForms.FormsPlot formsPlot1;
         private NumericUpDown numericUpDown1;
         private Label label1;
         private Button button1;
