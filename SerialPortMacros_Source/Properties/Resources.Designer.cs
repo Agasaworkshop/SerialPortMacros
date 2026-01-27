@@ -153,6 +153,26 @@ namespace SerialPortMacros.Properties {
         /// <summary>
         ///   Cerca una risorsa localizzata di tipo System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap SyncArrowStatusBar5_16x {
+            get {
+                object obj = ResourceManager.GetObject("SyncArrowStatusBar5_16x", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Cerca una risorsa localizzata di tipo System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap SyncArrowStatusBar5_extra_16x {
+            get {
+                object obj = ResourceManager.GetObject("SyncArrowStatusBar5_extra_16x", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Cerca una risorsa localizzata di tipo System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap Time_16x_cross {
             get {
                 object obj = ResourceManager.GetObject("Time_16x_cross", resourceCulture);

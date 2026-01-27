@@ -51,8 +51,10 @@ namespace SerialPortMacros
         public StreamWriter _writer5;
         private string _logFilePath5;
         public bool multilog = false;
+        public bool looking_for_merge = false;
+        private Form4 merging_form = null;
         public Dictionary<string, List<Form4>> openGraphs = new Dictionary<string, List<Form4>>();
-
+        
 
         public Form1()
         {
@@ -367,7 +369,7 @@ namespace SerialPortMacros
         }
         private int Openport(int baud, SerialPort c_port, string name)
         {
-            if (baud > 0 && comboBox2.Text != "")
+            if (baud > 0 && name != "")
             {
                 c_port.PortName = name;
                 c_port.BaudRate = baud;
@@ -398,13 +400,13 @@ namespace SerialPortMacros
         {
 
             if (opn_p1 && checkBox1.Checked)
-                port1.Write(output);
+                port1.WriteLine(output);
             if (opn_p2 && checkBox2.Checked)
-                port2.Write(output);
+                port2.WriteLine(output);
             if (opn_p3 && checkBox3.Checked)
-                port3.Write(output);
+                port3.WriteLine(output);
             if (opn_p4 && checkBox4.Checked)
-                port4.Write(output);
+                port4.WriteLine(output);
         }
         private async void SerialPort_DataReceived1(object sender, SerialDataReceivedEventArgs e)
         {
@@ -915,7 +917,7 @@ namespace SerialPortMacros
             }
             for (int i = 1; i <= n_grafici; i++)
             {
-                var form = new Form4();
+                var form = new Form4(this);
                 form.Text = $"{nome_porta} {i}";  // nome della finestra
                 form.Show();
                 openGraphs[nome_porta].Add(form);
@@ -944,6 +946,56 @@ namespace SerialPortMacros
 
         private void comboBox2_MouseClick(object sender, MouseEventArgs e)
         {
+        }
+        
+        public void merge_graphs1(string name, Form4 currentform)
+        {
+            if (!looking_for_merge)
+            {
+                merging_form = currentform;
+                looking_for_merge = true;
+            }else 
+            if (looking_for_merge)
+            {
+                CreateParasiticForm(merging_form, currentform);
+                looking_for_merge = false;
+
+            }
+
+        }
+        public void CreateParasiticForm(Form4 f1, Form4 f2)
+        {
+            // Creo la form master
+            var master = new Form4(this, true)
+            {
+                Text = $"Merged: {f1.Text} + {f2.Text}"
+            };
+
+            // Imposto i figli nella master
+            master.child1 = f1;
+            master.child2 = f2;
+
+            // Impostiamo il master nei figli
+            f1.MasterForm = master;
+            f2.MasterForm = master;
+
+            f1.reset_merge();
+            f2.reset_merge();
+            // Nascondo i figli se vuoi solo vedere il master
+            f1.Visible = false;
+            f2.Visible = false;
+
+
+            // Mostro il master
+            master.Show();
+        }
+
+
+
+        public void undo_merge()
+        {
+            looking_for_merge = false;
+            merging_form = null;
         }
     }
 
