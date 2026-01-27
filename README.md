@@ -33,7 +33,7 @@ You can also merge two graphs by using the merge button
 In the image, the graph on the right is looking to merge. After clicking the merge button on a second graph, the two windows will become invisible and a new merged window will appear 
 <img width="806" height="490" alt="image" src="https://github.com/user-attachments/assets/2cab5e2b-0ad5-4984-9d0b-ef2e977a4fed" />   
 The first clicked window will be the red line, the second will be green. You can show the original two windows by clicking the new unmerge button; this will not close the merged window.   
-As of right now only two graphs at a time are supported. 
+As of right now, only four graphs at a time are supported. 
 # Macro Menu
 ![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/057b1100-a02f-4a6a-84e4-77cb438d2151)
 
