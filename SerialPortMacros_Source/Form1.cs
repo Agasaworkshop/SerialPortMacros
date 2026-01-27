@@ -994,10 +994,12 @@ namespace SerialPortMacros
                 throw new Exception("Troppi grafici da unire: massimo 4 slave totali.");
 
             // 4) creo la form master
+            var slaveNames = slaves.Select(s => s.Text).ToList();
+
             var master = new Form4(this, true)
             {
-                Text = $"Merged: {f1.Text} + {f2.Text}"
-            };
+                Text = "Merged: " + string.Join(" ", slaveNames)
+        };
 
             // 5) assegno slot fissi solo se il figlio esiste
             if (slaves.Count > 0) master.child1 = slaves[0];

@@ -18,6 +18,7 @@ namespace SerialPortMacros
         private System.Windows.Forms.Timer timerPlot;
         private Stopwatch sw = new Stopwatch();
         private double timeWindow = 10;
+        private bool legend_on = true;
 
         // Ruolo della form
         public bool isMaster = false;
@@ -44,6 +45,7 @@ namespace SerialPortMacros
         public Form4 child2 = null;
         public Form4 child3 = null;
         public Form4 child4 = null;
+        public LegendItem[] items = new LegendItem[4];
 
         public bool merging = false;
         public Form1 mainform;
@@ -66,8 +68,14 @@ namespace SerialPortMacros
                 }
                 button2.Visible = true;
             }
+            if (!isMaster)
+            {
+                label2.Visible = false;
+                button3.Visible = false;
+            }
 
             formsPlot1.Plot.Axes.ContinuouslyAutoscale = true;
+            formsPlot1.Plot.Legend.IsVisible = true;
 
             timerPlot = new System.Windows.Forms.Timer();
             timerPlot.Interval = 50;
@@ -76,24 +84,64 @@ namespace SerialPortMacros
             sw.Start();
             timerPlot.Start();
 
+
             if (isMaster)
             {
                 logger_child1 = formsPlot1.Plot.Add.DataLogger();
                 logger_child1.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
+                items[0] = new LegendItem()
+                {
+                    LineColor = Colors.Red,
+                    MarkerFillColor = Colors.Red,
+                    MarkerLineColor = Colors.Red,
+                    MarkerShape = MarkerShape.Cross,
+                    LineWidth = 2,
+                    LabelText = child1.Text
+                };
 
                 logger_child2 = formsPlot1.Plot.Add.DataLogger();
                 logger_child2.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Green);
+                items[1] = new LegendItem()
+                {
+                    LineColor = Colors.Green,
+                    MarkerFillColor = Colors.Green,
+                    MarkerLineColor = Colors.Green,
+                    MarkerShape = MarkerShape.Cross,
+                    LineWidth = 2,
+                    LabelText = child2.Text
+                };
+
 
                 if (child3 != null)
                 {
                     logger_child3 = formsPlot1.Plot.Add.DataLogger();
                     logger_child3.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Orange);
+                    items[2] = new LegendItem()
+                    {
+                        LineColor = Colors.Orange,
+                        MarkerFillColor = Colors.Orange,
+                        MarkerLineColor = Colors.Orange,
+                        MarkerShape = MarkerShape.Cross,
+                        LineWidth = 2,
+                        LabelText = child3.Text
+                    };
                 }
                 if (child4 != null)
                 {
                     logger_child4 = formsPlot1.Plot.Add.DataLogger();
                     logger_child4.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Purple);
+                    items[3] = new LegendItem()
+                    {
+                        LineColor = Colors.Purple,
+                        MarkerFillColor = Colors.Purple,
+                        MarkerLineColor = Colors.Purple,
+                        MarkerShape = MarkerShape.Cross,
+                        LineWidth = 2,
+                        LabelText = child4.Text
+                    };
                 }
+                formsPlot1.Plot.ShowLegend(items.Where(item => item != null).ToArray());
+                formsPlot1.Plot.Legend.Alignment = Alignment.LowerLeft;
             }
             else
             {
@@ -228,6 +276,23 @@ namespace SerialPortMacros
         {
             merging = false;
             button1.Image = Properties.Resources.SyncArrowStatusBar5_16x;
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            if (legend_on)
+            {
+                button3.Image = Properties.Resources.Not_Visible_16x;
+                legend_on = false;
+                formsPlot1.Plot.Legend.IsVisible = false;
+            }
+            else
+            {
+                button3.Image = Properties.Resources.Visible_16x;
+                legend_on = true;
+                formsPlot1.Plot.Legend.IsVisible = true;
+            }
+
         }
     }
 }

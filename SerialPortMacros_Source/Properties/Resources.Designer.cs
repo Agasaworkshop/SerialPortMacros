@@ -113,6 +113,16 @@ namespace SerialPortMacros.Properties {
         /// <summary>
         ///   Cerca una risorsa localizzata di tipo System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap Not_Visible_16x {
+            get {
+                object obj = ResourceManager.GetObject("Not_Visible_16x", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Cerca una risorsa localizzata di tipo System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap Settings_blue {
             get {
                 object obj = ResourceManager.GetObject("Settings_blue", resourceCulture);
@@ -226,6 +236,16 @@ namespace SerialPortMacros.Properties {
         internal static System.Drawing.Bitmap Unlock {
             get {
                 object obj = ResourceManager.GetObject("Unlock", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Cerca una risorsa localizzata di tipo System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap Visible_16x {
+            get {
+                object obj = ResourceManager.GetObject("Visible_16x", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
