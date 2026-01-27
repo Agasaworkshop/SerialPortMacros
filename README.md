@@ -31,8 +31,8 @@ As of right now, it's not super optimized. If you give it a very fast signal, it
 You can also merge two graphs by using the merge button  
 <img width="1597" height="484" alt="image" src="https://github.com/user-attachments/assets/7ebe436e-014d-485b-8aa8-a3134e2872bc" />  
 In the image, the graph on the right is looking to merge. After clicking the merge button on a second graph, the two windows will become invisible and a new merged window will appear 
-<img width="786" height="512" alt="image" src="https://github.com/user-attachments/assets/1b5851f3-e06b-48bc-9403-6eb925ae2d99" />    
-You can toggle the legend by clicking the eye icon on the bottom.  
+<img width="786" height="512" alt="image" src="https://github.com/user-attachments/assets/3b125746-0292-4abd-8ada-5a24f82bdd19" />     
+You can toggle the legend by clicking the eye icon at the bottom.  
 You can show the original windows by clicking the new unmerge button; this will not close the merged window.      
 As of right now, only four graphs at a time are supported.   
 
@@ -42,7 +42,7 @@ As of right now, only four graphs at a time are supported.
 
 This program is meant to interact with your electronic projects through the serial port, the idea is to associate a string sent by your device to an action made by your computer, I will refine and add functionalities probably, currently, it can press a button in response to a certain string or send a string to the selected ports in response to a string on the selected ports(to coordinate multiple devices).    
   
-You can easily make your macros with this menu, use "New File" to create a new macro (you will have to close and reopen the window to see it in the list), you can then:  
+You can easily make your macros with this menu. Use "New File" to create a new macro (you will have to close and reopen the window to see it in the list), you can then:  
   
   1)see the name  
     
