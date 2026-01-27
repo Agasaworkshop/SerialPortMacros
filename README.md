@@ -27,7 +27,13 @@ By checking the log option near the text box, you will also be logging user inpu
 Under each port, you can find a button to open the graphs; the number near the button decides how many plots will be opened. When reading the lines in the serial port the software will associate the first number in the line to the first graph, the second number to the second graph, and so on. There are no defined delimiters; just make sure to add something between your numbers. In the plot window, you can also select how long the time window should be. Note that due to how it's coded, moving the window or interacting in some other ways might ruin the signal a bit. 
 As of right now, it's not super optimized. If you give it a very fast signal, it will display artefacts and even freeze; the images are taken with 10 samples per second; you can still see the shape clearly, but with some distorsion at 100 samples per second. 
 
-  
+## Merging graphs
+You can also merge two graphs by using the merge button  
+<img width="1597" height="484" alt="image" src="https://github.com/user-attachments/assets/7ebe436e-014d-485b-8aa8-a3134e2872bc" />  
+In the image, the graph on the right is looking to merge. After clicking the merge button on a second graph, the two windows will become invisible and a new merged window will appear 
+<img width="806" height="490" alt="image" src="https://github.com/user-attachments/assets/2cab5e2b-0ad5-4984-9d0b-ef2e977a4fed" />   
+The first clicked window will be the red line, the second will be green. You can show the original two windows by clicking the new unmerge button; this will not close the merged window.   
+As of right now only two graphs at a time are supported. 
 # Macro Menu
 ![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/057b1100-a02f-4a6a-84e4-77cb438d2151)
 
