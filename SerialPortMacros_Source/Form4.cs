@@ -189,28 +189,44 @@ namespace SerialPortMacros
                 if (child1 != null)
                     while (child1Queue.TryDequeue(out var p1))
                     {
-                        logger_child1.Add(p1.t, p1.y);
+                        try
+                        {
+                            logger_child1.Add(p1.t, p1.y);
+                        }
+                        catch { } //I think very rarely at the start it can get two out of order points, it's not important, it doesn't really change anything but I don't want to get an error
                         updated = true;
                     }
 
                 if (child2 != null)
                     while (child2Queue.TryDequeue(out var p2))
                     {
-                        logger_child2.Add(p2.t, p2.y);
+                        try
+                        {
+                            logger_child2.Add(p2.t, p2.y);
+                        }
+                        catch { }
                         updated = true;
                     }
 
                 if (child3 != null)
                     while (child3Queue.TryDequeue(out var p3))
                     {
-                        logger_child3.Add(p3.t, p3.y);
+                        try
+                        {
+                            logger_child3.Add(p3.t, p3.y);
+                        }
+                        catch { }
                         updated = true;
                     }
 
                 if (child4 != null)
                     while (child4Queue.TryDequeue(out var p4))
                     {
-                        logger_child4.Add(p4.t, p4.y);
+                        try
+                        {
+                            logger_child4.Add(p4.t, p4.y);
+                        }
+                        catch { }
                         updated = true;
                     }
             }
@@ -265,10 +281,26 @@ namespace SerialPortMacros
         {
             if (isMaster)
             {
-                child1?.Show();
-                child2?.Show();
-                child3?.Show();
-                child4?.Show();
+                try
+                {
+                    child1?.Show();
+                }
+                catch { } //if the user closes manually the window this would throw an error, it's not really important
+                try
+                {
+                    child2?.Show();
+                }
+                catch { }
+                try
+                {
+                    child3?.Show();
+                }
+                catch { }
+                try
+                {
+                    child4?.Show();
+                }
+                catch { }
             }
         }
 
@@ -293,6 +325,37 @@ namespace SerialPortMacros
                 formsPlot1.Plot.Legend.IsVisible = true;
             }
 
+        }
+
+        private void Form4_FormClosed(object sender, FormClosedEventArgs e)
+        {
+        }
+
+        private void Form4_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (isMaster)
+            {
+                try
+                {
+                    child1?.Show();
+                }
+                catch { } //if the user closes manually the window this would throw an error, it's not really important
+                try
+                {
+                    child2?.Show();
+                }
+                catch { }
+                try
+                {
+                    child3?.Show();
+                }
+                catch { }
+                try
+                {
+                    child4?.Show();
+                }
+                catch { }
+            }
         }
     }
 }

@@ -125,6 +125,8 @@
             Controls.Add(formsPlot1);
             Name = "Form4";
             Text = "Form4";
+            FormClosing += Form4_FormClosing;
+            FormClosed += Form4_FormClosed;
             Load += Form4_Load;
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).EndInit();
             ResumeLayout(false);

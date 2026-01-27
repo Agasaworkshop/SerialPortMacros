@@ -1007,7 +1007,15 @@ namespace SerialPortMacros
             if (slaves.Count > 2) master.child3 = slaves[2];
             if (slaves.Count > 3) master.child4 = slaves[3];
 
-            // 6) aggiorna MasterForm dei figli e nascondili
+
+            // 6) chiudi i vecchi master se necessario
+            if (f1.isMaster)
+                f1.Close();
+
+            if (f2.isMaster)
+                f2.Close();
+
+            // 7) aggiorna MasterForm dei figli e nascondili
             foreach (var s in slaves)
             {
                 s.MasterForm = master;
@@ -1015,12 +1023,7 @@ namespace SerialPortMacros
                 s.Visible = false; // non mostrare i vecchi grafici
             }
 
-            // 7) chiudi i vecchi master se necessario
-            if (f1.isMaster)
-                f1.Close();
 
-            if (f2.isMaster)
-                f2.Close();
 
             // 8) mostra il nuovo master
             master.Show();
