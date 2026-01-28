@@ -886,19 +886,19 @@ namespace SerialPortMacros
 
         private void button17_Click(object sender, EventArgs e)
         {
-            if (comboBox2.Text != "")
+            if (comboBox1.Text != "")
                 launch_graphs((int)numericUpDown2.Value, comboBox1.Text);
         }
 
         private void button18_Click(object sender, EventArgs e)
         {
-            if (comboBox2.Text != "")
+            if (comboBox3.Text != "")
                 launch_graphs((int)numericUpDown3.Value, comboBox3.Text);
         }
 
         private void button19_Click(object sender, EventArgs e)
         {
-            if (comboBox2.Text != "")
+            if (comboBox4.Text != "")
                 launch_graphs((int)numericUpDown4.Value, comboBox4.Text);
         }
         private void launch_graphs(int n_grafici, string nome_porta)
