@@ -234,7 +234,11 @@ namespace SerialPortMacros
             {
                 while (mainQueue.TryDequeue(out var p))
                 {
-                    logger_main.Add(p.t, p.y);
+                    try
+                    {
+                        logger_main.Add(p.t, p.y);
+                    }
+                    catch { }
                     updated = true;
                 }
             }
