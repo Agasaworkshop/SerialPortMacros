@@ -316,7 +316,7 @@ namespace SerialPortMacros
                 }
             }
         }
-        const int MaxChars = 500_000;
+        const int MaxChars = 100_000;
 
         private void aggiungi_a_textbox2(string inputText, string usr, Color color)
         {
