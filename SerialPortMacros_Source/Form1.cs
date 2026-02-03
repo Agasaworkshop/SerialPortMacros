@@ -1,22 +1,10 @@
-using System.Drawing.Text;
-using System.Dynamic;
 using System.Diagnostics;
-using System.IO;
 using System.IO.Ports;
-using System.Net.Http.Headers;
-using System.Net.NetworkInformation;
-using System.Runtime.InteropServices;
-using System.Security.Policy;
 using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using WindowsInput;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
-using System.Runtime.InteropServices;
-using System;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
-using System.Text.RegularExpressions;
 using System.Globalization;
+using System.Collections.Concurrent;
+
 
 namespace SerialPortMacros
 {
@@ -54,7 +42,7 @@ namespace SerialPortMacros
         public bool looking_for_merge = false;
         private Form4 merging_form = null;
         public Dictionary<string, List<Form4>> openGraphs = new Dictionary<string, List<Form4>>();
-        
+        private System.Windows.Forms.Timer _uiTimer;
 
         public Form1()
         {
@@ -68,6 +56,10 @@ namespace SerialPortMacros
             }
             setports();
             ScanScripts();
+            _uiTimer = new System.Windows.Forms.Timer();
+            _uiTimer.Interval = 20;
+            _uiTimer.Tick += UiTimer_Tick;
+            _uiTimer.Start();
         }
 
 
@@ -642,72 +634,128 @@ namespace SerialPortMacros
                 Thread.Sleep(1);
             }
         }
+
+        private int _scanIndex = 0;
+
+        private readonly ConcurrentQueue<SerialMessage> _messageQueue = new ConcurrentQueue<SerialMessage>();
+
         public void Serial_port_data2(
             SerialPort port, int num,
             bool po1, bool po2, bool po3, bool po4,
             bool opn, CheckBox checkbox, Color color,
             StringBuilder sb, bool log)
         {
-            string data = port.ReadExisting();
-            if (string.IsNullOrEmpty(data))
+            if (port.BytesToRead == 0)
                 return;
+            sb.Append(port.ReadExisting());
 
-            sb.Append(data); // accumula tutto
 
-            string buffer = sb.ToString();
-            int lastProcessedIndex = 0;
-
-            for (int i = 0; i < buffer.Length; i++)
+            for (int i = _scanIndex; i < sb.Length; i++)
             {
                 // controlla se il carattere è terminatore
-                if (buffer[i] == '\n' || buffer[i] == '\r')
+                if (sb[i] == '\n' || sb[i] == '\r')
                 {
-                    string mess = buffer.Substring(lastProcessedIndex, i - lastProcessedIndex).Trim();
-                    lastProcessedIndex = i + 1; // salta il terminatore
+                    string mess = sb.ToString(_scanIndex, i - _scanIndex).Trim();
+                    _scanIndex = i + 1;
 
                     if (string.IsNullOrEmpty(mess))
                         continue; // evita stringhe vuote
 
-                    // Invoca UI
-                    this.Invoke((Action)(() =>
+                    if (opn)
                     {
-                        if (opn)
+                        var forms = openGraphs.ContainsKey(port.PortName) ? openGraphs[port.PortName] : null;
+
+                        var item = new SerialMessage
                         {
-                            if (logging)
-                                write_logs(po1, po2, po3, po4, mess, port.PortName);
+                            Mess = mess,
+                            Forms = forms,
+                            Po1 = po1,
+                            Po2 = po2,
+                            Po3 = po3,
+                            Po4 = po4,
+                            PortName = port.PortName,
+                            Color = color,
+                            Logging = log
+                        };
 
-                            aggiungi_a_textbox2(mess, port.PortName, color);
-                            scriptcheck(mess, po1, po2, po3, po4);
-                        }
-                    }));
-                    if (opn && openGraphs.ContainsKey(port.PortName))
-                    {
-                        string messCopy = mess; // copia sicura
-                        var forms = openGraphs[port.PortName];
-
-                        // Esegui in un thread separato solo il parsing
-                        Task.Run(() =>
-                        {
-                            var nums = Regex.Matches(messCopy, @"-?\d+(\.\d+)?")
-                                            .Cast<Match>()
-                                            .Select(m => double.Parse(m.Value, CultureInfo.InvariantCulture))
-                                            .ToList();
-
-                            for (int i = 0; i < forms.Count; i++)
-                            {
-                                if (i < nums.Count)
-                                {
-                                    forms[i].AddDataPoint(nums[i]);
-                                }
-                            }
-                        });
+                        _messageQueue.Enqueue(item);
                     }
+
 
                 }
             }
 
-            // Rimuove solo la parte processata dal buffer, lascia eventuali dati parziali
-            sb.Remove(0, lastProcessedIndex);
+            if (_scanIndex > 0)
+            {
+                sb.Remove(0, _scanIndex);
+                _scanIndex = 0;
+            }
+        }
+
+        private void UiTimer_Tick(object sender, EventArgs e)
+        {
+            while (_messageQueue.TryDequeue(out var item))
+            {
+                var mess = item.Mess;
+                var forms = item.Forms;
+
+                // Aggiornamento UI
+                if (item.Logging)
+                    write_logs(item.Po1, item.Po2, item.Po3, item.Po4, mess, item.PortName);
+
+                aggiungi_a_textbox2(mess, item.PortName, item.Color);
+                scriptcheck(mess, item.Po1, item.Po2, item.Po3, item.Po4);
+
+                // Aggiornamento grafici
+                if (forms != null)
+                {
+                    var nums = ParseNumbers(mess);
+                    for (int i = 0; i < forms.Count; i++)
+                    {
+                        if (i < nums.Count)
+                            forms[i].AddDataPoint(nums[i]);
+                    }
+                }
+            }
+        }
+
+
+
+        public static List<double> ParseNumbers(string s)
+        {
+            var numbers = new List<double>();
+            int i = 0;
+
+            while (i < s.Length)
+            {
+
+                while (i < s.Length && !char.IsDigit(s[i]) && s[i] != '-' && s[i] != '.')
+                    i++;
+
+                int start = i;
+                int dotCount = 0;
+
+                while (i < s.Length && (char.IsDigit(s[i]) || s[i] == '.' || s[i] == '-'))
+                {
+                    if (s[i] == '.')
+                    {
+                        dotCount++;
+                        if (dotCount > 1) break; 
+                    }
+                    i++;
+                }
+
+                if (start < i &&
+                    double.TryParse(s.Substring(start, i - start),
+                                    NumberStyles.Float,
+                                    CultureInfo.InvariantCulture,
+                                    out double val))
+                {
+                    numbers.Add(val);
+                }
+            }
+
+            return numbers;
         }
 
 
@@ -1056,5 +1104,17 @@ namespace SerialPortMacros
         public string keypress;
         public string path;
         public bool active;
+    }
+    public class SerialMessage
+    {
+        public string Mess { get; set; } = "";
+        public List<Form4>? Forms { get; set; } = null;
+        public bool Po1 { get; set; }
+        public bool Po2 { get; set; }
+        public bool Po3 { get; set; }
+        public bool Po4 { get; set; }
+        public string PortName { get; set; } = "";
+        public Color Color { get; set; }
+        public bool Logging { get; set; }
     }
 }
