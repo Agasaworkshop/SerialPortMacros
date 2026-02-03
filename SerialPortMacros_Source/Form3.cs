@@ -39,20 +39,21 @@ namespace SerialPortMacros
             string[] newfile;
             Script c_script = new Script();
             int ind = comboBox1.SelectedIndex;
-            if (ind == -1) 
+            if (ind == -1)
                 return;
             c_script = (Script)checkedListBox1.SelectedItem;
             form1.wait(100);
             if (checkedListBox1.GetItemCheckState(ind) == CheckState.Checked)
             {
                 c_script.active = false;
-            } else
+            }
+            else
                 c_script.active = true;
             newfile = File.ReadAllLines(c_script.path);
             int len = newfile.Length - 1;
             newfile[len] = c_script.active.ToString();
             newfile = newfile.Where(str => !string.IsNullOrWhiteSpace(str)).ToArray();
-            File.WriteAllLines(c_script.path,newfile);
+            File.WriteAllLines(c_script.path, newfile);
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -62,7 +63,11 @@ namespace SerialPortMacros
 
         private void button1_Click(object sender, EventArgs e)
         {
-            Applychanges();
+            try
+            {
+                Applychanges();
+            }
+            catch { }
         }
         private void Applychanges()
         {
@@ -172,7 +177,8 @@ namespace SerialPortMacros
             checkBox5.Checked = false;
 
             Script c_script = (Script)checkedListBox1.SelectedItem;
-            if (c_script != null) {
+            if (c_script != null)
+            {
                 textBox1.Text = c_script.name;
                 textBox2.Text = c_script.key;
                 checkBox1.Checked = c_script.p1;

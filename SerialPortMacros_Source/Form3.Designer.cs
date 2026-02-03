@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             checkedListBox1 = new CheckedListBox();
             textBox1 = new TextBox();
             comboBox1 = new ComboBox();
@@ -60,6 +61,7 @@
             button2 = new Button();
             button3 = new Button();
             textBox5 = new TextBox();
+            toolTip1 = new ToolTip(components);
             SuspendLayout();
             // 
             // checkedListBox1
@@ -69,8 +71,8 @@
             checkedListBox1.Name = "checkedListBox1";
             checkedListBox1.Size = new Size(207, 400);
             checkedListBox1.TabIndex = 0;
-            checkedListBox1.SelectedIndexChanged += checkedListBox1_SelectedIndexChanged;
             checkedListBox1.ItemCheck += CheckedListBox1_ItemCheck;
+            checkedListBox1.SelectedIndexChanged += checkedListBox1_SelectedIndexChanged;
             // 
             // textBox1
             // 
@@ -336,6 +338,7 @@
             button3.Size = new Size(78, 29);
             button3.TabIndex = 30;
             button3.Text = "New File";
+            toolTip1.SetToolTip(button3, "Create New file");
             button3.UseVisualStyleBackColor = true;
             button3.Click += button3_Click;
             // 
@@ -346,6 +349,7 @@
             textBox5.PlaceholderText = "script.txt";
             textBox5.Size = new Size(125, 27);
             textBox5.TabIndex = 31;
+            toolTip1.SetToolTip(textBox5, "New file name");
             // 
             // Form3
             // 
@@ -425,5 +429,6 @@
         private Button button2;
         private Button button3;
         private TextBox textBox5;
+        private ToolTip toolTip1;
     }
 }

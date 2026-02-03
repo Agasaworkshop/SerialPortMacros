@@ -126,9 +126,11 @@ namespace SerialPortMacros
             {
                 int baud = int.Parse(textBox3.Text);
                 string name = comboBox2.Text;
+
                 if (Openport(baud, port1, name) == 1)
                 {
                     button3.Image = Properties.Resources.Disconnect;
+                    toolTip1.SetToolTip(button3, "Disconnect");
                     opn_p1 = true;
                 }
             }
@@ -136,6 +138,7 @@ namespace SerialPortMacros
             {
                 port1.Close();
                 button3.Image = Properties.Resources.AddConnection;
+                toolTip1.SetToolTip(button3, "Connect");
                 opn_p1 = false;
             }
         }
@@ -146,9 +149,11 @@ namespace SerialPortMacros
             {
                 int baud = int.Parse(textBox4.Text);
                 string name = comboBox3.Text;
+
                 if (Openport(baud, port3, name) == 1)
                 {
                     button4.Image = Properties.Resources.Disconnect;
+                    toolTip1.SetToolTip(button4, "Disconnect");
                     opn_p3 = true;
                 }
             }
@@ -156,6 +161,7 @@ namespace SerialPortMacros
             {
                 port3.Close();
                 button4.Image = Properties.Resources.AddConnection;
+                toolTip1.SetToolTip(button4, "Connect");
                 opn_p3 = false;
             }
         }
@@ -166,9 +172,11 @@ namespace SerialPortMacros
             {
                 int baud = int.Parse(textBox5.Text);
                 string name = comboBox1.Text;
+
                 if (Openport(baud, port2, name) == 1)
                 {
                     button5.Image = Properties.Resources.Disconnect;
+                    toolTip1.SetToolTip(button5, "Disconnect");
                     opn_p2 = true;
                 }
             }
@@ -176,6 +184,7 @@ namespace SerialPortMacros
             {
                 port2.Close();
                 button5.Image = Properties.Resources.AddConnection;
+                toolTip1.SetToolTip(button5, "Connect");
                 opn_p2 = false;
             }
         }
@@ -185,9 +194,11 @@ namespace SerialPortMacros
             {
                 int baud = int.Parse(textBox6.Text);
                 string name = comboBox4.Text;
+
                 if (Openport(baud, port4, name) == 1)
                 {
                     button6.Image = Properties.Resources.Disconnect;
+                    toolTip1.SetToolTip(button6, "Disconnect");
                     opn_p4 = true;
                 }
             }
@@ -195,6 +206,7 @@ namespace SerialPortMacros
             {
                 port4.Close();
                 button6.Image = Properties.Resources.AddConnection;
+                toolTip1.SetToolTip(button6, "Connect");
                 opn_p4 = false;
             }
         }
@@ -609,6 +621,7 @@ namespace SerialPortMacros
             if (is_locked)
             {
                 is_locked = false;
+                toolTip1.SetToolTip(button12, "AutoScrolling off");
                 button12.Image = Properties.Resources.Unlock;
 
             }
@@ -616,6 +629,7 @@ namespace SerialPortMacros
             {
                 is_locked = true;
                 button12.Image = Properties.Resources.Lock;
+                toolTip1.SetToolTip(button12, "AutoScrolling on");
             }
 
         }
@@ -740,7 +754,7 @@ namespace SerialPortMacros
                     if (s[i] == '.')
                     {
                         dotCount++;
-                        if (dotCount > 1) break; 
+                        if (dotCount > 1) break;
                     }
                     i++;
                 }
@@ -917,12 +931,13 @@ namespace SerialPortMacros
             {
                 time_log = false;
                 button15.Image = Properties.Resources.Time_16x_cross2;
+                toolTip1.SetToolTip(button15, "Timestamps off");
             }
             else
             {
                 time_log = true;
                 button15.Image = Properties.Resources.Time_color_16x;
-
+                toolTip1.SetToolTip(button15, "Timestamps on");
             }
         }
 
@@ -995,14 +1010,15 @@ namespace SerialPortMacros
         private void comboBox2_MouseClick(object sender, MouseEventArgs e)
         {
         }
-        
+
         public void merge_graphs1(string name, Form4 currentform)
         {
             if (!looking_for_merge)
             {
                 merging_form = currentform;
                 looking_for_merge = true;
-            }else 
+            }
+            else
             if (looking_for_merge)
             {
                 CreateParasiticForm(merging_form, currentform);
@@ -1047,7 +1063,7 @@ namespace SerialPortMacros
             var master = new Form4(this, true)
             {
                 Text = "Merged: " + string.Join(" ", slaveNames)
-        };
+            };
 
             // 5) assegno slot fissi solo se il figlio esiste
             if (slaves.Count > 0) master.child1 = slaves[0];

@@ -117,14 +117,20 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <metadata name="toolTip1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>17, 17</value>
+  </metadata>
   <assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
   <data name="button2.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAO
-        vQAADr0BR/uQrQAAAKpJREFUOE+1k8ENwzAMAzNCR8gs3sJbdIRuUHiivr2KP/nxq4BF5aZ0VKANQoCf
+        vAAADrwBlbxySQAAAKpJREFUOE+1k8ENwzAMAzNCR8gs3sJbdIRuUHiivr2KP/nxq4BF5aZ0VKANQoCf
         wDpRcjyZ2XTEXQBmAAsA2/j2PjFKAY9SiqWULOfMYsIu2wJVBwC41lqfxbSk+PAAYPTW2sKuDoh8DoA6
         NIIrWOJdAPw2R4C9aySgj8cGbLQLeEGGyG4fj6Ny5BCgi1MzDZfOxOcAIjvg6wgq/so/LVHFxyRJxmv0
         Z/mvV9vXHz+wTHrnAAAAAElFTkSuQmCC
 </value>
   </data>
+  <metadata name="$this.TrayHeight" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+    <value>116</value>
+  </metadata>
 </root>

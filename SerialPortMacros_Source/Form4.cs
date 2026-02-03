@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace SerialPortMacros
 {
@@ -323,12 +324,14 @@ namespace SerialPortMacros
                 button3.Image = Properties.Resources.Not_Visible_16x;
                 legend_on = false;
                 formsPlot1.Plot.Legend.IsVisible = false;
+                toolTip1.SetToolTip(button3, "Show");
             }
             else
             {
                 button3.Image = Properties.Resources.Visible_16x;
                 legend_on = true;
                 formsPlot1.Plot.Legend.IsVisible = true;
+                toolTip1.SetToolTip(button3, "Hide");
             }
 
         }

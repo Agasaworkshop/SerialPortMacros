@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form4));
             formsPlot1 = new ScottPlot.WinForms.FormsPlot();
             numericUpDown1 = new NumericUpDown();
@@ -36,6 +37,7 @@
             button2 = new Button();
             button3 = new Button();
             label2 = new Label();
+            toolTip1 = new ToolTip(components);
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
             SuspendLayout();
             // 
@@ -76,6 +78,7 @@
             button1.Name = "button1";
             button1.Size = new Size(27, 29);
             button1.TabIndex = 3;
+            toolTip1.SetToolTip(button1, "Merge Graph");
             button1.UseVisualStyleBackColor = true;
             button1.Click += button1_Click;
             // 
@@ -86,6 +89,7 @@
             button2.Name = "button2";
             button2.Size = new Size(27, 29);
             button2.TabIndex = 3;
+            toolTip1.SetToolTip(button2, "Separate Graphs");
             button2.UseVisualStyleBackColor = true;
             button2.Visible = false;
             button2.Click += button2_Click;
@@ -98,6 +102,7 @@
             button3.Name = "button3";
             button3.Size = new Size(28, 29);
             button3.TabIndex = 4;
+            toolTip1.SetToolTip(button3, "Hide");
             button3.UseVisualStyleBackColor = true;
             button3.Click += button3_Click;
             // 
@@ -142,5 +147,6 @@
         private Button button2;
         private Button button3;
         private Label label2;
+        private ToolTip toolTip1;
     }
 }

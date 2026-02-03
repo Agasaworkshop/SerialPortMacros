@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             button1 = new Button();
             button2 = new Button();
@@ -74,6 +75,7 @@
             button18 = new Button();
             numericUpDown4 = new NumericUpDown();
             button19 = new Button();
+            toolTip1 = new ToolTip(components);
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown3).BeginInit();
@@ -129,6 +131,7 @@
             button3.Name = "button3";
             button3.Size = new Size(27, 29);
             button3.TabIndex = 5;
+            toolTip1.SetToolTip(button3, "Connect");
             button3.UseVisualStyleBackColor = false;
             button3.Click += button3_Click;
             // 
@@ -141,6 +144,7 @@
             button4.Name = "button4";
             button4.Size = new Size(27, 29);
             button4.TabIndex = 7;
+            toolTip1.SetToolTip(button4, "Connect");
             button4.UseVisualStyleBackColor = true;
             button4.Click += button4_Click;
             // 
@@ -169,6 +173,7 @@
             button5.Name = "button5";
             button5.Size = new Size(27, 29);
             button5.TabIndex = 7;
+            toolTip1.SetToolTip(button5, "Connect");
             button5.UseVisualStyleBackColor = true;
             button5.Click += button5_Click;
             // 
@@ -181,6 +186,7 @@
             button6.Name = "button6";
             button6.Size = new Size(27, 29);
             button6.TabIndex = 9;
+            toolTip1.SetToolTip(button6, "Connect");
             button6.UseVisualStyleBackColor = true;
             button6.Click += button6_Click;
             // 
@@ -287,6 +293,7 @@
             button8.Name = "button8";
             button8.Size = new Size(27, 29);
             button8.TabIndex = 20;
+            toolTip1.SetToolTip(button8, "Settings");
             button8.UseVisualStyleBackColor = false;
             button8.Click += button8_Click;
             // 
@@ -298,6 +305,7 @@
             button9.Name = "button9";
             button9.Size = new Size(27, 29);
             button9.TabIndex = 21;
+            toolTip1.SetToolTip(button9, "Settings");
             button9.UseVisualStyleBackColor = true;
             button9.Click += button9_Click;
             // 
@@ -309,6 +317,7 @@
             button10.Name = "button10";
             button10.Size = new Size(27, 29);
             button10.TabIndex = 22;
+            toolTip1.SetToolTip(button10, "Settings");
             button10.UseVisualStyleBackColor = true;
             button10.Click += button10_Click;
             // 
@@ -320,6 +329,7 @@
             button11.Name = "button11";
             button11.Size = new Size(27, 29);
             button11.TabIndex = 23;
+            toolTip1.SetToolTip(button11, "Settings");
             button11.UseVisualStyleBackColor = true;
             button11.Click += button11_Click;
             // 
@@ -331,6 +341,7 @@
             checkBox1.Name = "checkBox1";
             checkBox1.Size = new Size(18, 17);
             checkBox1.TabIndex = 24;
+            toolTip1.SetToolTip(checkBox1, "send messages to port");
             checkBox1.UseVisualStyleBackColor = true;
             // 
             // checkBox2
@@ -341,6 +352,7 @@
             checkBox2.Name = "checkBox2";
             checkBox2.Size = new Size(18, 17);
             checkBox2.TabIndex = 25;
+            toolTip1.SetToolTip(checkBox2, "send messages to port");
             checkBox2.UseVisualStyleBackColor = true;
             // 
             // checkBox3
@@ -351,6 +363,7 @@
             checkBox3.Name = "checkBox3";
             checkBox3.Size = new Size(18, 17);
             checkBox3.TabIndex = 26;
+            toolTip1.SetToolTip(checkBox3, "send messages to port");
             checkBox3.UseVisualStyleBackColor = true;
             // 
             // checkBox4
@@ -361,6 +374,7 @@
             checkBox4.Name = "checkBox4";
             checkBox4.Size = new Size(18, 17);
             checkBox4.TabIndex = 27;
+            toolTip1.SetToolTip(checkBox4, "send messages to port");
             checkBox4.UseVisualStyleBackColor = true;
             // 
             // textBox2
@@ -382,6 +396,7 @@
             button12.Name = "button12";
             button12.Size = new Size(30, 29);
             button12.TabIndex = 29;
+            toolTip1.SetToolTip(button12, "Autoscrolling on");
             button12.UseVisualStyleBackColor = true;
             button12.Click += button12_Click;
             // 
@@ -393,6 +408,7 @@
             button13.Name = "button13";
             button13.Size = new Size(30, 29);
             button13.TabIndex = 30;
+            toolTip1.SetToolTip(button13, "Clear");
             button13.UseVisualStyleBackColor = true;
             button13.Click += button13_Click;
             // 
@@ -470,6 +486,7 @@
             button15.Name = "button15";
             button15.Size = new Size(30, 29);
             button15.TabIndex = 37;
+            toolTip1.SetToolTip(button15, "Timestamps on");
             button15.UseVisualStyleBackColor = true;
             button15.Click += button15_Click;
             // 
@@ -482,6 +499,7 @@
             numericUpDown1.Name = "numericUpDown1";
             numericUpDown1.Size = new Size(43, 27);
             numericUpDown1.TabIndex = 38;
+            toolTip1.SetToolTip(numericUpDown1, "Number of graphs to open");
             numericUpDown1.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
             // button16
@@ -492,6 +510,7 @@
             button16.Name = "button16";
             button16.Size = new Size(32, 29);
             button16.TabIndex = 39;
+            toolTip1.SetToolTip(button16, "Open Graphs");
             button16.UseVisualStyleBackColor = true;
             button16.Click += button16_Click;
             // 
@@ -504,6 +523,7 @@
             numericUpDown2.Name = "numericUpDown2";
             numericUpDown2.Size = new Size(43, 27);
             numericUpDown2.TabIndex = 38;
+            toolTip1.SetToolTip(numericUpDown2, "Number of graphs to open");
             numericUpDown2.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
             // button17
@@ -514,6 +534,7 @@
             button17.Name = "button17";
             button17.Size = new Size(32, 29);
             button17.TabIndex = 39;
+            toolTip1.SetToolTip(button17, "Open Graphs");
             button17.UseVisualStyleBackColor = true;
             button17.Click += button17_Click;
             // 
@@ -526,6 +547,7 @@
             numericUpDown3.Name = "numericUpDown3";
             numericUpDown3.Size = new Size(43, 27);
             numericUpDown3.TabIndex = 38;
+            toolTip1.SetToolTip(numericUpDown3, "Number of graphs to open");
             numericUpDown3.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
             // button18
@@ -536,6 +558,7 @@
             button18.Name = "button18";
             button18.Size = new Size(32, 29);
             button18.TabIndex = 39;
+            toolTip1.SetToolTip(button18, "Open Graphs");
             button18.UseVisualStyleBackColor = true;
             button18.Click += button18_Click;
             // 
@@ -548,6 +571,7 @@
             numericUpDown4.Name = "numericUpDown4";
             numericUpDown4.Size = new Size(43, 27);
             numericUpDown4.TabIndex = 38;
+            toolTip1.SetToolTip(numericUpDown4, "Number of graphs to open");
             numericUpDown4.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
             // button19
@@ -558,6 +582,7 @@
             button19.Name = "button19";
             button19.Size = new Size(32, 29);
             button19.TabIndex = 39;
+            toolTip1.SetToolTip(button19, "Open Graphs");
             button19.UseVisualStyleBackColor = true;
             button19.Click += button19_Click;
             // 
@@ -670,5 +695,6 @@
         private Button button18;
         private NumericUpDown numericUpDown4;
         private Button button19;
+        private ToolTip toolTip1;
     }
 }
