@@ -1,4 +1,5 @@
 ﻿using ScottPlot;
+using ScottPlot.AxisLimitManagers;
 using ScottPlot.Colormaps;
 using ScottPlot.Plottables;
 using ScottPlot.WinForms;
@@ -18,7 +19,7 @@ namespace SerialPortMacros
     {
         private System.Windows.Forms.Timer timerPlot;
         private Stopwatch sw = new Stopwatch();
-        private double timeWindow = 30;
+        private double timeWindow = 10;
         private bool legend_on = true;
 
         // Ruolo della form
@@ -50,6 +51,8 @@ namespace SerialPortMacros
 
         public bool merging = false;
         public Form1 mainform;
+        public bool is_visible = true;
+
 
         public Form4(Form1 form1, bool masterFlag = false)
         {
@@ -58,6 +61,8 @@ namespace SerialPortMacros
             mainform = form1;
 
         }
+
+
 
         private void Form4_Load(object sender, EventArgs e)
         {
@@ -90,6 +95,7 @@ namespace SerialPortMacros
             {
                 logger_child1 = formsPlot1.Plot.Add.DataLogger();
                 logger_child1.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
+             //   logger_child1.ViewSlide();
                 items[0] = new LegendItem()
                 {
                     LineColor = Colors.Red,
@@ -102,6 +108,7 @@ namespace SerialPortMacros
 
                 logger_child2 = formsPlot1.Plot.Add.DataLogger();
                 logger_child2.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Green);
+                //   logger_child2.ViewSlide();
                 items[1] = new LegendItem()
                 {
                     LineColor = Colors.Green,
@@ -117,6 +124,7 @@ namespace SerialPortMacros
                 {
                     logger_child3 = formsPlot1.Plot.Add.DataLogger();
                     logger_child3.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Orange);
+                    //  logger_child3.ViewSlide();
                     items[2] = new LegendItem()
                     {
                         LineColor = Colors.Orange,
@@ -131,6 +139,7 @@ namespace SerialPortMacros
                 {
                     logger_child4 = formsPlot1.Plot.Add.DataLogger();
                     logger_child4.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Purple);
+                    //    logger_child4.ViewSlide();
                     items[3] = new LegendItem()
                     {
                         LineColor = Colors.Purple,
@@ -148,8 +157,11 @@ namespace SerialPortMacros
             {
                 logger_main = formsPlot1.Plot.Add.DataLogger();
                 logger_main.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Blue);
+                //   logger_main.ViewSlide();
             }
         }
+
+
 
         public void AddDataPoint(double value)
         {
@@ -162,6 +174,7 @@ namespace SerialPortMacros
             }
             MasterForm?.AddChildData(this, now, value);
         }
+
 
         public void AddChildData(Form4 child, double t, double y)
         {
@@ -233,11 +246,17 @@ namespace SerialPortMacros
             }
             else
             {
+                int picky = 0;
                 while (mainQueue.TryDequeue(out var p))
                 {
                     try
                     {
-                        logger_main.Add(p.t, p.y);
+                        picky++;
+                        if (picky == 5) //sistemare, vorrei che avesse senso in base al tempo
+                        {
+                            logger_main.Add(p.t, p.y);
+                            picky = 0;
+                        }
                     }
                     catch { }
                     updated = true;
@@ -246,11 +265,9 @@ namespace SerialPortMacros
 
             if (updated)
             {
-                timeWindow = (double)numericUpDown1.Value;
                 double xMax = now;
                 double xMin = now - timeWindow;
                 formsPlot1.Plot.Axes.ContinuouslyAutoscale = false;
-                formsPlot1.Plot.Axes.SetLimitsX(xMin, xMax);
 
                 if (isMaster)
                 {
@@ -263,10 +280,11 @@ namespace SerialPortMacros
                 {
                     logger_main.Data.Coordinates.RemoveAll(c => c.X < now - timeWindow);
                 }
-
+                formsPlot1.Plot.Axes.SetLimitsX(xMin, xMax);
                 formsPlot1.Refresh();
             }
         }
+
 
         private void button1_Click(object sender, EventArgs e) // unisci
         {
@@ -290,22 +308,38 @@ namespace SerialPortMacros
             {
                 try
                 {
-                    child1?.Show();
+                    if (child1 != null)
+                    {
+                        child1?.Show();
+                        child1.is_visible = true;
+                    }
                 }
                 catch { } //if the user closes manually the window this would throw an error, it's not really important
                 try
                 {
-                    child2?.Show();
+                    if (child2 != null)
+                    {
+                        child2?.Show();
+                        child2.is_visible = true;
+                    }
                 }
                 catch { }
                 try
                 {
-                    child3?.Show();
+                    if (child3 != null)
+                    {
+                        child3?.Show();
+                        child3.is_visible = true;
+                    }
                 }
                 catch { }
                 try
                 {
-                    child4?.Show();
+                    if (child4 != null)
+                    {
+                        child4?.Show();
+                        child4.is_visible = true;
+                    }
                 }
                 catch { }
             }
@@ -366,5 +400,71 @@ namespace SerialPortMacros
                 catch { }
             }
         }
+
+        private void formsPlot1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void numericUpDown1_ValueChanged(object sender, EventArgs e)
+        {
+            timeWindow = (double)numericUpDown1.Value;
+        }
     }
+    public class CircularPlotBuffer
+    {
+        public readonly double[] Xs;
+        public readonly double[] Ys;
+
+        private int index = 0;
+        private bool filled = false;
+
+        public CircularPlotBuffer(int capacity)
+        {
+            Xs = new double[capacity];
+            Ys = new double[capacity];
+        }
+
+        public void Add(double x, double y)
+        {
+            Xs[index] = x;
+            Ys[index] = y;
+
+            index++;
+            if (index >= Xs.Length)
+            {
+                index = 0;
+                filled = true;
+            }
+        }
+
+        public int Count => filled ? Xs.Length : index;
+        public int Start => filled ? index : 0;
+        public void CopyOrdered(double[] xsDest, double[] ysDest)
+        {
+            int count = Count;
+            int start = Start;
+
+            if (count == 0)
+                return;
+
+            if (!filled)
+            {
+                Array.Copy(Xs, xsDest, count);
+                Array.Copy(Ys, ysDest, count);
+            }
+            else
+            {
+                int rightLen = Xs.Length - start;
+
+                Array.Copy(Xs, start, xsDest, 0, rightLen);
+                Array.Copy(Ys, start, ysDest, 0, rightLen);
+
+                Array.Copy(Xs, 0, xsDest, rightLen, start);
+                Array.Copy(Ys, 0, ysDest, rightLen, start);
+            }
+        }
+    }
+
+
 }

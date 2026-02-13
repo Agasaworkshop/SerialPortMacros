@@ -4,7 +4,9 @@ using System.Text;
 using WindowsInput;
 using System.Globalization;
 using System.Collections.Concurrent;
-
+using System.Text.RegularExpressions; // Regex, Match
+using System.Linq;                   // Cast, Select, ToList
+using System.Globalization;          // CultureInfo
 
 namespace SerialPortMacros
 {
@@ -43,10 +45,13 @@ namespace SerialPortMacros
         private Form4 merging_form = null;
         public Dictionary<string, List<Form4>> openGraphs = new Dictionary<string, List<Form4>>();
         private System.Windows.Forms.Timer _uiTimer;
+        private readonly Action<string, string, bool, bool, bool, bool, Color> _processUiAction;
+
 
         public Form1()
         {
             InitializeComponent();
+            _processUiAction = UiProcess;
         }
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -57,8 +62,8 @@ namespace SerialPortMacros
             setports();
             ScanScripts();
             _uiTimer = new System.Windows.Forms.Timer();
-            _uiTimer.Interval = 20;
-            _uiTimer.Tick += UiTimer_Tick;
+            _uiTimer.Interval = 100;
+            _uiTimer.Tick += uiTimer_Tick;
             _uiTimer.Start();
         }
 
@@ -320,10 +325,25 @@ namespace SerialPortMacros
                 }
             }
         }
-        const int MaxChars = 100_000;
+        const int MaxChars = 20000;
+
+        private readonly ConcurrentQueue<Textbox_entry> _pendingLines = new();
+
+        string timestamp;
+
+        private readonly Queue<(string Text, Color Color)> _logBuffer = new();
+        private int _currentChars = 0;
+
+        private bool _needsRedraw = false;
+
 
         private void aggiungi_a_textbox2(string inputText, string usr, Color color)
         {
+            if (textBox2.TextLength > MaxChars)
+            {
+                textBox2.Text = "";   // NON Clear()
+            }
+
             string line;
             if (time_log)
             {
@@ -331,42 +351,65 @@ namespace SerialPortMacros
                 line = $"{timestamp} | {usr}: {inputText}";
             }
             else
-                line = $"{usr}: {inputText}";
-
-            // Testo da aggiungere (con newline se serve)
-            string toAppend = (textBox2.TextLength == 0)
-                ? line
-                : Environment.NewLine + line;
-
-            // --- LIMITE DI CARATTERI ---
-            int newLength = textBox2.TextLength + toAppend.Length;
-            if (newLength > MaxChars)
             {
-                int excess = newLength - MaxChars;
-
-                // Rimuove dall'inizio i caratteri in eccesso
-                textBox2.Select(0, excess);
-                textBox2.SelectedText = "";
+                line = $"{usr}: {inputText}";
             }
 
-            // --- APPEND COLORATO ---
-            textBox2.SelectionStart = textBox2.TextLength;
-            textBox2.SelectionLength = 0;
-            textBox2.SelectionColor = color;
+            if (textBox2.TextLength > 0)
+                line = Environment.NewLine + line;
 
-            textBox2.AppendText(toAppend);
+            textBox2.SelectionStart = textBox2.TextLength;
+            textBox2.SelectionColor = color;
+            textBox2.AppendText(line);
 
             if (is_locked)
                 textBox2.ScrollToCaret();
         }
 
 
-        private void text_color(int start, int end, Color color)
+
+        private void RedrawRichTextBox()
         {
-            textBox2.Select(start, end);
-            textBox2.SelectionColor = color;
-            textBox2.Select(start + end, start + end);
+            int selStart = textBox2.SelectionStart;
+            int selLength = textBox2.SelectionLength;
+
+            textBox2.SuspendLayout();
+            textBox2.Clear();
+
+            foreach (var item in _logBuffer)
+            {
+                textBox2.SelectionStart = textBox2.TextLength;
+                textBox2.SelectionColor = item.Color;
+                textBox2.AppendText(item.Text);
+            }
+
+            // Ripristina posizione utente
+            textBox2.SelectionStart = Math.Min(selStart, textBox2.TextLength);
+            textBox2.SelectionLength = selLength;
+
+            textBox2.ResumeLayout();
         }
+
+        private void uiTimer_Tick(object sender, EventArgs e)
+        {
+            if (!_needsRedraw)
+                return;
+
+            _needsRedraw = false;
+
+            // Rimuovi dal buffer le righe in eccesso
+            while (_currentChars > MaxChars && _logBuffer.Count > 0)
+            {
+                var removed = _logBuffer.Dequeue();
+                _currentChars -= removed.Text.Length;
+            }
+
+            RedrawRichTextBox();
+        }
+
+
+
+
         private void comboBox4_SelectedIndexChanged(object sender, EventArgs e)
         {
 
@@ -412,21 +455,21 @@ namespace SerialPortMacros
             if (opn_p4 && checkBox4.Checked)
                 port4.WriteLine(output);
         }
-        private async void SerialPort_DataReceived1(object sender, SerialDataReceivedEventArgs e)
+        private void SerialPort_DataReceived1(object sender, SerialDataReceivedEventArgs e)
         {
-            Serial_port_data2(port1, 1, true, false, false, false, opn_p1, checkBox1, Color.Red, mes1, checkBox8.Checked);
+            Serial_port_data2(port1, 1, true, false, false, false, opn_p1, checkBox1, Color.Red, mes1, port1Enabled);
         }
-        private async void SerialPort_DataReceived2(object sender, SerialDataReceivedEventArgs e)
+        private void SerialPort_DataReceived2(object sender, SerialDataReceivedEventArgs e)
         {
-            Serial_port_data2(port2, 2, false, true, false, false, opn_p2, checkBox2, Color.Blue, mes2, checkBox7.Checked);
+            Serial_port_data2(port2, 2, false, true, false, false, opn_p2, checkBox2, Color.Blue, mes2, port2Enabled);
         }
-        private async void SerialPort_DataReceived3(object sender, SerialDataReceivedEventArgs e)
+        private void SerialPort_DataReceived3(object sender, SerialDataReceivedEventArgs e)
         {
-            Serial_port_data2(port3, 3, false, false, true, false, opn_p3, checkBox3, Color.Yellow, mes3, checkBox6.Checked);
+            Serial_port_data2(port3, 3, false, false, true, false, opn_p3, checkBox3, Color.Yellow, mes3, port3Enabled);
         }
-        private async void SerialPort_DataReceived4(object sender, SerialDataReceivedEventArgs e)
+        private void SerialPort_DataReceived4(object sender, SerialDataReceivedEventArgs e)
         {
-            Serial_port_data2(port4, 4, false, false, false, true, opn_p4, checkBox4, Color.Green, mes4, checkBox5.Checked);
+            Serial_port_data2(port4, 4, false, false, false, true, opn_p4, checkBox4, Color.Green, mes4, port4Enabled);
         }
         public void ScanScripts()
         {
@@ -649,91 +692,73 @@ namespace SerialPortMacros
             }
         }
 
-        private int _scanIndex = 0;
-
-        private readonly ConcurrentQueue<SerialMessage> _messageQueue = new ConcurrentQueue<SerialMessage>();
 
         public void Serial_port_data2(
-            SerialPort port, int num,
-            bool po1, bool po2, bool po3, bool po4,
-            bool opn, CheckBox checkbox, Color color,
-            StringBuilder sb, bool log)
+        SerialPort port, int num,
+        bool po1, bool po2, bool po3, bool po4,
+        bool opn, CheckBox checkbox, Color color,
+        StringBuilder sb, bool log)
         {
-            if (port.BytesToRead == 0)
-                return;
             sb.Append(port.ReadExisting());
 
-
-            for (int i = _scanIndex; i < sb.Length; i++)
+            for (int i = 0; i < sb.Length; i++)
             {
-                // controlla se il carattere è terminatore
-                if (sb[i] == '\n' || sb[i] == '\r')
+                char c = sb[i];
+
+                if (c == '\n' || c == '\r')
                 {
-                    string mess = sb.ToString(_scanIndex, i - _scanIndex).Trim();
-                    _scanIndex = i + 1;
+                    int len = i;
 
-                    if (string.IsNullOrEmpty(mess))
-                        continue; // evita stringhe vuote
-
-                    if (opn)
+                    if (len == 0)
                     {
-                        var forms = openGraphs.ContainsKey(port.PortName) ? openGraphs[port.PortName] : null;
-
-                        var item = new SerialMessage
-                        {
-                            Mess = mess,
-                            Forms = forms,
-                            Po1 = po1,
-                            Po2 = po2,
-                            Po3 = po3,
-                            Po4 = po4,
-                            PortName = port.PortName,
-                            Color = color,
-                            Logging = log
-                        };
-
-                        _messageQueue.Enqueue(item);
+                        sb.Remove(0, 1);
+                        i--;
+                        continue;
                     }
 
+                    string mess = sb.ToString(0, len).Trim();
 
+                    sb.Remove(0, i + 1);
+                    i = -1;
+
+                    if (mess.Length == 0)
+                        continue;
+
+                    ProcessMessage(mess, port.PortName, po1, po2, po3, po4, opn, color);
                 }
             }
-
-            if (_scanIndex > 0)
-            {
-                sb.Remove(0, _scanIndex);
-                _scanIndex = 0;
-            }
         }
-
-        private void UiTimer_Tick(object sender, EventArgs e)
+        private void ProcessMessage(
+        string mess, string portName,
+        bool po1, bool po2, bool po3, bool po4,
+        bool opn, Color color)
         {
-            while (_messageQueue.TryDequeue(out var item))
+            if (!opn) return;
+
+            BeginInvoke(_processUiAction, new object[]
+            { mess, portName, po1, po2, po3, po4, color });
+
+            if (openGraphs.TryGetValue(portName, out var forms))
             {
-                var mess = item.Mess;
-                var forms = item.Forms;
-
-                // Aggiornamento UI
-                if (item.Logging)
-                    write_logs(item.Po1, item.Po2, item.Po3, item.Po4, mess, item.PortName);
-
-                aggiungi_a_textbox2(mess, item.PortName, item.Color);
-                scriptcheck(mess, item.Po1, item.Po2, item.Po3, item.Po4);
-
-                // Aggiornamento grafici
-                if (forms != null)
+                var nums = ParseNumbers(mess);
+                for (int i = 0; i < forms.Count && i < nums.Count; i++)
                 {
-                    var nums = ParseNumbers(mess);
-                    for (int i = 0; i < forms.Count; i++)
-                    {
-                        if (i < nums.Count)
-                            forms[i].AddDataPoint(nums[i]);
-                    }
+                    forms[i].AddDataPoint(nums[i]);
                 }
             }
         }
 
 
+
+        private void UiProcess(string mess, string portName,
+        bool po1, bool po2, bool po3, bool po4, Color color)
+        {
+            if (logging)
+                write_logs(po1, po2, po3, po4, mess, portName);
+
+            aggiungi_a_textbox2(mess, portName, color);
+            scriptcheck(mess, po1, po2, po3, po4);
+        }
 
         public static List<double> ParseNumbers(string s)
         {
@@ -1085,6 +1110,7 @@ namespace SerialPortMacros
                 s.MasterForm = master;
                 s.reset_merge();
                 s.Visible = false; // non mostrare i vecchi grafici
+                s.is_visible = false;
             }
 
 
@@ -1100,6 +1126,27 @@ namespace SerialPortMacros
         {
             looking_for_merge = false;
             merging_form = null;
+        }
+        volatile bool port1Enabled;
+        private void checkBox8_CheckedChanged(object sender, EventArgs e)
+        {
+            port1Enabled = checkBox8.Checked;
+        }
+        volatile bool port2Enabled;
+
+        private void checkBox7_CheckedChanged(object sender, EventArgs e)
+        {
+            port2Enabled = checkBox7.Checked;
+        }
+        volatile bool port3Enabled;
+        private void checkBox6_CheckedChanged(object sender, EventArgs e)
+        {
+            port3Enabled = checkBox6.Checked;
+        }
+        volatile bool port4Enabled;
+        private void checkBox5_CheckedChanged(object sender, EventArgs e)
+        {
+            port4Enabled = checkBox5.Checked;
         }
     }
 
@@ -1121,16 +1168,19 @@ namespace SerialPortMacros
         public string path;
         public bool active;
     }
-    public class SerialMessage
+
+    public class Textbox_entry
     {
-        public string Mess { get; set; } = "";
-        public List<Form4>? Forms { get; set; } = null;
-        public bool Po1 { get; set; }
-        public bool Po2 { get; set; }
-        public bool Po3 { get; set; }
-        public bool Po4 { get; set; }
-        public string PortName { get; set; } = "";
-        public Color Color { get; set; }
-        public bool Logging { get; set; }
+        public string inputText;
+        public string usr;
+        public Color color;
+        public string line;
+        public Textbox_entry(string in_text, string lin, string user, Color clr)
+        {
+            inputText = in_text;
+            line = lin;
+            usr = user;
+            color = clr;
+        }
     }
 }

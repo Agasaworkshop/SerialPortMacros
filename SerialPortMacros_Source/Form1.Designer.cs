@@ -381,6 +381,7 @@
             // 
             textBox2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             textBox2.BackColor = Color.White;
+            textBox2.Enabled = false;
             textBox2.Location = new Point(12, 12);
             textBox2.Name = "textBox2";
             textBox2.ReadOnly = true;
@@ -422,6 +423,7 @@
             checkBox5.TabIndex = 31;
             checkBox5.Text = "log";
             checkBox5.UseVisualStyleBackColor = true;
+            checkBox5.CheckedChanged += checkBox5_CheckedChanged;
             // 
             // checkBox6
             // 
@@ -433,6 +435,7 @@
             checkBox6.TabIndex = 32;
             checkBox6.Text = "log";
             checkBox6.UseVisualStyleBackColor = true;
+            checkBox6.CheckedChanged += checkBox6_CheckedChanged;
             // 
             // checkBox7
             // 
@@ -444,6 +447,7 @@
             checkBox7.TabIndex = 33;
             checkBox7.Text = "log";
             checkBox7.UseVisualStyleBackColor = true;
+            checkBox7.CheckedChanged += checkBox7_CheckedChanged;
             // 
             // checkBox8
             // 
@@ -455,6 +459,7 @@
             checkBox8.TabIndex = 34;
             checkBox8.Text = "log";
             checkBox8.UseVisualStyleBackColor = true;
+            checkBox8.CheckedChanged += checkBox8_CheckedChanged;
             // 
             // button14
             // 

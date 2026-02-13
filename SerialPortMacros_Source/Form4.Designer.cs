@@ -49,6 +49,7 @@
             formsPlot1.Name = "formsPlot1";
             formsPlot1.Size = new Size(763, 397);
             formsPlot1.TabIndex = 0;
+            formsPlot1.Load += formsPlot1_Load;
             // 
             // numericUpDown1
             // 
@@ -59,7 +60,8 @@
             numericUpDown1.Name = "numericUpDown1";
             numericUpDown1.Size = new Size(129, 27);
             numericUpDown1.TabIndex = 1;
-            numericUpDown1.Value = new decimal(new int[] { 30, 0, 0, 0 });
+            numericUpDown1.Value = new decimal(new int[] { 10, 0, 0, 0 });
+            numericUpDown1.ValueChanged += numericUpDown1_ValueChanged;
             // 
             // label1
             // 
