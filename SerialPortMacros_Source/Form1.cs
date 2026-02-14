@@ -645,19 +645,22 @@ namespace SerialPortMacros
         public void Reply(Script c_script)
         {
             aggiungi_a_textbox2(c_script.reply, c_script.name, Color.Brown);
-            if (c_script.p1_w == true && opn_p1 && checkBox1.Checked)
+            if (c_script.p1_w == true && opn_p1)
             {
                 port1.WriteLine(c_script.reply);
             }
-            if (c_script.p2_w == true && opn_p2 && checkBox2.Checked)
+            if (c_script.p2_w == true && opn_p2)
             {
                 port2.WriteLine(c_script.reply);
             }
-            if (c_script.p3_w == true && opn_p3 && checkBox3.Checked)
+            if (c_script.p3_w == true && opn_p3)
             {
                 port3.WriteLine(c_script.reply);
             }
-            if (c_script.p4_w == true && opn_p4 && checkBox4.Checked) ;
+            if (c_script.p4_w == true && opn_p4)
+            {
+                port4.WriteLine(c_script.reply);
+            }
         }
 
         private void button12_Click(object sender, EventArgs e)
