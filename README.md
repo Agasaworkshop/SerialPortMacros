@@ -88,3 +88,4 @@ In the keypress text box you can:
   7)If you set the macro key and keypress to "===" and send through the serial port a message beginning in "===" followed by a keypress the program will interpret and press that key (all previous formats apply)
       example: "===+A" sent by your device through the serial port will make the program start pressing the A key;
 
+  8)If you set the macro key to "*" you will react to every message regardless of the content (I needed this mostly for reply)
