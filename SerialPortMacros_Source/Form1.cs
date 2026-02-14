@@ -514,7 +514,7 @@ namespace SerialPortMacros
             {
                 foreach (Script script in scripts)
                 {
-                    if ((script.active && ((script.key == data) || ((script.key == "===") && (data[0] == '=') && (data[1] == '=') && (data[2] == '='))) && ((p1 == script.p1 == true) || (p2 == script.p2 == true) || (p3 == script.p3 == true) || (p4 == script.p4 == true))))
+                    if ((script.active && ((script.key == data) || ((script.key == "===") && (data[0] == '=') && (data[1] == '=') && (data[2] == '='))) || (script.key == "*") && ((p1 == script.p1 == true) || (p2 == script.p2 == true) || (p3 == script.p3 == true) || (p4 == script.p4 == true))))
                         if (script.trigger == 1)
                         {
                             Thread inputThread = new Thread(() =>
@@ -528,6 +528,7 @@ namespace SerialPortMacros
                 }
             }
         }
+
         public void scr_KeyPress(string car, string data)
         {
             int time = 0;
