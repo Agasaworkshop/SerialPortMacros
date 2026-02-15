@@ -36,25 +36,25 @@ namespace SerialPortMacros
         }
         private void CheckedListBox1_ItemCheck(object sender, ItemCheckEventArgs e)
         {
-            string[] newfile;
-            Script c_script = new Script();
-            int ind = comboBox1.SelectedIndex;
-            if (ind == -1)
+            if (e.Index < 0 || e.Index >= checkedListBox1.Items.Count)
                 return;
-            c_script = (Script)checkedListBox1.SelectedItem;
-            form1.wait(100);
-            if (checkedListBox1.GetItemCheckState(ind) == CheckState.Checked)
+
+            Script c_script = checkedListBox1.Items[e.Index] as Script;
+            if (c_script == null)
+                return;
+
+            c_script.active = (e.NewValue == CheckState.Checked);
+
+            var lines = File.ReadAllLines(c_script.path);
+
+            if (lines.Length > 0)
             {
-                c_script.active = false;
+                lines[lines.Length - 1] = c_script.active.ToString();
+                File.WriteAllLines(c_script.path,
+                    lines.Where(l => !string.IsNullOrWhiteSpace(l)));
             }
-            else
-                c_script.active = true;
-            newfile = File.ReadAllLines(c_script.path);
-            int len = newfile.Length - 1;
-            newfile[len] = c_script.active.ToString();
-            newfile = newfile.Where(str => !string.IsNullOrWhiteSpace(str)).ToArray();
-            File.WriteAllLines(c_script.path, newfile);
         }
+
 
         private void button2_Click(object sender, EventArgs e)
         {

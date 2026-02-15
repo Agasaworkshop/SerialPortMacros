@@ -22,17 +22,17 @@ namespace SerialPortMacros
         private double timeWindow = 10;
         private bool legend_on = true;
 
-        // Ruolo della form
+
         public bool isMaster = false;
 
-        // Form base: riferimento al master (facoltativo)
+
         public Form4 MasterForm { get; set; } = null;
 
-        // Queue e logger per form base
+
         private ConcurrentQueue<(double t, double y)> mainQueue = new ConcurrentQueue<(double t, double y)>();
         private DataLogger logger_main;
 
-        // Queue e logger per form master (4 slot)
+
         private ConcurrentQueue<(double t, double y)> child1Queue = new ConcurrentQueue<(double t, double y)>();
         private ConcurrentQueue<(double t, double y)> child2Queue = new ConcurrentQueue<(double t, double y)>();
         private ConcurrentQueue<(double t, double y)> child3Queue = new ConcurrentQueue<(double t, double y)>();
@@ -246,17 +246,11 @@ namespace SerialPortMacros
             }
             else
             {
-                int picky = 0;
                 while (mainQueue.TryDequeue(out var p))
                 {
                     try
-                    {
-                        picky++;
-                        if (picky == 5) //sistemare, vorrei che avesse senso in base al tempo
-                        {
-                            logger_main.Add(p.t, p.y);
-                            picky = 0;
-                        }
+                    { 
+                        logger_main.Add(p.t, p.y);
                     }
                     catch { }
                     updated = true;
