@@ -325,11 +325,8 @@ namespace SerialPortMacros
                 }
             }
         }
-        const int MaxChars = 20000;
+        const int MaxChars = 30000;
 
-        private readonly ConcurrentQueue<Textbox_entry> _pendingLines = new();
-
-        string timestamp;
 
         private readonly Queue<(string Text, Color Color)> _logBuffer = new();
         private int _currentChars = 0;
@@ -339,9 +336,11 @@ namespace SerialPortMacros
 
         private void aggiungi_a_textbox2(string inputText, string usr, Color color)
         {
+            if (!is_locked) { return; }
+
             if (textBox2.TextLength > MaxChars)
             {
-                textBox2.Text = "";   // NON Clear()
+                textBox2.Text = "";  
             }
 
             string line;
@@ -670,6 +669,7 @@ namespace SerialPortMacros
                 is_locked = false;
                 toolTip1.SetToolTip(button12, "AutoScrolling off");
                 button12.Image = Properties.Resources.Unlock;
+                textBox2.Enabled = true;
 
             }
             else
@@ -677,6 +677,7 @@ namespace SerialPortMacros
                 is_locked = true;
                 button12.Image = Properties.Resources.Lock;
                 toolTip1.SetToolTip(button12, "AutoScrolling on");
+                textBox2.Enabled = false;
             }
 
         }
