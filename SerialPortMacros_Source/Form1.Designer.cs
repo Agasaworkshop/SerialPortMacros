@@ -111,7 +111,10 @@
             textBox1.Name = "textBox1";
             textBox1.Size = new Size(620, 27);
             textBox1.TabIndex = 2;
+            textBox1.TextChanged += textBox1_TextChanged;
+            textBox1.KeyDown += textBox1_KeyDown;
             textBox1.KeyPress += textBox1_Keypress;
+            textBox1.KeyUp += textBox1_KeyUp;
             // 
             // textBox3
             // 
@@ -207,6 +210,7 @@
             comboBox2.Name = "comboBox2";
             comboBox2.Size = new Size(71, 28);
             comboBox2.TabIndex = 11;
+            comboBox2.SelectionChangeCommitted += comboBox2_SelectionChangeCommitted;
             comboBox2.Click += comboBox2_Click;
             comboBox2.MouseClick += comboBox2_MouseClick;
             // 
@@ -219,6 +223,7 @@
             comboBox1.Name = "comboBox1";
             comboBox1.Size = new Size(71, 28);
             comboBox1.TabIndex = 12;
+            comboBox1.SelectionChangeCommitted += comboBox1_SelectionChangeCommitted;
             comboBox1.Click += comboBox1_Click;
             // 
             // comboBox3
@@ -230,6 +235,7 @@
             comboBox3.Name = "comboBox3";
             comboBox3.Size = new Size(71, 28);
             comboBox3.TabIndex = 13;
+            comboBox3.SelectionChangeCommitted += comboBox3_SelectionChangeCommitted;
             comboBox3.Click += comboBox3_Click;
             // 
             // comboBox4
@@ -242,6 +248,7 @@
             comboBox4.Size = new Size(71, 28);
             comboBox4.TabIndex = 14;
             comboBox4.SelectedIndexChanged += comboBox4_SelectedIndexChanged;
+            comboBox4.SelectionChangeCommitted += comboBox4_SelectionChangeCommitted;
             comboBox4.Click += comboBox4_Click;
             // 
             // label1

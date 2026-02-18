@@ -89,19 +89,37 @@ namespace SerialPortMacros
             Form3 macro_form = new Form3(this);
             macro_form.ShowDialog();
         }
+
+        private List<string> commandHistory = new List<string>();
+        private int historyIndex = 0; // 0 = textbox normale (nessuna history attiva)
+        private const int maxHistory = 50;
+
         private void textBox1_Keypress(object sender, KeyPressEventArgs e)
         {
             if (e.KeyChar == (char)Keys.Enter)
             {
                 e.Handled = true;
+
                 string inputText = textBox1.Text;
+
+                if (!string.IsNullOrWhiteSpace(inputText))
+                {
+                    // Aggiunge alla history
+                    commandHistory.Add(inputText);
+
+                    // Mantieni solo gli ultimi 50
+                    if (commandHistory.Count > maxHistory)
+                        commandHistory.RemoveAt(0);
+                }
+
+                historyIndex = 0; // reset indice
+
                 aggiungi_a_textbox2(inputText, "You", Color.Black);
                 textBox1.Text = "";
                 Sendtoports(inputText);
+
                 if (logging)
-                {
                     Task.Run(() => LogUserInput(inputText));
-                }
             }
         }
         private void LogUserInput(string inputText)
@@ -303,9 +321,11 @@ namespace SerialPortMacros
                 setting_form.ShowDialog();
             }
         }
+
         private void Searchports(int n)
         {
             ComboBox c1 = null;
+
             if (n == 1)
                 c1 = comboBox2;
             else if (n == 2)
@@ -314,17 +334,27 @@ namespace SerialPortMacros
                 c1 = comboBox3;
             else if (n == 4)
                 c1 = comboBox4;
+
             if (c1 != null)
             {
-                c1.Items.Clear();
+
+                string previouslySelected = c1.SelectedItem as string;
+
 
                 string[] availablePorts = SerialPort.GetPortNames();
-                foreach (string portName in availablePorts)
+
+                c1.Items.Clear();
+                c1.Items.AddRange(availablePorts);
+
+
+                if (!string.IsNullOrEmpty(previouslySelected) &&
+                    availablePorts.Contains(previouslySelected))
                 {
-                    c1.Items.Add(portName);
+                    c1.SelectedItem = previouslySelected;
                 }
             }
         }
+
         const int MaxChars = 30000;
 
 
@@ -340,7 +370,7 @@ namespace SerialPortMacros
 
             if (textBox2.TextLength > MaxChars)
             {
-                textBox2.Text = "";  
+                textBox2.Text = "";
             }
 
             string line;
@@ -446,13 +476,28 @@ namespace SerialPortMacros
         {
 
             if (opn_p1 && checkBox1.Checked)
-                port1.WriteLine(output);
+                try
+                {
+                    port1.WriteLine(output);
+                }
+                catch { }
             if (opn_p2 && checkBox2.Checked)
-                port2.WriteLine(output);
+                try { 
+                    port2.WriteLine(output);
+                }
+                catch { }
             if (opn_p3 && checkBox3.Checked)
-                port3.WriteLine(output);
+                try
+                {
+                    port3.WriteLine(output);
+                }
+                catch { }
             if (opn_p4 && checkBox4.Checked)
-                port4.WriteLine(output);
+                try
+                {
+                    port4.WriteLine(output);
+                } 
+                catch { }
         }
         private void SerialPort_DataReceived1(object sender, SerialDataReceivedEventArgs e)
         {
@@ -1153,7 +1198,115 @@ namespace SerialPortMacros
         {
             port4Enabled = checkBox5.Checked;
         }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            if (historyIndex != 0 && textBox1.Focused && change_due_to_key == false)
+            {
+                historyIndex = 0;
+            }
+            change_due_to_key = false;
+        }
+        bool change_due_to_key = false;
+
+        private void textBox1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Up)
+            {
+                e.SuppressKeyPress = true; // evita beep o comportamento default
+
+                if (commandHistory.Count == 0)
+                    return;
+
+                historyIndex++;
+
+                if (historyIndex > commandHistory.Count)
+                    historyIndex = 1;
+                change_due_to_key = true;
+                textBox1.Text = commandHistory[commandHistory.Count - historyIndex];
+                textBox1.SelectionStart = textBox1.Text.Length;
+            }
+            else if (e.KeyCode == Keys.Down)
+            {
+                e.SuppressKeyPress = true;
+
+                if (commandHistory.Count == 0)
+                    return;
+
+                if (historyIndex > 0)
+                {
+                    historyIndex--;
+
+                    if (historyIndex == 0)
+                        textBox1.Text = "";
+                    else
+                    {
+                        change_due_to_key = true;
+                        textBox1.Text = commandHistory[commandHistory.Count - historyIndex];
+                    }
+
+                    textBox1.SelectionStart = textBox1.Text.Length;
+                }
+            }
+        }
+
+
+        private void textBox1_KeyUp(object sender, KeyEventArgs e)
+        {
+        }
+
+        private void comboBox2_SelectionChangeCommitted(object sender, EventArgs e)
+        {
+        if (opn_p1 == true) {
+            if (port1.PortName == comboBox2.SelectedItem?.ToString())
+                return;
+            port1.Close();
+            button3.Image = Properties.Resources.AddConnection;
+            toolTip1.SetToolTip(button3, "Connect");
+            opn_p1 = false;
+            }
+        }
+
+        private void comboBox1_SelectionChangeCommitted(object sender, EventArgs e)
+        {
+        if (opn_p2 == true)
+            {
+                if (port2.PortName == comboBox1.SelectedItem?.ToString())
+                    return;
+                port2.Close();
+                button5.Image = Properties.Resources.AddConnection;
+                toolTip1.SetToolTip(button5, "Connect");
+                opn_p2 = false;
+            }
+        }
+
+        private void comboBox3_SelectionChangeCommitted(object sender, EventArgs e)
+        {
+        if (opn_p3 == true)
+            {
+                if (port3.PortName == comboBox3.SelectedItem?.ToString())
+                    return;
+                port3.Close();
+                button4.Image = Properties.Resources.AddConnection;
+                toolTip1.SetToolTip(button4, "Connect");
+                opn_p3 = false;
+            }
+        }
+
+        private void comboBox4_SelectionChangeCommitted(object sender, EventArgs e)
+        {
+        if (opn_p4 == true)
+            {
+                if (port4.PortName == comboBox4.SelectedItem?.ToString())
+                    return;
+                port4.Close();
+                button6.Image = Properties.Resources.AddConnection;
+                toolTip1.SetToolTip(button6, "Connect");
+                opn_p4 = false;
+            }
+        }
     }
+
 
     public class Script
     {
