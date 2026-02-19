@@ -388,13 +388,13 @@
             // 
             textBox2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             textBox2.BackColor = Color.White;
-            textBox2.Enabled = false;
             textBox2.Location = new Point(12, 12);
             textBox2.Name = "textBox2";
             textBox2.ReadOnly = true;
             textBox2.Size = new Size(776, 318);
             textBox2.TabIndex = 28;
             textBox2.Text = "";
+            textBox2.MouseDown += textBox2_MouseDown;
             // 
             // button12
             // 

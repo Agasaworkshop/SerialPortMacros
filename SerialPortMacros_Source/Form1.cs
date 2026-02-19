@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.Ports;
 using System.Text;
 using WindowsInput;
@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions; // Regex, Match
 using System.Linq;                   // Cast, Select, ToList
 using System.Globalization;          // CultureInfo
+using System.Windows.Forms;
 
 namespace SerialPortMacros
 {
@@ -65,6 +66,7 @@ namespace SerialPortMacros
             _uiTimer.Interval = 100;
             _uiTimer.Tick += uiTimer_Tick;
             _uiTimer.Start();
+            textBox1.TabStop = false;
         }
 
 
@@ -363,36 +365,54 @@ namespace SerialPortMacros
 
         private bool _needsRedraw = false;
 
-
+        private bool stop_adding = false;
         private void aggiungi_a_textbox2(string inputText, string usr, Color color)
         {
-            if (!is_locked) { return; }
-
-            if (textBox2.TextLength > MaxChars)
+            if (!stop_adding)
             {
-                textBox2.Text = "";
+                int selStart = textBox2.SelectionStart;
+                int selLength = textBox2.SelectionLength;
+                bool wasAtEnd = selStart == textBox2.TextLength;
+
+                if (textBox2.TextLength > MaxChars)
+                {
+                    if (!is_locked)
+                    {
+                        stop_adding = true;
+                    }else 
+                        textBox2.Text = "";
+                }
+
+                string line;
+                if (time_log)
+                {
+                    string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+                    line = $"{timestamp} | {usr}: {inputText}";
+                }
+                else
+                {
+                    line = $"{usr}: {inputText}";
+                }
+
+                if (textBox2.TextLength > 0)
+                    line = Environment.NewLine + line;
+
+                textBox2.SelectionStart = textBox2.TextLength;
+                textBox2.SelectionLength = 0;
+                textBox2.SelectionColor = color;
+                textBox2.AppendText(line);
+
+                if (is_locked)
+                {
+                    textBox2.ScrollToCaret();
+                }
+                else
+                {
+                    // Ripristina posizione utente
+                    textBox2.SelectionStart = selStart;
+                    textBox2.SelectionLength = selLength;
+                }
             }
-
-            string line;
-            if (time_log)
-            {
-                string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
-                line = $"{timestamp} | {usr}: {inputText}";
-            }
-            else
-            {
-                line = $"{usr}: {inputText}";
-            }
-
-            if (textBox2.TextLength > 0)
-                line = Environment.NewLine + line;
-
-            textBox2.SelectionStart = textBox2.TextLength;
-            textBox2.SelectionColor = color;
-            textBox2.AppendText(line);
-
-            if (is_locked)
-                textBox2.ScrollToCaret();
         }
 
 
@@ -482,7 +502,8 @@ namespace SerialPortMacros
                 }
                 catch { }
             if (opn_p2 && checkBox2.Checked)
-                try { 
+                try
+                {
                     port2.WriteLine(output);
                 }
                 catch { }
@@ -496,7 +517,7 @@ namespace SerialPortMacros
                 try
                 {
                     port4.WriteLine(output);
-                } 
+                }
                 catch { }
         }
         private void SerialPort_DataReceived1(object sender, SerialDataReceivedEventArgs e)
@@ -714,7 +735,7 @@ namespace SerialPortMacros
                 is_locked = false;
                 toolTip1.SetToolTip(button12, "AutoScrolling off");
                 button12.Image = Properties.Resources.Unlock;
-                textBox2.Enabled = true;
+                //                textBox2.Enabled = true;
 
             }
             else
@@ -722,7 +743,8 @@ namespace SerialPortMacros
                 is_locked = true;
                 button12.Image = Properties.Resources.Lock;
                 toolTip1.SetToolTip(button12, "AutoScrolling on");
-                textBox2.Enabled = false;
+                //               textBox2.Enabled = false;
+                stop_adding = false;
             }
 
         }
@@ -1257,19 +1279,20 @@ namespace SerialPortMacros
 
         private void comboBox2_SelectionChangeCommitted(object sender, EventArgs e)
         {
-        if (opn_p1 == true) {
-            if (port1.PortName == comboBox2.SelectedItem?.ToString())
-                return;
-            port1.Close();
-            button3.Image = Properties.Resources.AddConnection;
-            toolTip1.SetToolTip(button3, "Connect");
-            opn_p1 = false;
+            if (opn_p1 == true)
+            {
+                if (port1.PortName == comboBox2.SelectedItem?.ToString())
+                    return;
+                port1.Close();
+                button3.Image = Properties.Resources.AddConnection;
+                toolTip1.SetToolTip(button3, "Connect");
+                opn_p1 = false;
             }
         }
 
         private void comboBox1_SelectionChangeCommitted(object sender, EventArgs e)
         {
-        if (opn_p2 == true)
+            if (opn_p2 == true)
             {
                 if (port2.PortName == comboBox1.SelectedItem?.ToString())
                     return;
@@ -1282,7 +1305,7 @@ namespace SerialPortMacros
 
         private void comboBox3_SelectionChangeCommitted(object sender, EventArgs e)
         {
-        if (opn_p3 == true)
+            if (opn_p3 == true)
             {
                 if (port3.PortName == comboBox3.SelectedItem?.ToString())
                     return;
@@ -1295,7 +1318,7 @@ namespace SerialPortMacros
 
         private void comboBox4_SelectionChangeCommitted(object sender, EventArgs e)
         {
-        if (opn_p4 == true)
+            if (opn_p4 == true)
             {
                 if (port4.PortName == comboBox4.SelectedItem?.ToString())
                     return;
@@ -1304,6 +1327,12 @@ namespace SerialPortMacros
                 toolTip1.SetToolTip(button6, "Connect");
                 opn_p4 = false;
             }
+        }
+
+        private void textBox2_MouseDown(object sender, MouseEventArgs e)
+        {
+            if(is_locked)
+                this.ActiveControl = null;
         }
     }
 
