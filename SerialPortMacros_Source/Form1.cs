@@ -62,17 +62,11 @@ namespace SerialPortMacros
             }
             setports();
             ScanScripts();
-            _uiTimer = new System.Windows.Forms.Timer();
-            _uiTimer.Interval = 100;
-            _uiTimer.Tick += uiTimer_Tick;
-            _uiTimer.Start();
             textBox1.TabStop = false;
             port_timeout = new System.Windows.Forms.Timer();
             port_timeout.Interval = 1000;
             port_timeout.Tick += remove_ports;
             port_timeout.Start();
-
-
         }
 
 
@@ -162,7 +156,7 @@ namespace SerialPortMacros
                 if (Openport(baud, port1, name) == 1)
                 {
 
-                    textBox3.Enabled= false;
+                    textBox3.Enabled = false;
                     button3.Image = Properties.Resources.Disconnect;
                     toolTip1.SetToolTip(button3, "Disconnect");
                     opn_p1 = true;
@@ -374,32 +368,17 @@ namespace SerialPortMacros
 
         const int MaxChars = 30000;
 
-
         private readonly Queue<(string Text, Color Color)> _logBuffer = new();
-        private int _currentChars = 0;
 
-        private bool _needsRedraw = false;
 
-        private bool stop_adding = false;
-        private void aggiungi_a_textbox2(string inputText, string usr, Color color)
+        private void aggiungi_a_textbox2(string inputText, string usr, Color color, bool queue_ign = false)
         {
-            if (!stop_adding)
+            int selStart = textBox2.SelectionStart;
+            int selLength = textBox2.SelectionLength;
+
+            string line;
+            if (!queue_ign)
             {
-                int selStart = textBox2.SelectionStart;
-                int selLength = textBox2.SelectionLength;
-                bool wasAtEnd = selStart == textBox2.TextLength;
-
-                if (textBox2.TextLength > MaxChars)
-                {
-                    if (!is_locked)
-                    {
-                        stop_adding = true;
-                    }
-                    else
-                        textBox2.Text = "";
-                }
-
-                string line;
                 if (time_log)
                 {
                     string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
@@ -409,68 +388,53 @@ namespace SerialPortMacros
                 {
                     line = $"{usr}: {inputText}";
                 }
-
-                if (textBox2.TextLength > 0)
-                    line = Environment.NewLine + line;
-
-                textBox2.SelectionStart = textBox2.TextLength;
-                textBox2.SelectionLength = 0;
-                textBox2.SelectionColor = color;
-                textBox2.AppendText(line);
-
-                if (is_locked)
+                if (stop_text)
                 {
-                    textBox2.ScrollToCaret();
+                    _logBuffer.Enqueue((line, color));
+                    return;
                 }
                 else
                 {
-                    // Ripristina posizione utente
-                    textBox2.SelectionStart = selStart;
-                    textBox2.SelectionLength = selLength;
+                    while (_logBuffer.Count > 0)
+                    {
+                        var item = _logBuffer.Dequeue();
+                        aggiungi_a_textbox2(item.Text, usr, item.Color, true);
+                    }
                 }
             }
-        }
+            else
+                line = inputText;
 
 
-
-        private void RedrawRichTextBox()
-        {
-            int selStart = textBox2.SelectionStart;
-            int selLength = textBox2.SelectionLength;
-
-            textBox2.SuspendLayout();
-            textBox2.Clear();
-
-            foreach (var item in _logBuffer)
+            if (textBox2.TextLength > MaxChars)
             {
-                textBox2.SelectionStart = textBox2.TextLength;
-                textBox2.SelectionColor = item.Color;
-                textBox2.AppendText(item.Text);
+                if (is_locked)
+                    textBox2.Text = "";
             }
 
-            // Ripristina posizione utente
-            textBox2.SelectionStart = Math.Min(selStart, textBox2.TextLength);
-            textBox2.SelectionLength = selLength;
 
-            textBox2.ResumeLayout();
-        }
 
-        private void uiTimer_Tick(object sender, EventArgs e)
-        {
-            if (!_needsRedraw)
-                return;
+            if (textBox2.TextLength > 0)
+                line = Environment.NewLine + line;
 
-            _needsRedraw = false;
+            textBox2.SelectionStart = textBox2.TextLength;
+            textBox2.SelectionLength = 0;
+            textBox2.SelectionColor = color;
+            textBox2.AppendText(line);
 
-            // Rimuovi dal buffer le righe in eccesso
-            while (_currentChars > MaxChars && _logBuffer.Count > 0)
+            if (is_locked)
             {
-                var removed = _logBuffer.Dequeue();
-                _currentChars -= removed.Text.Length;
+                textBox2.ScrollToCaret();
+            }
+            else
+            {
+                // Ripristina posizione utente
+                textBox2.SelectionStart = selStart;
+                textBox2.SelectionLength = selLength;
             }
 
-            RedrawRichTextBox();
         }
+
 
 
 
@@ -747,6 +711,7 @@ namespace SerialPortMacros
                 is_locked = false;
                 toolTip1.SetToolTip(button12, "AutoScrolling off");
                 button12.Image = Properties.Resources.Unlock;
+                textBox2.ScrollBars = RichTextBoxScrollBars.Both;
                 //                textBox2.Enabled = true;
 
             }
@@ -755,8 +720,8 @@ namespace SerialPortMacros
                 is_locked = true;
                 button12.Image = Properties.Resources.Lock;
                 toolTip1.SetToolTip(button12, "AutoScrolling on");
+                textBox2.ScrollBars = RichTextBoxScrollBars.None;
                 //               textBox2.Enabled = false;
-                stop_adding = false;
             }
 
         }
@@ -1138,17 +1103,17 @@ namespace SerialPortMacros
         }
         public void CreateParasiticForm(Form4 f1, Form4 f2)
         {
-            // 1) raccogli tutti gli slave reali dai due grafici
             var slaves = new List<Form4>();
 
             void Collect(Form4 f)
             {
                 if (f.isMaster)
                 {
-                    if (f.child1 != null) slaves.Add(f.child1);
-                    if (f.child2 != null) slaves.Add(f.child2);
-                    if (f.child3 != null) slaves.Add(f.child3);
-                    if (f.child4 != null) slaves.Add(f.child4);
+                    foreach (var childEntry in f.children.Values)
+                    {
+                        if (childEntry.child != null)
+                            slaves.Add(childEntry.child);
+                    }
                 }
                 else
                 {
@@ -1159,48 +1124,68 @@ namespace SerialPortMacros
             Collect(f1);
             Collect(f2);
 
-            // 2) rimuove eventuali duplicati
             slaves = slaves.Distinct().ToList();
 
-            // 3) controllo limite 4
-            if (slaves.Count > 4)
-                throw new Exception("Troppi grafici da unire: massimo 4 slave totali.");
 
-            // 4) creo la form master
             var slaveNames = slaves.Select(s => s.Text).ToList();
-
             var master = new Form4(this, true)
             {
                 Text = "Merged: " + string.Join(" ", slaveNames)
             };
 
-            // 5) assegno slot fissi solo se il figlio esiste
-            if (slaves.Count > 0) master.child1 = slaves[0];
-            if (slaves.Count > 1) master.child2 = slaves[1];
-            if (slaves.Count > 2) master.child3 = slaves[2];
-            if (slaves.Count > 3) master.child4 = slaves[3];
+            for (int i = 0; i < slaves.Count; i++)
+            {
+                var s = slaves[i];
+                var color = GetDistinctColor(i, slaves.Count); // colore unico e distinguibile
+                var childEntry = new child_form(s, color, master.formsPlot1);
+                master.children.Add(s, childEntry);
+            }
+
+            if (f1.isMaster) f1.Close();
+            if (f2.isMaster) f2.Close();
 
 
-            // 6) chiudi i vecchi master se necessario
-            if (f1.isMaster)
-                f1.Close();
-
-            if (f2.isMaster)
-                f2.Close();
-
-            // 7) aggiorna MasterForm dei figli e nascondili
             foreach (var s in slaves)
             {
                 s.MasterForm = master;
                 s.reset_merge();
-                s.Visible = false; // non mostrare i vecchi grafici
+                s.Visible = false;
                 s.is_visible = false;
             }
 
-
-
-            // 8) mostra il nuovo master
             master.Show();
+        }
+
+        private System.Drawing.Color ColorFromHSV(double hue, double saturation, double value)
+        {
+            int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
+            double f = hue / 60 - Math.Floor(hue / 60);
+
+            value = value * 255;
+            int v = Convert.ToInt32(value);
+            int p = Convert.ToInt32(value * (1 - saturation));
+            int q = Convert.ToInt32(value * (1 - f * saturation));
+            int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
+
+            switch (hi)
+            {
+                case 0: return System.Drawing.Color.FromArgb(255, v, t, p);
+                case 1: return System.Drawing.Color.FromArgb(255, q, v, p);
+                case 2: return System.Drawing.Color.FromArgb(255, p, v, t);
+                case 3: return System.Drawing.Color.FromArgb(255, p, q, v);
+                case 4: return System.Drawing.Color.FromArgb(255, t, p, v);
+                default: return System.Drawing.Color.FromArgb(255, v, p, q);
+            }
+        }
+
+        private System.Drawing.Color GetDistinctColor(int index, int total)
+        {
+            // Distribuisci la tonalità uniformemente nello spettro
+            float hue = (360f / total) * index; // tonalità da 0 a 360
+            float saturation = 0.7f; // saturazione alta
+            float value = 0.9f;      // luminosità alta
+
+            return ColorFromHSV(hue, saturation, value);
         }
 
 
@@ -1285,13 +1270,8 @@ namespace SerialPortMacros
         }
 
 
+        bool stop_text = false;
 
-
-        private void textBox2_MouseDown(object sender, MouseEventArgs e)
-        {
-            if (is_locked)
-                this.ActiveControl = null;
-        }
 
         private void remove_ports(object sender, EventArgs e)
         {
@@ -1372,6 +1352,27 @@ namespace SerialPortMacros
                 toolTip1.SetToolTip(button6, "Connect");
                 opn_p4 = false;
             }
+        }
+
+        private void textBox2_Enter(object sender, EventArgs e)
+        {
+            if (is_locked)
+                this.ActiveControl = null;
+            else
+                stop_text = true;
+        }
+
+        private void textBox2_Leave(object sender, EventArgs e)
+        {
+            if (!is_locked)
+            {
+                stop_text = false;
+            }
+        }
+
+        private void Form1_MouseClick(object sender, MouseEventArgs e)
+        {
+            this.ActiveControl = null;
         }
     }
 

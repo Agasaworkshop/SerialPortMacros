@@ -22,7 +22,6 @@ namespace SerialPortMacros
         private double timeWindow = 10;
         private bool legend_on = true;
 
-
         public bool isMaster = false;
 
 
@@ -33,21 +32,7 @@ namespace SerialPortMacros
         private DataLogger logger_main;
 
 
-        private ConcurrentQueue<(double t, double y)> child1Queue = new ConcurrentQueue<(double t, double y)>();
-        private ConcurrentQueue<(double t, double y)> child2Queue = new ConcurrentQueue<(double t, double y)>();
-        private ConcurrentQueue<(double t, double y)> child3Queue = new ConcurrentQueue<(double t, double y)>();
-        private ConcurrentQueue<(double t, double y)> child4Queue = new ConcurrentQueue<(double t, double y)>();
-
-        private DataLogger logger_child1;
-        private DataLogger logger_child2;
-        private DataLogger logger_child3;
-        private DataLogger logger_child4;
-
-        public Form4 child1 = null;
-        public Form4 child2 = null;
-        public Form4 child3 = null;
-        public Form4 child4 = null;
-        public LegendItem[] items = new LegendItem[4];
+        public Dictionary<Form4, child_form> children = new Dictionary<Form4, child_form>();
 
         public bool merging = false;
         public Form1 mainform;
@@ -66,15 +51,11 @@ namespace SerialPortMacros
 
         private void Form4_Load(object sender, EventArgs e)
         {
+
             if (isMaster)
             {
-                if (child4 != null)
-                {
-                    button1.Visible = false;
-                }
                 button2.Visible = true;
-            }
-            if (!isMaster)
+            }else
             {
                 label2.Visible = false;
                 button3.Visible = false;
@@ -90,74 +71,15 @@ namespace SerialPortMacros
             sw.Start();
             timerPlot.Start();
 
-
             if (isMaster)
             {
-                logger_child1 = formsPlot1.Plot.Add.DataLogger();
-                logger_child1.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
-             //   logger_child1.ViewSlide();
-                items[0] = new LegendItem()
-                {
-                    LineColor = Colors.Red,
-                    MarkerFillColor = Colors.Red,
-                    MarkerLineColor = Colors.Red,
-                    MarkerShape = MarkerShape.Cross,
-                    LineWidth = 2,
-                    LabelText = child1.Text
-                };
-
-                logger_child2 = formsPlot1.Plot.Add.DataLogger();
-                logger_child2.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Green);
-                //   logger_child2.ViewSlide();
-                items[1] = new LegendItem()
-                {
-                    LineColor = Colors.Green,
-                    MarkerFillColor = Colors.Green,
-                    MarkerLineColor = Colors.Green,
-                    MarkerShape = MarkerShape.Cross,
-                    LineWidth = 2,
-                    LabelText = child2.Text
-                };
-
-
-                if (child3 != null)
-                {
-                    logger_child3 = formsPlot1.Plot.Add.DataLogger();
-                    logger_child3.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Orange);
-                    //  logger_child3.ViewSlide();
-                    items[2] = new LegendItem()
-                    {
-                        LineColor = Colors.Orange,
-                        MarkerFillColor = Colors.Orange,
-                        MarkerLineColor = Colors.Orange,
-                        MarkerShape = MarkerShape.Cross,
-                        LineWidth = 2,
-                        LabelText = child3.Text
-                    };
-                }
-                if (child4 != null)
-                {
-                    logger_child4 = formsPlot1.Plot.Add.DataLogger();
-                    logger_child4.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Purple);
-                    //    logger_child4.ViewSlide();
-                    items[3] = new LegendItem()
-                    {
-                        LineColor = Colors.Purple,
-                        MarkerFillColor = Colors.Purple,
-                        MarkerLineColor = Colors.Purple,
-                        MarkerShape = MarkerShape.Cross,
-                        LineWidth = 2,
-                        LabelText = child4.Text
-                    };
-                }
-                formsPlot1.Plot.ShowLegend(items.Where(item => item != null).ToArray());
+                formsPlot1.Plot.ShowLegend(children.Values.Select(c => c.legendItem).ToArray());
                 formsPlot1.Plot.Legend.Alignment = Alignment.LowerLeft;
             }
             else
             {
                 logger_main = formsPlot1.Plot.Add.DataLogger();
                 logger_main.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Blue);
-                //   logger_main.ViewSlide();
             }
         }
 
@@ -179,19 +101,13 @@ namespace SerialPortMacros
         public void AddChildData(Form4 child, double y)
         {
             double t = sw.Elapsed.TotalSeconds;
+
             if (!isMaster) return;
 
-            // smista sulle code se il logger è presente
-            if (child == child1)
-                child1Queue.Enqueue((t, y));
-            else if (child == child2)
-                child2Queue.Enqueue((t, y));
-            else if (child == child3)
-                child3Queue.Enqueue((t, y));
-            else if (child == child4)
-                child4Queue.Enqueue((t, y));
-            else
-                throw new Exception("Il master riceve dati da un figlio non registrato (oltre 4)!");
+            if (!children.TryGetValue(child, out var childEntry))
+                throw new Exception("Il master riceve dati da un figlio non registrato!");
+
+            childEntry.childQueue.Enqueue((t, y));
         }
 
         private void TimerPlot_Tick(object sender, EventArgs e)
@@ -201,56 +117,27 @@ namespace SerialPortMacros
 
             if (isMaster)
             {
-                if (child1 != null)
-                    while (child1Queue.TryDequeue(out var p1))
+                foreach (var childEntry in children.Values)
+                {
+                    while (childEntry.childQueue.TryDequeue(out var p))
                     {
                         try
                         {
-                            logger_child1.Add(p1.t, p1.y);
+                            childEntry.logger.Add(p.t, p.y);
                         }
-                        catch { } //I think very rarely at the start it can get two out of order points, it's not important, it doesn't really change anything but I don't want to get an error
-                        updated = true;
-                    }
-
-                if (child2 != null)
-                    while (child2Queue.TryDequeue(out var p2))
-                    {
-                        try
+                        catch
                         {
-                            logger_child2.Add(p2.t, p2.y);
                         }
-                        catch { }
                         updated = true;
                     }
-
-                if (child3 != null)
-                    while (child3Queue.TryDequeue(out var p3))
-                    {
-                        try
-                        {
-                            logger_child3.Add(p3.t, p3.y);
-                        }
-                        catch { }
-                        updated = true;
-                    }
-
-                if (child4 != null)
-                    while (child4Queue.TryDequeue(out var p4))
-                    {
-                        try
-                        {
-                            logger_child4.Add(p4.t, p4.y);
-                        }
-                        catch { }
-                        updated = true;
-                    }
+                }
             }
             else
             {
                 while (mainQueue.TryDequeue(out var p))
                 {
                     try
-                    { 
+                    {
                         logger_main.Add(p.t, p.y);
                     }
                     catch { }
@@ -266,10 +153,10 @@ namespace SerialPortMacros
 
                 if (isMaster)
                 {
-                    if (child1 != null) logger_child1.Data.Coordinates.RemoveAll(c => c.X < now - timeWindow);
-                    if (child2 != null) logger_child2.Data.Coordinates.RemoveAll(c => c.X < now - timeWindow);
-                    if (child3 != null) logger_child3.Data.Coordinates.RemoveAll(c => c.X < now - timeWindow);
-                    if (child4 != null) logger_child4.Data.Coordinates.RemoveAll(c => c.X < now - timeWindow);
+                    foreach (var childEntry in children.Values)
+                    {
+                        childEntry.logger.Data.Coordinates.RemoveAll(c => c.X < now - timeWindow);
+                    }
                 }
                 else
                 {
@@ -297,46 +184,23 @@ namespace SerialPortMacros
             }
         }
 
-        private void button2_Click(object sender, EventArgs e) // separa
+        private void button2_Click(object sender, EventArgs e)
         {
-            if (isMaster)
+            if (!isMaster) return;
+
+            foreach (var childEntry in children.Values)
             {
                 try
                 {
-                    if (child1 != null)
+                    if (childEntry.child != null)
                     {
-                        child1?.Show();
-                        child1.is_visible = true;
+                        childEntry.child.Show();
+                        childEntry.child.is_visible = true;
                     }
                 }
-                catch { } //if the user closes manually the window this would throw an error, it's not really important
-                try
+                catch
                 {
-                    if (child2 != null)
-                    {
-                        child2?.Show();
-                        child2.is_visible = true;
-                    }
                 }
-                catch { }
-                try
-                {
-                    if (child3 != null)
-                    {
-                        child3?.Show();
-                        child3.is_visible = true;
-                    }
-                }
-                catch { }
-                try
-                {
-                    if (child4 != null)
-                    {
-                        child4?.Show();
-                        child4.is_visible = true;
-                    }
-                }
-                catch { }
             }
         }
 
@@ -365,40 +229,20 @@ namespace SerialPortMacros
 
         }
 
-        private void Form4_FormClosed(object sender, FormClosedEventArgs e)
-        {
-        }
-
         private void Form4_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (isMaster)
+            if (!isMaster) return;
+
+            foreach (var childEntry in children.Values)
             {
                 try
                 {
-                    child1?.Show();
+                    childEntry.child?.Show();
                 }
-                catch { } //if the user closes manually the window this would throw an error, it's not really important
-                try
+                catch
                 {
-                    child2?.Show();
                 }
-                catch { }
-                try
-                {
-                    child3?.Show();
-                }
-                catch { }
-                try
-                {
-                    child4?.Show();
-                }
-                catch { }
             }
-        }
-
-        private void formsPlot1_Load(object sender, EventArgs e)
-        {
-
         }
 
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
@@ -462,4 +306,34 @@ namespace SerialPortMacros
     }
 
 
+    public class child_form
+    {
+        public ConcurrentQueue<(double t, double y)> childQueue = new ConcurrentQueue<(double t, double y)>();
+        public System.Drawing.Color color;
+        public Form4 child;
+        public DataLogger logger;
+        public LegendItem legendItem;
+
+        public child_form(Form4 in_child, System.Drawing.Color clr, ScottPlot.WinForms.FormsPlot formsPlot)
+        {
+            child = in_child;
+            color = clr;
+
+            // Crea il logger direttamente
+            logger = formsPlot.Plot.Add.DataLogger();
+            var spColor = ScottPlot.Color.FromColor(color);
+            logger.Color = spColor;
+
+            // Crea il LegendItem
+            legendItem = new LegendItem()
+            {
+                LineColor = spColor,
+                MarkerFillColor = spColor,
+                MarkerLineColor = spColor,
+                MarkerShape = MarkerShape.Cross,
+                LineWidth = 2,
+                LabelText = child.Text
+            };
+        }
+    }
 }

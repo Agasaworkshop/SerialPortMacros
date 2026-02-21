@@ -388,10 +388,12 @@
             textBox2.Location = new Point(12, 12);
             textBox2.Name = "textBox2";
             textBox2.ReadOnly = true;
+            textBox2.ScrollBars = RichTextBoxScrollBars.None;
             textBox2.Size = new Size(776, 318);
             textBox2.TabIndex = 28;
             textBox2.Text = "";
-            textBox2.MouseDown += textBox2_MouseDown;
+            textBox2.Enter += textBox2_Enter;
+            textBox2.Leave += textBox2_Leave;
             // 
             // button12
             // 
@@ -649,6 +651,7 @@
             Name = "Form1";
             Text = "SerialPortMacros";
             Load += Form1_Load;
+            MouseClick += Form1_MouseClick;
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).EndInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown2).EndInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown3).EndInit();

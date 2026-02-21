@@ -49,7 +49,6 @@
             formsPlot1.Name = "formsPlot1";
             formsPlot1.Size = new Size(763, 397);
             formsPlot1.TabIndex = 0;
-            formsPlot1.Load += formsPlot1_Load;
             // 
             // numericUpDown1
             // 
@@ -133,7 +132,6 @@
             Name = "Form4";
             Text = "Form4";
             FormClosing += Form4_FormClosing;
-            FormClosed += Form4_FormClosed;
             Load += Form4_Load;
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).EndInit();
             ResumeLayout(false);
