@@ -47,7 +47,7 @@ namespace SerialPortMacros
         public Dictionary<string, List<Form4>> openGraphs = new Dictionary<string, List<Form4>>();
         private System.Windows.Forms.Timer _uiTimer;
         private readonly Action<string, string, bool, bool, bool, bool, Color> _processUiAction;
-
+        private System.Windows.Forms.Timer port_timeout;
 
         public Form1()
         {
@@ -67,6 +67,12 @@ namespace SerialPortMacros
             _uiTimer.Tick += uiTimer_Tick;
             _uiTimer.Start();
             textBox1.TabStop = false;
+            port_timeout = new System.Windows.Forms.Timer();
+            port_timeout.Interval = 1000;
+            port_timeout.Tick += remove_ports;
+            port_timeout.Start();
+
+
         }
 
 
@@ -152,8 +158,11 @@ namespace SerialPortMacros
                 int baud = int.Parse(textBox3.Text);
                 string name = comboBox2.Text;
 
+
                 if (Openport(baud, port1, name) == 1)
                 {
+
+                    textBox3.Enabled= false;
                     button3.Image = Properties.Resources.Disconnect;
                     toolTip1.SetToolTip(button3, "Disconnect");
                     opn_p1 = true;
@@ -161,6 +170,7 @@ namespace SerialPortMacros
             }
             else
             {
+                textBox3.Enabled = true;
                 port1.Close();
                 button3.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button3, "Connect");
@@ -174,9 +184,9 @@ namespace SerialPortMacros
             {
                 int baud = int.Parse(textBox4.Text);
                 string name = comboBox3.Text;
-
                 if (Openport(baud, port3, name) == 1)
                 {
+                    textBox4.Enabled = false;
                     button4.Image = Properties.Resources.Disconnect;
                     toolTip1.SetToolTip(button4, "Disconnect");
                     opn_p3 = true;
@@ -185,6 +195,7 @@ namespace SerialPortMacros
             else
             {
                 port3.Close();
+                textBox4.Enabled = true;
                 button4.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button4, "Connect");
                 opn_p3 = false;
@@ -200,6 +211,7 @@ namespace SerialPortMacros
 
                 if (Openport(baud, port2, name) == 1)
                 {
+                    textBox5.Enabled = false;
                     button5.Image = Properties.Resources.Disconnect;
                     toolTip1.SetToolTip(button5, "Disconnect");
                     opn_p2 = true;
@@ -207,6 +219,7 @@ namespace SerialPortMacros
             }
             else
             {
+                textBox5.Enabled = true;
                 port2.Close();
                 button5.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button5, "Connect");
@@ -222,6 +235,7 @@ namespace SerialPortMacros
 
                 if (Openport(baud, port4, name) == 1)
                 {
+                    textBox6.Enabled = false;
                     button6.Image = Properties.Resources.Disconnect;
                     toolTip1.SetToolTip(button6, "Disconnect");
                     opn_p4 = true;
@@ -230,6 +244,7 @@ namespace SerialPortMacros
             else
             {
                 port4.Close();
+                textBox6.Enabled = true;
                 button6.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button6, "Connect");
                 opn_p4 = false;
@@ -379,7 +394,8 @@ namespace SerialPortMacros
                     if (!is_locked)
                     {
                         stop_adding = true;
-                    }else 
+                    }
+                    else
                         textBox2.Text = "";
                 }
 
@@ -459,10 +475,6 @@ namespace SerialPortMacros
 
 
 
-        private void comboBox4_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
-        }
         private int Openport(int baud, SerialPort c_port, string name)
         {
             if (baud > 0 && name != "")
@@ -530,7 +542,7 @@ namespace SerialPortMacros
         }
         private void SerialPort_DataReceived3(object sender, SerialDataReceivedEventArgs e)
         {
-            Serial_port_data2(port3, 3, false, false, true, false, opn_p3, checkBox3, Color.Yellow, mes3, port3Enabled);
+            Serial_port_data2(port3, 3, false, false, true, false, opn_p3, checkBox3, Color.Orange, mes3, port3Enabled);
         }
         private void SerialPort_DataReceived4(object sender, SerialDataReceivedEventArgs e)
         {
@@ -1273,66 +1285,93 @@ namespace SerialPortMacros
         }
 
 
-        private void textBox1_KeyUp(object sender, KeyEventArgs e)
+
+
+        private void textBox2_MouseDown(object sender, MouseEventArgs e)
         {
+            if (is_locked)
+                this.ActiveControl = null;
         }
 
-        private void comboBox2_SelectionChangeCommitted(object sender, EventArgs e)
+        private void remove_ports(object sender, EventArgs e)
+        {
+            string[] availablePorts = SerialPort.GetPortNames();
+
+            CheckCombo(comboBox1, availablePorts);
+            CheckCombo(comboBox2, availablePorts);
+            CheckCombo(comboBox3, availablePorts);
+            CheckCombo(comboBox4, availablePorts);
+        }
+
+        private void CheckCombo(ComboBox combo, string[] availablePorts)
+        {
+            if (combo.SelectedItem != null)
+            {
+                string selectedPort = combo.SelectedItem.ToString();
+
+                bool exists = availablePorts.Contains(selectedPort);
+
+                if (!exists)
+                {
+                    combo.SelectedIndex = -1; // opzionale: deseleziona
+                }
+            }
+        }
+
+        private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (opn_p1 == true)
             {
                 if (port1.PortName == comboBox2.SelectedItem?.ToString())
                     return;
                 port1.Close();
+                textBox3.Enabled = true;
                 button3.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button3, "Connect");
                 opn_p1 = false;
             }
         }
 
-        private void comboBox1_SelectionChangeCommitted(object sender, EventArgs e)
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (opn_p2 == true)
             {
                 if (port2.PortName == comboBox1.SelectedItem?.ToString())
                     return;
                 port2.Close();
+                textBox5.Enabled = true;
                 button5.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button5, "Connect");
                 opn_p2 = false;
             }
         }
 
-        private void comboBox3_SelectionChangeCommitted(object sender, EventArgs e)
+        private void comboBox3_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (opn_p3 == true)
             {
                 if (port3.PortName == comboBox3.SelectedItem?.ToString())
                     return;
                 port3.Close();
+                textBox4.Enabled = true;
                 button4.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button4, "Connect");
                 opn_p3 = false;
             }
         }
 
-        private void comboBox4_SelectionChangeCommitted(object sender, EventArgs e)
+        private void comboBox4_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (opn_p4 == true)
             {
                 if (port4.PortName == comboBox4.SelectedItem?.ToString())
                     return;
                 port4.Close();
+                textBox6.Enabled = true;
                 button6.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button6, "Connect");
                 opn_p4 = false;
             }
-        }
-
-        private void textBox2_MouseDown(object sender, MouseEventArgs e)
-        {
-            if(is_locked)
-                this.ActiveControl = null;
         }
     }
 

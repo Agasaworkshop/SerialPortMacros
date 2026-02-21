@@ -121,6 +121,9 @@
   <data name="AddConnection" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\AddConnection.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="Not_Visible_16x" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\Not_Visible_16x.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="Settings_yellow" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Settings_yellow.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -129,6 +132,9 @@
   </data>
   <data name="Lock" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Lock.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Visible_16x" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\Visible_16x.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="SyncArrowStatusBar5_extra_16x" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\SyncArrowStatusBar5_extra_16x.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -169,10 +175,7 @@
   <data name="Time_16x_cross2" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Time_16x_cross2.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Not_Visible_16x" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Not_Visible_16x.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Visible_16x" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Visible_16x.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="Settings_orange" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\Settings_orange.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

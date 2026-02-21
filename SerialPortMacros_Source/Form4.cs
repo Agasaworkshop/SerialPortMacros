@@ -172,12 +172,13 @@ namespace SerialPortMacros
                 if (this.Visible)
                     mainQueue.Enqueue((now, value));
             }
-            MasterForm?.AddChildData(this, now, value);
+            MasterForm?.AddChildData(this, value);
         }
 
 
-        public void AddChildData(Form4 child, double t, double y)
+        public void AddChildData(Form4 child, double y)
         {
+            double t = sw.Elapsed.TotalSeconds;
             if (!isMaster) return;
 
             // smista sulle code se il logger è presente

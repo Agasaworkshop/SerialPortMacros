@@ -143,6 +143,16 @@ namespace SerialPortMacros.Properties {
         /// <summary>
         ///   Cerca una risorsa localizzata di tipo System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap Settings_orange {
+            get {
+                object obj = ResourceManager.GetObject("Settings_orange", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Cerca una risorsa localizzata di tipo System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap Settings_red {
             get {
                 object obj = ResourceManager.GetObject("Settings_red", resourceCulture);
