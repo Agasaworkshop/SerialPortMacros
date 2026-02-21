@@ -723,7 +723,9 @@ namespace SerialPortMacros
                 textBox2.ScrollBars = RichTextBoxScrollBars.None;
                 //               textBox2.Enabled = false;
             }
-
+            textBox2.SelectionStart = textBox2.Text.Length;
+            textBox2.SelectionLength = 0;
+            textBox2.ScrollToCaret();
         }
 
         private void button13_Click(object sender, EventArgs e)
