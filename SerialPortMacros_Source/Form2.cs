@@ -22,6 +22,7 @@ namespace SerialPortMacros
         }
         private void Form2_Load(object sender, EventArgs e)
         {
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
             Paritybox.Items.Add("Odd");
             Paritybox.Items.Add("Even");
             Paritybox.Items.Add("None");

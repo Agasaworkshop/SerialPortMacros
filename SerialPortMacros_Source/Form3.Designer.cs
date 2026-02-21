@@ -388,6 +388,8 @@
             Controls.Add(comboBox1);
             Controls.Add(textBox1);
             Controls.Add(checkedListBox1);
+            MaximumSize = new Size(818, 497);
+            MinimumSize = new Size(818, 497);
             Name = "Form3";
             Text = "Macro List";
             Load += Form3_Load;

@@ -27,6 +27,7 @@ namespace SerialPortMacros
             string[] effectlist = { "Keypress", "Write back" };
             comboBox1.Items.AddRange(effectlist);
             findactivescripts();
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
             displayscript();
         }
 
