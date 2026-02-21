@@ -50,7 +50,7 @@ You can easily make your macros with this menu. Use "New File" to create a new m
   
   1)See the name  
     
-  2)Set the key*, this will let you decide the keyword that will trigger the action  
+  2)Set the key(*), which will let you decide the keyword that will trigger the action  
     
   3)Set the ports that will be monitored for the key of this script  
     
@@ -89,7 +89,10 @@ In the keypress text box, you can:
       !RMB will press the right mouse button;  
       !MMB will press the middle mouse button;  
 
-  7)If you set the macro key and keypress to "===" and send through the serial port a message beginning in "===" followed by a keypress, the program will interpret and press that key (all previous formats apply)
+#(*)Key format
+  1)The program will look for the incoming stringsthat contain the key(not necessarily just the key)   
+  
+  2)If you set the macro key and keypress to "===" and send through the serial port a message beginning in "===" followed by a keypress, the program will interpret and press that key (all previous formats apply)
       Example: "===+A" sent by your device through the serial port will make the program start pressing the A key;
 
-  8)If you set the macro key to "*" it will react to every message regardless of the content (I needed this mostly for reply)
+  3)If you set the macro key to "*" it will react to every message regardless of the content (I needed this mostly for reply)
