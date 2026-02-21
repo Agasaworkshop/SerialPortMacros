@@ -1,10 +1,10 @@
 # SerialPortMacros
 This is a C# program used to read up to 4 configurable serial ports,log them and write to them, it can also plot in real time multiple variables for each port.    
-<img width="798" height="522" alt="image" src="https://github.com/user-attachments/assets/77848a25-0070-46ca-a038-75219a26d727" />
+<img width="800" height="567" alt="image" src="https://github.com/user-attachments/assets/106fca52-d07b-49a9-89ac-bcc57c24bd37" />
 
   
 Each port can be selected and configured to read and write on the serial ports with different settings. The text received or sent will then be displayed with different colors based on the sender:  
-<img width="800" height="522" alt="image" src="https://github.com/user-attachments/assets/2177ce21-547c-4c7b-aadb-743807c38790" />
+<img width="799" height="566" alt="image" src="https://github.com/user-attachments/assets/455ee976-55d7-43ed-83c5-99e425c24c19" />
 
 
 The color for the port is the same as the cog for the settings above the combobox; the text sent by you will be black and the text sent by a script will be brown.    
@@ -16,22 +16,25 @@ You can clear the display by clicking the eraser button. You can also toggle aut
 
 # Logging
 
-<img width="808" height="522" alt="image" src="https://github.com/user-attachments/assets/05c825a2-bac8-437b-928b-9a466a893360" />
+<img width="800" height="569" alt="image" src="https://github.com/user-attachments/assets/73030c52-3b37-4fae-8bd7-77c6dd5b90fb" />
 
 By checking the log option under a port, you will enable logging for that port. If you do, when using the logging feature, a text file corresponding to that port will be created in the logs folder in the same directory as the exe file.  This file will contain the log of all that was written by that port, if the timestamp option is enabled, the timestamp will also be written (the name of the sender is only visible if the sender is the user in this case).    
 If two or more ports are selected, the software will write an additional file containing the log of all ports (in this case, the name of the sender will also be written).    
 By checking the log option near the text box, you will also be logging user inputs.    
 
 # Plotting
-<img width="1918" height="1017" alt="image" src="https://github.com/user-attachments/assets/45806a8a-a646-4166-a092-6dba3f148d7b" />   
+<img width="1918" height="1015" alt="image" src="https://github.com/user-attachments/assets/535a5f56-c7e3-442d-bfec-a6f98fb20602" />
 
 Under each port, you can find a button to open the graphs; the number near the button decides how many plots will be opened. When reading the lines in the serial port, the software will associate the first number in the line to the first graph, the second number to the second graph, and so on. There are no defined delimiters; just make sure to add something between your numbers that isn't a dot(used for decimals). In the plot window, you can also select how long the time window should be.    
 
 ## Merging graphs
 You can also merge two graphs by using the merge button  
-<img width="1597" height="484" alt="image" src="https://github.com/user-attachments/assets/7ebe436e-014d-485b-8aa8-a3134e2872bc" />  
-In the image, the graph on the right is looking to merge. After clicking the merge button on a second graph, the two windows will become invisible, and a new merged window will appear 
-<img width="786" height="512" alt="image" src="https://github.com/user-attachments/assets/3b125746-0292-4abd-8ada-5a24f82bdd19" />     
+<img width="1570" height="514" alt="image" src="https://github.com/user-attachments/assets/e7df99b2-9336-4e63-b991-0d3c69e8a95a" />  
+In the image, the graph on the right is looking to merge. After clicking the merge button on a second graph, the two windows will become invisible, and a new merged window will appear   
+  
+
+<img width="787" height="513" alt="image" src="https://github.com/user-attachments/assets/bec74c95-a074-4af0-bd73-a33f8f500ea0" />
+
 You can toggle the legend by clicking the eye icon at the bottom.  
 You can show the original windows by clicking the new unmerge button; this will not close the merged window.      
 If you close the merged graph, the original graphs will show up again.   
