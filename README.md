@@ -48,7 +48,7 @@ This program is meant to interact with your electronic projects through the seri
   
 You can easily make your macros with this menu. Use "New File" to create a new macro. You can then:  
   
-  1) See the name  
+  1)See the name  
     
   2)Set the key*, this will let you decide the keyword that will trigger the action  
     
