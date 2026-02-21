@@ -41,7 +41,7 @@ If you close the merged graph, the original graphs will show up again.
 There is no hard limit on the number of graphs you can plot together. 
 
 # Macro Menu
-![image](https://github.com/Agasaworkshop/SerialPortMacros/assets/142116808/057b1100-a02f-4a6a-84e4-77cb438d2151)
+<img width="800" height="486" alt="image" src="https://github.com/user-attachments/assets/e99b4de0-6c87-4756-acf2-2377e30cfcb5" />
 
 
 This program is meant to interact with your electronic projects through the serial port, the idea is to associate a string sent by your device to an action made by your computer, currently, it can press a button in response to a certain string or send a string to the selected ports in response to a string on the selected ports(to coordinate multiple devices).    
