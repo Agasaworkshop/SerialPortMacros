@@ -48,6 +48,8 @@ namespace SerialPortMacros
         private System.Windows.Forms.Timer _uiTimer;
         private readonly Action<string, string, bool, bool, bool, bool, Color> _processUiAction;
         private System.Windows.Forms.Timer port_timeout;
+        string exeFolder = AppDomain.CurrentDomain.BaseDirectory;
+
 
         public Form1()
         {
@@ -160,6 +162,8 @@ namespace SerialPortMacros
                     button3.Image = Properties.Resources.Disconnect;
                     toolTip1.SetToolTip(button3, "Disconnect");
                     opn_p1 = true;
+                    string iconPath = Path.Combine(exeFolder, "icon_closed.ico");
+                    this.Icon = new Icon(iconPath);
                 }
             }
             else
@@ -169,6 +173,11 @@ namespace SerialPortMacros
                 button3.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button3, "Connect");
                 opn_p1 = false;
+                if (opn_p4 == false && opn_p2 == false && opn_p3 == false)
+                {
+                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
+                    this.Icon = new Icon(iconPath);
+                }
             }
         }
 
@@ -184,6 +193,8 @@ namespace SerialPortMacros
                     button4.Image = Properties.Resources.Disconnect;
                     toolTip1.SetToolTip(button4, "Disconnect");
                     opn_p3 = true;
+                    string iconPath = Path.Combine(exeFolder, "icon_closed.ico");
+                    this.Icon = new Icon(iconPath);
                 }
             }
             else
@@ -193,6 +204,11 @@ namespace SerialPortMacros
                 button4.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button4, "Connect");
                 opn_p3 = false;
+                if (opn_p1 == false && opn_p2 == false && opn_p4 == false)
+                {
+                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
+                    this.Icon = new Icon(iconPath);
+                }
             }
         }
 
@@ -209,6 +225,8 @@ namespace SerialPortMacros
                     button5.Image = Properties.Resources.Disconnect;
                     toolTip1.SetToolTip(button5, "Disconnect");
                     opn_p2 = true;
+                    string iconPath = Path.Combine(exeFolder, "icon_closed.ico");
+                    this.Icon = new Icon(iconPath);
                 }
             }
             else
@@ -218,6 +236,12 @@ namespace SerialPortMacros
                 button5.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button5, "Connect");
                 opn_p2 = false;
+                if (opn_p1 == false && opn_p4 == false && opn_p3 == false)
+                {
+                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
+                    this.Icon = new Icon(iconPath);
+                }
+
             }
         }
         private void button6_Click(object sender, EventArgs e)
@@ -233,6 +257,8 @@ namespace SerialPortMacros
                     button6.Image = Properties.Resources.Disconnect;
                     toolTip1.SetToolTip(button6, "Disconnect");
                     opn_p4 = true;
+                    string iconPath = Path.Combine(exeFolder, "icon_closed.ico");
+                    this.Icon = new Icon(iconPath);
                 }
             }
             else
@@ -242,6 +268,11 @@ namespace SerialPortMacros
                 button6.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button6, "Connect");
                 opn_p4 = false;
+                if (opn_p1 == false && opn_p2 == false && opn_p3 == false)
+                {
+                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
+                    this.Icon = new Icon(iconPath);
+                }
             }
         }
 
@@ -1311,6 +1342,11 @@ namespace SerialPortMacros
                 button3.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button3, "Connect");
                 opn_p1 = false;
+                if (opn_p4 == false && opn_p2 == false && opn_p3 == false)
+                {
+                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
+                    this.Icon = new Icon(iconPath);
+                }
             }
         }
 
@@ -1325,6 +1361,11 @@ namespace SerialPortMacros
                 button5.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button5, "Connect");
                 opn_p2 = false;
+                if (opn_p4 == false && opn_p1 == false && opn_p3 == false)
+                {
+                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
+                    this.Icon = new Icon(iconPath);
+                }
             }
         }
 
@@ -1339,6 +1380,11 @@ namespace SerialPortMacros
                 button4.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button4, "Connect");
                 opn_p3 = false;
+                if (opn_p4 == false && opn_p2 == false && opn_p1 == false)
+                {
+                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
+                    this.Icon = new Icon(iconPath);
+                }
             }
         }
 
@@ -1353,6 +1399,11 @@ namespace SerialPortMacros
                 button6.Image = Properties.Resources.AddConnection;
                 toolTip1.SetToolTip(button6, "Connect");
                 opn_p4 = false;
+                if (opn_p1 == false && opn_p2 == false && opn_p3 == false)
+                {
+                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
+                    this.Icon = new Icon(iconPath);
+                }
             }
         }
 

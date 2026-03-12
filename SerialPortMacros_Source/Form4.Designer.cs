@@ -130,6 +130,7 @@
             Controls.Add(numericUpDown1);
             Controls.Add(formsPlot1);
             Name = "Form4";
+            ShowIcon = false;
             Text = "Form4";
             FormClosing += Form4_FormClosing;
             Load += Form4_Load;

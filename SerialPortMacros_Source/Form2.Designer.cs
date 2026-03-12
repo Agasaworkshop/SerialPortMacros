@@ -157,6 +157,7 @@
             MinimizeBox = false;
             MinimumSize = new Size(244, 256);
             Name = "Form2";
+            ShowIcon = false;
             Text = "Form2";
             Load += Form2_Load;
             ResumeLayout(false);

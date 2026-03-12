@@ -391,6 +391,7 @@
             MaximumSize = new Size(818, 497);
             MinimumSize = new Size(818, 497);
             Name = "Form3";
+            ShowIcon = false;
             Text = "Macro List";
             Load += Form3_Load;
             ResumeLayout(false);

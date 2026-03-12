@@ -647,6 +647,7 @@
             Controls.Add(textBox1);
             Controls.Add(button2);
             Controls.Add(button1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(818, 534);
             Name = "Form1";
             Text = "SerialPortMacros";

@@ -55,7 +55,8 @@ namespace SerialPortMacros
             if (isMaster)
             {
                 button2.Visible = true;
-            }else
+            }
+            else
             {
                 label2.Visible = false;
                 button3.Visible = false;
