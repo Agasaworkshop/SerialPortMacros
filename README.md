@@ -2,6 +2,7 @@
 This is a C# program used to read up to 4 configurable serial ports,log them and write to them, it can also plot in real time multiple variables for each port.    
 <img width="800" height="567" alt="image" src="https://github.com/user-attachments/assets/106fca52-d07b-49a9-89ac-bcc57c24bd37" />
 
+[I've also made a short video to show some capabilities of this software](https://www.youtube.com/watch?v=STqCw-Kn7qI)
   
 Each port can be selected and configured to read and write on the serial ports with different settings. The text received or sent will then be displayed with different colors based on the sender:  
 <img width="799" height="566" alt="image" src="https://github.com/user-attachments/assets/455ee976-55d7-43ed-83c5-99e425c24c19" />
