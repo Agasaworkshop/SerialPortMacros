@@ -58,6 +58,14 @@ namespace SerialPortMacros
         }
         private void Form1_Load(object sender, EventArgs e)
         {
+
+            comboBox6.Items.Clear();
+            comboBox6.Items.Add("No line ending");
+            comboBox6.Items.Add("New line");
+            comboBox6.Items.Add("Carriage return");
+            comboBox6.Items.Add("Both NL & CR");
+
+            comboBox6.SelectedIndex = 0;
             for (int k = 1; k < 5; k++)
             {
                 Searchports(k);
@@ -501,29 +509,54 @@ namespace SerialPortMacros
         }
         private void Sendtoports(string output)
         {
+            string lineEnding = "";
+
+            switch (comboBox6.SelectedIndex)
+            {
+                case 0: // No line ending
+                    lineEnding = "";
+                    break;
+
+                case 1: // New line
+                    lineEnding = "\n";
+                    break;
+
+                case 2: // Carriage return
+                    lineEnding = "\r";
+                    break;
+
+                case 3: // Both NL & CR
+                    lineEnding = "\r\n";
+                    break;
+            }
+
+            string dataToSend = output + lineEnding;
 
             if (opn_p1 && checkBox1.Checked)
                 try
                 {
-                    port1.WriteLine(output);
+                    port1.Write(dataToSend);
                 }
                 catch { }
+
             if (opn_p2 && checkBox2.Checked)
                 try
                 {
-                    port2.WriteLine(output);
+                    port2.Write(dataToSend);
                 }
                 catch { }
+
             if (opn_p3 && checkBox3.Checked)
                 try
                 {
-                    port3.WriteLine(output);
+                    port3.Write(dataToSend);
                 }
                 catch { }
+
             if (opn_p4 && checkBox4.Checked)
                 try
                 {
-                    port4.WriteLine(output);
+                    port4.Write(dataToSend);
                 }
                 catch { }
         }

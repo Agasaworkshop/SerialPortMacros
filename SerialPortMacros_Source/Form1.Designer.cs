@@ -76,6 +76,7 @@
             numericUpDown4 = new NumericUpDown();
             button19 = new Button();
             toolTip1 = new ToolTip(components);
+            comboBox6 = new ComboBox();
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown3).BeginInit();
@@ -109,7 +110,7 @@
             textBox1.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             textBox1.Location = new Point(12, 336);
             textBox1.Name = "textBox1";
-            textBox1.Size = new Size(620, 27);
+            textBox1.Size = new Size(485, 27);
             textBox1.TabIndex = 2;
             textBox1.TextChanged += textBox1_TextChanged;
             textBox1.KeyDown += textBox1_KeyDown;
@@ -597,11 +598,22 @@
             button19.UseVisualStyleBackColor = true;
             button19.Click += button19_Click;
             // 
+            // comboBox6
+            // 
+            comboBox6.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            comboBox6.DropDownStyle = ComboBoxStyle.DropDownList;
+            comboBox6.FormattingEnabled = true;
+            comboBox6.Location = new Point(496, 336);
+            comboBox6.Name = "comboBox6";
+            comboBox6.Size = new Size(136, 28);
+            comboBox6.TabIndex = 41;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 531);
+            Controls.Add(comboBox6);
             Controls.Add(button19);
             Controls.Add(numericUpDown4);
             Controls.Add(button18);
@@ -709,5 +721,6 @@
         private NumericUpDown numericUpDown4;
         private Button button19;
         private ToolTip toolTip1;
+        private ComboBox comboBox6;
     }
 }
