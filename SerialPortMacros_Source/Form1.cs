@@ -8,6 +8,9 @@ using System.Text.RegularExpressions; // Regex, Match
 using System.Linq;                   // Cast, Select, ToList
 using System.Globalization;          // CultureInfo
 using System.Windows.Forms;
+using System.Text.Json;
+
+
 
 namespace SerialPortMacros
 {
@@ -49,6 +52,9 @@ namespace SerialPortMacros
         private readonly Action<string, string, bool, bool, bool, bool, Color> _processUiAction;
         private System.Windows.Forms.Timer port_timeout;
         string exeFolder = AppDomain.CurrentDomain.BaseDirectory;
+        private readonly string settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
+
+        private AppSettings settings = new AppSettings();
 
 
         public Form1()
@@ -58,25 +64,30 @@ namespace SerialPortMacros
         }
         private void Form1_Load(object sender, EventArgs e)
         {
-
             comboBox6.Items.Clear();
+
             comboBox6.Items.Add("No line ending");
             comboBox6.Items.Add("New line");
             comboBox6.Items.Add("Carriage return");
             comboBox6.Items.Add("Both NL & CR");
 
-            comboBox6.SelectedIndex = 0;
             for (int k = 1; k < 5; k++)
             {
                 Searchports(k);
             }
+
             setports();
             ScanScripts();
+
             textBox1.TabStop = false;
+
+
             port_timeout = new System.Windows.Forms.Timer();
             port_timeout.Interval = 1000;
             port_timeout.Tick += remove_ports;
             port_timeout.Start();
+
+            LoadSettings();
         }
 
 
@@ -315,6 +326,7 @@ namespace SerialPortMacros
             port1.Parity = Parity.None;
             port1.DataBits = 8;
             port1.StopBits = StopBits.One;
+
             port2.BaudRate = 9600;
             port2.Encoding = Encoding.ASCII;
             port2.NewLine = "\n";
@@ -322,6 +334,7 @@ namespace SerialPortMacros
             port2.Parity = Parity.None;
             port2.DataBits = 8;
             port2.StopBits = StopBits.One;
+
             port3.BaudRate = 9600;
             port3.Encoding = Encoding.ASCII;
             port3.NewLine = "\n";
@@ -329,6 +342,7 @@ namespace SerialPortMacros
             port3.Parity = Parity.None;
             port3.DataBits = 8;
             port3.StopBits = StopBits.One;
+
             port4.BaudRate = 9600;
             port4.Encoding = Encoding.ASCII;
             port4.NewLine = "\n";
@@ -336,11 +350,13 @@ namespace SerialPortMacros
             port4.Parity = Parity.None;
             port4.DataBits = 8;
             port4.StopBits = StopBits.One;
+
             port1.DataReceived += SerialPort_DataReceived1;
             port2.DataReceived += SerialPort_DataReceived2;
             port3.DataReceived += SerialPort_DataReceived3;
             port4.DataReceived += SerialPort_DataReceived4;
         }
+
         private string getparity(SerialPort port)
         {
             if (port.Parity == Parity.Odd)
@@ -1460,7 +1476,308 @@ namespace SerialPortMacros
         {
             this.ActiveControl = null;
         }
+
+        private void button7_Click_1(object sender, EventArgs e)
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string logsDir = Path.Combine(baseDir, "logs");
+            if (!Directory.Exists(logsDir))
+            {
+                Directory.CreateDirectory(logsDir);
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = logsDir,
+                UseShellExecute = true
+            });
+        }
+        private void LoadSettings()
+        {
+            if (!File.Exists(settingsPath))
+            {
+                settings = new AppSettings();
+                ApplySettingsToControls();
+                return;
+            }
+
+            try
+            {
+                string json = File.ReadAllText(settingsPath);
+
+                settings = JsonSerializer.Deserialize<AppSettings>(json)
+                           ?? new AppSettings();
+
+                ApplySettingsToControls();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Errore nel caricamento delle impostazioni:\n\n{ex.Message}",
+                    "Errore",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                settings = new AppSettings();
+                ApplySettingsToControls();
+            }
+        }
+
+
+        private void ApplySettingsToControls()
+        {
+            // =========================
+            // CHECKBOX
+            // =========================
+
+            checkBox1.Checked = settings.check1;
+            checkBox2.Checked = settings.check2;
+            checkBox3.Checked = settings.check3;
+            checkBox4.Checked = settings.check4;
+            checkBox5.Checked = settings.check5;
+            checkBox6.Checked = settings.check6;
+            checkBox7.Checked = settings.check7;
+            checkBox8.Checked = settings.check8;
+            checkBox9.Checked = settings.check9;
+
+
+            // =========================
+            // BAUD RATE
+            // =========================
+
+            textBox3.Text = settings.BaudRate1;
+            textBox5.Text = settings.BaudRate2;
+            textBox4.Text = settings.BaudRate3;
+            textBox6.Text = settings.BaudRate4;
+
+
+            // =========================
+            // NUMERIC UP DOWN
+            // =========================
+
+            numericUpDown1.Value = settings.graph_num1;
+            numericUpDown2.Value = settings.graph_num2;
+            numericUpDown3.Value = settings.graph_num3;
+            numericUpDown4.Value = settings.graph_num4;
+
+
+            // =========================
+            // COMBOBOX
+            // =========================
+
+            if (settings.line_end_index >= 0 &&
+                settings.line_end_index < comboBox6.Items.Count)
+            {
+                comboBox6.SelectedIndex = settings.line_end_index;
+            }
+
+
+            // =========================
+            // VARIABILI
+            // =========================
+
+            time_log = settings.time_button;
+            is_locked = settings.locked_button;
+
+
+            if (!is_locked)
+            {
+                toolTip1.SetToolTip(button12, "AutoScrolling off");
+                button12.Image = Properties.Resources.Unlock;
+                textBox2.ScrollBars = RichTextBoxScrollBars.Both;
+                //               textBox2.Enabled = true;
+
+            }
+            else
+            {
+                button12.Image = Properties.Resources.Lock;
+                toolTip1.SetToolTip(button12, "AutoScrolling on");
+                textBox2.ScrollBars = RichTextBoxScrollBars.None;
+                //               textBox2.Enabled = false;
+            }
+            textBox2.SelectionStart = textBox2.Text.Length;
+            textBox2.SelectionLength = 0;
+            textBox2.ScrollToCaret();
+
+
+            if (!time_log)
+            {
+                button15.Image = Properties.Resources.Time_16x_cross2;
+                toolTip1.SetToolTip(button15, "Timestamps off");
+            }
+            else
+            {
+                button15.Image = Properties.Resources.Time_color_16x;
+                toolTip1.SetToolTip(button15, "Timestamps on");
+            }
+
+            port1.Parity = ParseParity(settings.Parity1);
+            port1.DataBits = settings.DataBits1;
+            port1.StopBits = ParseStopBits(settings.StopBits1);
+
+            if (settings.CustomBuffer1)
+                port1.ReadBufferSize = settings.ReadBufferSize1;
+
+
+            port2.Parity = ParseParity(settings.Parity2);
+            port2.DataBits = settings.DataBits2;
+            port2.StopBits = ParseStopBits(settings.StopBits2);
+
+            if (settings.CustomBuffer2)
+                port2.ReadBufferSize = settings.ReadBufferSize2;
+
+
+            port3.Parity = ParseParity(settings.Parity3);
+            port3.DataBits = settings.DataBits3;
+            port3.StopBits = ParseStopBits(settings.StopBits3);
+
+            if (settings.CustomBuffer3)
+                port3.ReadBufferSize = settings.ReadBufferSize3;
+
+
+            port4.Parity = ParseParity(settings.Parity4);
+            port4.DataBits = settings.DataBits4;
+            port4.StopBits = ParseStopBits(settings.StopBits4);
+
+            if (settings.CustomBuffer4)
+                port4.ReadBufferSize = settings.ReadBufferSize4;
+
+        }
+        private Parity ParseParity(string value)
+        {
+            return value switch
+            {
+                "Odd" => Parity.Odd,
+                "Even" => Parity.Even,
+                _ => Parity.None
+            };
+        }
+        private StopBits ParseStopBits(string value)
+        {
+            return value switch
+            {
+                "None" => StopBits.None,
+                "One" => StopBits.One,
+                "OnePointFive" => StopBits.OnePointFive,
+                "Two" => StopBits.Two,
+                _ => StopBits.One
+            };
+        }
+
+        private void SaveSettings()
+        {
+            try
+            {
+                // =========================
+                // CHECKBOX
+                // =========================
+
+                settings.check1 = checkBox1.Checked;
+                settings.check2 = checkBox2.Checked;
+                settings.check3 = checkBox3.Checked;
+                settings.check4 = checkBox4.Checked;
+                settings.check5 = checkBox5.Checked;
+                settings.check6 = checkBox6.Checked;
+                settings.check7 = checkBox7.Checked;
+                settings.check8 = checkBox8.Checked;
+                settings.check9 = checkBox9.Checked;
+
+
+                // =========================
+                // BAUD RATE
+                // =========================
+
+                settings.BaudRate1 = textBox3.Text;
+                settings.BaudRate2 = textBox5.Text;
+                settings.BaudRate3 = textBox4.Text;
+                settings.BaudRate4 = textBox6.Text;
+
+
+                // =========================
+                // NUMERIC UP DOWN
+                // =========================
+
+                settings.graph_num1 = (int)numericUpDown1.Value;
+                settings.graph_num2 = (int)numericUpDown2.Value;
+                settings.graph_num3 = (int)numericUpDown3.Value;
+                settings.graph_num4 = (int)numericUpDown4.Value;
+
+
+                // =========================
+                // COMBOBOX
+                // =========================
+
+                settings.line_end_index = comboBox6.SelectedIndex;
+
+
+                // =========================
+                // VARIABILI
+                // =========================
+
+                settings.time_button = time_log;
+                settings.locked_button = is_locked;
+
+
+
+
+                // PORTA 1
+                settings.Parity1 = getparity(port1);
+                settings.DataBits1 = port1.DataBits;
+                settings.StopBits1 = getstopbits(port1);
+                settings.ReadBufferSize1 = port1.ReadBufferSize;
+
+
+                // PORTA 2
+                settings.Parity2 = getparity(port2);
+                settings.DataBits2 = port2.DataBits;
+                settings.StopBits2 = getstopbits(port2);
+                settings.ReadBufferSize2 = port2.ReadBufferSize;
+
+
+                // PORTA 3
+                settings.Parity3 = getparity(port3);
+                settings.DataBits3 = port3.DataBits;
+                settings.StopBits3 = getstopbits(port3);
+                settings.ReadBufferSize3 = port3.ReadBufferSize;
+
+
+                // PORTA 4
+                settings.Parity4 = getparity(port4);
+                settings.DataBits4 = port4.DataBits;
+                settings.StopBits4 = getstopbits(port4);
+                settings.ReadBufferSize4 = port4.ReadBufferSize;
+
+
+                // =========================
+                // SERIALIZZAZIONE
+                // =========================
+
+                string json = JsonSerializer.Serialize(
+                    settings,
+                    new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    });
+
+                File.WriteAllText(settingsPath, json);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Errore nel salvataggio delle impostazioni:\n\n{ex.Message}",
+                    "Errore",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            SaveSettings();
+        }
     }
+
+
 
 
     public class Script
@@ -1496,4 +1813,68 @@ namespace SerialPortMacros
             color = clr;
         }
     }
+
+
+    public class AppSettings
+    {
+        public bool check1 { get; set; } = false;
+        public bool check2 { get; set; } = false;
+        public bool check3 { get; set; } = false;
+        public bool check4 { get; set; } = false;
+        public bool check5 { get; set; } = false;
+        public bool check6 { get; set; } = false;
+        public bool check7 { get; set; } = false;
+        public bool check8 { get; set; } = false;
+        public bool check9 { get; set; } = false;
+
+        public bool time_button { get; set; } = false;
+        public bool locked_button { get; set; } = false;
+
+        public string BaudRate1 { get; set; } = "9600";
+        public string BaudRate2 { get; set; } = "9600";
+        public string BaudRate3 { get; set; } = "9600";
+        public string BaudRate4 { get; set; } = "9600";
+
+        public int graph_num1 { get; set; } = 1;
+        public int graph_num2 { get; set; } = 1;
+        public int graph_num3 { get; set; } = 1;
+        public int graph_num4 { get; set; } = 1;
+
+        public int line_end_index { get; set; } = 0;
+
+
+        // PORTA 1
+        public string Parity1 { get; set; } = "None";
+        public int DataBits1 { get; set; } = 8;
+        public string StopBits1 { get; set; } = "One";
+        public bool CustomBuffer1 { get; set; } = false;
+        public int ReadBufferSize1 { get; set; } = 4096;
+
+
+        // PORTA 2
+        public string Parity2 { get; set; } = "None";
+        public int DataBits2 { get; set; } = 8;
+        public string StopBits2 { get; set; } = "One";
+        public bool CustomBuffer2 { get; set; } = false;
+        public int ReadBufferSize2 { get; set; } = 4096;
+
+
+        // PORTA 3
+        public string Parity3 { get; set; } = "None";
+        public int DataBits3 { get; set; } = 8;
+        public string StopBits3 { get; set; } = "One";
+        public bool CustomBuffer3 { get; set; } = false;
+        public int ReadBufferSize3 { get; set; } = 4096;
+
+
+        // PORTA 4
+        public string Parity4 { get; set; } = "None";
+        public int DataBits4 { get; set; } = 8;
+        public string StopBits4 { get; set; } = "One";
+        public bool CustomBuffer4 { get; set; } = false;
+        public int ReadBufferSize4 { get; set; } = 4096;
+
+    }
+
+
 }

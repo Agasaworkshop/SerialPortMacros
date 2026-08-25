@@ -77,6 +77,7 @@
             button19 = new Button();
             toolTip1 = new ToolTip(components);
             comboBox6 = new ComboBox();
+            button7 = new Button();
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown3).BeginInit();
@@ -608,11 +609,24 @@
             comboBox6.Size = new Size(136, 28);
             comboBox6.TabIndex = 41;
             // 
+            // button7
+            // 
+            button7.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            button7.Image = (Image)resources.GetObject("button7.Image");
+            button7.Location = new Point(645, 445);
+            button7.Name = "button7";
+            button7.Size = new Size(27, 29);
+            button7.TabIndex = 42;
+            button7.TextAlign = ContentAlignment.MiddleRight;
+            button7.UseVisualStyleBackColor = true;
+            button7.Click += button7_Click_1;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 531);
+            Controls.Add(button7);
             Controls.Add(comboBox6);
             Controls.Add(button19);
             Controls.Add(numericUpDown4);
@@ -663,6 +677,7 @@
             MinimumSize = new Size(818, 534);
             Name = "Form1";
             Text = "SerialPortMacros";
+            FormClosing += Form1_FormClosing;
             Load += Form1_Load;
             MouseClick += Form1_MouseClick;
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).EndInit();
@@ -722,5 +737,6 @@
         private Button button19;
         private ToolTip toolTip1;
         private ComboBox comboBox6;
+        private Button button7;
     }
 }
