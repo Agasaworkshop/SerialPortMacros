@@ -963,6 +963,9 @@ namespace SerialPortMacros
         {
             if (logging == false)
             {
+
+
+
                 checkBox8.Enabled = false;
                 checkBox7.Enabled = false;
                 checkBox6.Enabled = false;
@@ -970,6 +973,16 @@ namespace SerialPortMacros
                 checkBox9.Enabled = false;
                 logging = true;
                 button14.Text = "Logging...";
+
+
+                _logFilePath1 = null;
+                _logFilePath2 = null;
+                _logFilePath3 = null;
+                _logFilePath4 = null;
+                _logFilePath5 = null;
+
+
+
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string logsDir = Path.Combine(baseDir, "logs");
                 Directory.CreateDirectory(logsDir);
@@ -1078,6 +1091,28 @@ namespace SerialPortMacros
                 _writer5?.Flush();
                 _writer5?.Close();
                 _writer5 = null;
+
+                OpenLogForms();
+            }
+        }
+
+        private void OpenLogForms()
+        {
+            string[] logPaths =
+            {
+            _logFilePath1,
+            _logFilePath2,
+            _logFilePath3,
+            _logFilePath4
+        };
+
+            foreach (string path in logPaths)
+            {
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    Form5 form = new Form5(path);
+                    form.Show();
+                }
             }
         }
 
@@ -1539,7 +1574,7 @@ namespace SerialPortMacros
             checkBox7.Checked = settings.check7;
             checkBox8.Checked = settings.check8;
             checkBox9.Checked = settings.check9;
-
+            checkBox10.Checked = settings.check10;
 
             // =========================
             // BAUD RATE
@@ -1682,7 +1717,7 @@ namespace SerialPortMacros
                 settings.check8 = checkBox8.Checked;
                 settings.check9 = checkBox9.Checked;
 
-
+                settings.check10 = checkBox10.Checked;
                 // =========================
                 // BAUD RATE
                 // =========================
@@ -1775,6 +1810,39 @@ namespace SerialPortMacros
         {
             SaveSettings();
         }
+
+        private void label5_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effect = DragDropEffects.Copy;
+            }
+            else
+            {
+                e.Effect = DragDropEffects.None;
+            }
+        }
+
+        private void label5_DragDrop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+                return;
+
+            string[] files =
+                (string[])e.Data.GetData(DataFormats.FileDrop);
+
+            // Accettiamo un solo file
+            if (files.Length != 1)
+                return;
+
+            string path = files[0];
+
+            if (!File.Exists(path))
+                return;
+
+            Form5 form = new Form5(path);
+            form.Show();
+        }
     }
 
 
@@ -1826,6 +1894,7 @@ namespace SerialPortMacros
         public bool check7 { get; set; } = false;
         public bool check8 { get; set; } = false;
         public bool check9 { get; set; } = false;
+        public bool check10 { get; set; } = false;
 
         public bool time_button { get; set; } = false;
         public bool locked_button { get; set; } = false;
