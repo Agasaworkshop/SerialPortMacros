@@ -616,7 +616,7 @@
             // 
             // comboBox6
             // 
-            comboBox6.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            comboBox6.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             comboBox6.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox6.FormattingEnabled = true;
             comboBox6.Location = new Point(496, 292);
@@ -638,6 +638,7 @@
             // label5
             // 
             label5.AllowDrop = true;
+            label5.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             label5.AutoSize = true;
             label5.BackColor = SystemColors.GradientActiveCaption;
             label5.Location = new Point(595, 458);

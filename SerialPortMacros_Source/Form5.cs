@@ -18,6 +18,7 @@ namespace SerialPortMacros
     {
         private LogParser parser;
         private string logPath;
+        public bool plot_ready = false;
 
 
         public Form5(string logPath)
@@ -51,6 +52,7 @@ namespace SerialPortMacros
             }
 
             InitializeXAxisSelector();
+            plot_ready = true;
         }
         private void InitializeTable()
         {
@@ -96,6 +98,17 @@ namespace SerialPortMacros
                 DataGridViewAutoSizeColumnMode.Fill;
 
             dataGridView1.Columns.Add(gainColumn);
+
+            DataGridViewTextBoxColumn cutoffColumn =
+                new DataGridViewTextBoxColumn();
+
+            cutoffColumn.Name = "Cutoff";
+            cutoffColumn.HeaderText = "Cutoff [Hz]";
+            cutoffColumn.Width = 55;
+            cutoffColumn.AutoSizeMode =
+                DataGridViewAutoSizeColumnMode.None;
+
+            dataGridView1.Columns.Add(cutoffColumn);
         }
 
 
@@ -109,6 +122,7 @@ namespace SerialPortMacros
             row.Cells["Plot"].Value = false;
             row.Cells["Element"].Value = name;
             row.Cells["Gain"].Value = 1.0;
+            row.Cells["Cutoff"].Value = 0.0;
         }
         private void InitializeXAxisSelector()
         {
@@ -132,6 +146,7 @@ namespace SerialPortMacros
         private void button1_Click(object sender, EventArgs e)
         {
             RefreshPlot();
+            plot_ready = true;
         }
         private void RefreshPlot()
         {
@@ -144,6 +159,29 @@ namespace SerialPortMacros
 
             bool atLeastOneSignal = false;
 
+            // Il filtro è disponibile solamente con asse X Auto
+            bool filterEnabled =
+                comboBox1.SelectedIndex == 0;
+
+            double samplingTime = 1.0;
+
+            if (filterEnabled)
+            {
+                if (!double.TryParse(
+                    textBox1.Text,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out samplingTime))
+                {
+                    samplingTime = 1.0;
+                }
+
+                if (samplingTime <= 0)
+                    samplingTime = 1.0;
+            }
+
+            double samplingFrequency =
+                1.0 / samplingTime;
 
             for (int element = 0;
                  element < parser.ElementCount;
@@ -151,6 +189,10 @@ namespace SerialPortMacros
             {
                 DataGridViewRow row =
                     dataGridView1.Rows[element];
+
+                // =====================================
+                // CHECKBOX PLOT
+                // =====================================
 
                 bool plot =
                     row.Cells["Plot"].Value != null &&
@@ -176,16 +218,58 @@ namespace SerialPortMacros
 
 
                 // =====================================
-                // CREA I DATI SCALATI
+                // CUTOFF
                 // =====================================
 
-                double[] originalY = parser.Data[element];
+                double cutoff = 0.0;
 
-                double[] scaledY = new double[originalY.Length];
+                double.TryParse(
+                    row.Cells["Cutoff"].Value?.ToString(),
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out cutoff);
 
-                for (int i = 0; i < originalY.Length; i++)
+
+                // =====================================
+                // DATI ORIGINALI
+                // =====================================
+
+                double[] originalY =
+                    parser.Data[element];
+
+                double[] filteredY =
+                    (double[])originalY.Clone();
+
+
+                // =====================================
+                // FILTRO
+                // Solo con asse X AUTO
+                // =====================================
+
+                if (filterEnabled &&
+                    cutoff > 0 &&
+                    cutoff < samplingFrequency / 2.0)
                 {
-                    scaledY[i] = originalY[i] * gain;
+                    filteredY =
+                        ButterworthFilter.LowPass(
+                            filteredY,
+                            samplingFrequency,
+                            cutoff,
+                            4);
+                }
+
+
+                // =====================================
+                // GAIN
+                // =====================================
+
+                double[] scaledY =
+                    new double[filteredY.Length];
+
+                for (int i = 0; i < filteredY.Length; i++)
+                {
+                    scaledY[i] =
+                        filteredY[i] * gain;
                 }
 
 
@@ -194,9 +278,10 @@ namespace SerialPortMacros
                 // =====================================
 
                 var signal =
-                    formsPlot1.Plot.Add.Scatter(xs, scaledY);
+                    formsPlot1.Plot.Add.Scatter(
+                        xs,
+                        scaledY);
 
-                // niente pallini
                 signal.MarkerSize = 0;
 
                 signal.LegendText =
@@ -210,12 +295,120 @@ namespace SerialPortMacros
                 return;
             }
 
-
-            // ScottPlot determina automaticamente
-            // i limiti del grafico
             formsPlot1.Plot.Axes.AutoScale();
 
             formsPlot1.Refresh();
+        }
+
+
+        public static class ButterworthFilter
+        {
+            public static double[] LowPass(
+                double[] input,
+                double sampleRate,
+                double cutoff,
+                int order = 4)
+            {
+                if (input == null || input.Length == 0)
+                    return Array.Empty<double>();
+
+                if (cutoff <= 0)
+                    return (double[])input.Clone();
+
+                if (cutoff >= sampleRate / 2.0)
+                    return (double[])input.Clone();
+
+                // Per ora implementiamo il filtro come
+                // cascata di sezioni biquad.
+                int stages = order / 2;
+
+                double[] output =
+                    (double[])input.Clone();
+
+                for (int stage = 0; stage < stages; stage++)
+                {
+                    output = ApplyLowPassBiquad(
+                        output,
+                        sampleRate,
+                        cutoff);
+                }
+
+                return output;
+            }
+
+
+            private static double[] ApplyLowPassBiquad(
+                double[] input,
+                double sampleRate,
+                double cutoff)
+            {
+                double Q = 1.0 / Math.Sqrt(2.0);
+
+                double omega =
+                    2.0 * Math.PI * cutoff / sampleRate;
+
+                double sinOmega = Math.Sin(omega);
+                double cosOmega = Math.Cos(omega);
+
+                double alpha =
+                    sinOmega / (2.0 * Q);
+
+                double b0 =
+                    (1.0 - cosOmega) / 2.0;
+
+                double b1 =
+                    1.0 - cosOmega;
+
+                double b2 =
+                    (1.0 - cosOmega) / 2.0;
+
+                double a0 =
+                    1.0 + alpha;
+
+                double a1 =
+                    -2.0 * cosOmega;
+
+                double a2 =
+                    1.0 - alpha;
+
+                // Normalizzazione
+                b0 /= a0;
+                b1 /= a0;
+                b2 /= a0;
+                a1 /= a0;
+                a2 /= a0;
+
+                double[] output =
+                    new double[input.Length];
+
+                double x1 = 0;
+                double x2 = 0;
+
+                double y1 = 0;
+                double y2 = 0;
+
+                for (int i = 0; i < input.Length; i++)
+                {
+                    double x0 = input[i];
+
+                    double y0 =
+                        b0 * x0 +
+                        b1 * x1 +
+                        b2 * x2 -
+                        a1 * y1 -
+                        a2 * y2;
+
+                    output[i] = y0;
+
+                    x2 = x1;
+                    x1 = x0;
+
+                    y2 = y1;
+                    y1 = y0;
+                }
+
+                return output;
+            }
         }
 
         private void RefreshParser()
@@ -307,6 +500,42 @@ namespace SerialPortMacros
             return Enumerable.Range(0, sampleCount)
                              .Select(i => (double)i)
                              .ToArray();
+        }
+
+        private void dataGridView1_CurrentCellDirtyStateChanged(object sender, EventArgs e)
+        {
+            if (!plot_ready) { return; }
+            if (dataGridView1.IsCurrentCellDirty &&
+                dataGridView1.CurrentCell is DataGridViewCheckBoxCell)
+            {
+                dataGridView1.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
+        }
+
+        private void dataGridView1_CellValueChanged(
+            object sender,
+            DataGridViewCellEventArgs e)
+        {
+            if (!plot_ready)
+                return;
+
+            if (e.RowIndex < 0)
+                return;
+
+            string columnName =
+                dataGridView1.Columns[e.ColumnIndex].Name;
+
+            if (columnName == "Plot" ||
+                columnName == "Gain" ||
+                columnName == "Cutoff")
+            {
+                RefreshPlot();
+            }
+        }
+
+        private void numericUpDown1_ValueChanged(object sender, EventArgs e)
+        {
+            plot_ready = false;
         }
     }
 
