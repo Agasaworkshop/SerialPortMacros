@@ -1,6 +1,7 @@
 # SerialPortMacros
 This is a C# program used to read up to 4 configurable serial ports,log them and write to them, it can also plot in real time multiple variables for each port.    
-<img width="800" height="567" alt="image" src="https://github.com/user-attachments/assets/106fca52-d07b-49a9-89ac-bcc57c24bd37" />
+<img width="798" height="522" alt="image" src="https://github.com/user-attachments/assets/d4376249-8ac4-4020-98c4-d35d994eefed" />
+
 
 [I've also made a short video to show some capabilities of this software](https://www.youtube.com/watch?v=STqCw-Kn7qI)
   
@@ -13,17 +14,52 @@ The color for the port is the same as the cog for the settings above the combobo
 To open a serial port, you need to select it from the combobox and click the connect button, you can also customize the serial port settings.   
 After connecting, you can select which ports you receive your messages by checking the checkbox near the port name.    
 
-You can clear the display by clicking the eraser button. You can also toggle auto-scroll with the lock button and toggle the timestamp with the clock button.    
+You can clear the display by clicking the eraser button. You can also toggle auto-scroll with the lock button and toggle the timestamp with the clock button.   
+
+All options will be saved each time the program closes.  
 
 # Logging
 
-<img width="800" height="569" alt="image" src="https://github.com/user-attachments/assets/73030c52-3b37-4fae-8bd7-77c6dd5b90fb" />
+<img width="797" height="518" alt="image" src="https://github.com/user-attachments/assets/da365469-b167-4387-ab2c-ee84752be0f7" />  
 
-By checking the log option under a port, you will enable logging for that port. If you do, when using the logging feature, a text file corresponding to that port will be created in the logs folder in the same directory as the exe file.  This file will contain the log of all that was written by that port, if the timestamp option is enabled, the timestamp will also be written (the name of the sender is only visible if the sender is the user in this case).    
+By checking the log option under a port, you will enable logging for that port. If you do, when using the logging feature, a text file corresponding to that port will be created in the logs folder* in the same directory as the exe file.  This file will contain the log of all that was written by that port,if the timestamp option is enabled, the timestamp will also be written (the name of the sender is only visible if the sender is the user in this case).    
+
 If two or more ports are selected, the software will write an additional file containing the log of all ports (in this case, the name of the sender will also be written).    
+
 By checking the log option near the text box, you will also be logging user inputs.    
 
-# Plotting
+* This folder can be opened with a dedicated button 
+
+# Plotting a log
+<img width="800" height="522" alt="image" src="https://github.com/user-attachments/assets/9ab631ef-b574-4e0d-bce3-febafd761e21" />   
+
+
+By checking the "Plot Log at the end" option the program will automatically open a dedicated window to plot the log:  
+<img width="968" height="485" alt="image" src="https://github.com/user-attachments/assets/d5141603-b343-4c0e-91c2-7b94a993850f" />
+
+The program takes any line containing a set of numbers spaced with any delimiter (different from ".") from a port and interprets each number in the string as a different vector   
+e.g.  
+The string:  
+132.50,-76457.00,847.36  
+will be interpreted as the values of 3 different plots at the same sample.  
+
+The program will automatically decide what format the data is in and will ignore any line different from the main format (so it decides how many plots from the data and then sticks to that), to prevent it from choosing a wrong format due to random messages. The program will check that the chosen format has at least "minimum occurrences" lines with that format; this value can be changed to make sure you exclude known ambiguous lines.
+
+<img width="976" height="485" alt="image" src="https://github.com/user-attachments/assets/e593320d-3521-4ea8-935f-97c64f3cb587" />    
+
+Each plot will be shown as an "element" in the table on the right; if a plot is checked, it will be displayed.   
+In addition, in the table one can set a gain and a low-pass filter cutoff frequency(only available in x-axis auto mode).  
+
+The x-axis can be set to two different modes:  
+- Auto: each element is considered sampled at a fixed sampling rate chosen by the user.  
+- Use an element as time base: one of the element vectors can be used as the x-axis.  
+e.g.
+132.50,-76457.00,847.36, 51
+Will consider 51 as the timestamp of the elements 132.50,-76457.00,847.36 in the plot  
+
+One can also open an old log with the drag and drop feature, which functions identically to the window that opens after a log if the box is checked. 
+
+# Plotting in real time
 <img width="1918" height="1015" alt="image" src="https://github.com/user-attachments/assets/535a5f56-c7e3-442d-bfec-a6f98fb20602" />
 
 Under each port, you can find a button to open the graphs; the number near the button decides how many plots will be opened. When reading the lines in the serial port, the software will associate the first number in the line to the first graph, the second number to the second graph, and so on. There are no defined delimiters; just make sure to add something between your numbers that isn't a dot(used for decimals). In the plot window, you can also select how long the time window should be.    
