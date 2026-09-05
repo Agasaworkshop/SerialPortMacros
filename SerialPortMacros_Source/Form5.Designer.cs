@@ -1,6 +1,6 @@
 ﻿namespace SerialPortMacros
 {
-    partial class Form5
+    partial class Log
     {
         /// <summary>
         /// Required designer variable.
@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form5));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Log));
             formsPlot1 = new ScottPlot.WinForms.FormsPlot();
             comboBox1 = new ComboBox();
             label1 = new Label();
@@ -160,7 +160,7 @@
             button1.UseVisualStyleBackColor = true;
             button1.Click += button1_Click;
             // 
-            // Form5
+            // Log
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -175,8 +175,8 @@
             Controls.Add(label1);
             Controls.Add(comboBox1);
             Controls.Add(formsPlot1);
-            Name = "Form5";
-            Text = "Form5";
+            Name = "Log";
+            Text = "Log";
             Load += Form5_Load;
             ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).EndInit();

@@ -56,6 +56,9 @@ namespace SerialPortMacros
 
         private AppSettings settings = new AppSettings();
 
+        private CancellationTokenSource? _watchdogCts;
+        private long _lastLogMessageTick;
+
 
         public Form1()
         {
@@ -141,10 +144,20 @@ namespace SerialPortMacros
                 textBox1.Text = "";
                 Sendtoports(inputText);
 
-                if (logging)
-                    Task.Run(() => LogUserInput(inputText));
+                Task.Run(() => LogUserInput(inputText));
             }
         }
+
+        private void send_log_message(string inputText)
+        {
+            aggiungi_a_textbox2(inputText, "You", Color.Black);
+            Sendtoports(inputText);
+
+            if (logging)
+                Task.Run(() => LogUserInput(inputText));
+        }   
+
+
         private void LogUserInput(string inputText)
         {
             string log_input_text = $"You: {inputText}";
@@ -859,12 +872,21 @@ namespace SerialPortMacros
                 }
             }
         }
+
+
+
+
         private void ProcessMessage(
-        string mess, string portName,
-        bool po1, bool po2, bool po3, bool po4,
-        bool opn, Color color)
+            string mess, string portName,
+            bool po1, bool po2, bool po3, bool po4,
+            bool opn, Color color)
         {
             if (!opn) return;
+
+            if (_stopRequested)
+            {
+                _lastLogMessageTick = Environment.TickCount64;
+            }
 
             BeginInvoke(_processUiAction, new object[]
             { mess, portName, po1, po2, po3, po4, color });
@@ -872,6 +894,7 @@ namespace SerialPortMacros
             if (openGraphs.TryGetValue(portName, out var forms))
             {
                 var nums = ParseNumbers(mess);
+
                 for (int i = 0; i < forms.Count && i < nums.Count; i++)
                 {
                     forms[i].AddDataPoint(nums[i]);
@@ -882,14 +905,18 @@ namespace SerialPortMacros
 
 
         private void UiProcess(string mess, string portName,
-        bool po1, bool po2, bool po3, bool po4, Color color)
+            bool po1, bool po2, bool po3, bool po4, Color color)
         {
             if (logging)
+            {
                 write_logs(po1, po2, po3, po4, mess, portName);
+
+            }
 
             aggiungi_a_textbox2(mess, portName, color);
             scriptcheck(mess, po1, po2, po3, po4);
         }
+
 
         public static List<double> ParseNumbers(string s)
         {
@@ -959,11 +986,17 @@ namespace SerialPortMacros
                 _writer5.WriteLine(multilog_line);
             }
         }
+
+
+        private bool _stopRequested = false;
+
+
         private void button14_Click(object sender, EventArgs e)
         {
             if (logging == false)
             {
-
+                if (settings.log_message1 != "")
+                    send_log_message(settings.log_message1);
 
 
                 checkBox8.Enabled = false;
@@ -1065,34 +1098,130 @@ namespace SerialPortMacros
             }
             else
             {
-                checkBox8.Enabled = true;
-                checkBox7.Enabled = true;
-                checkBox6.Enabled = true;
-                checkBox5.Enabled = true;
-                checkBox9.Enabled = true;
-                logging = false;
-                button14.Text = "Start Logging";
-                _writer1?.Flush();
-                _writer1?.Close();
-                _writer1 = null;
+                if (_stopRequested)
+                    return;
 
-                _writer2?.Flush();
-                _writer2?.Close();
-                _writer2 = null;
+                _stopRequested = true;
 
-                _writer3?.Flush();
-                _writer3?.Close();
-                _writer3 = null;
+                button14.Text = "Waiting...";
 
-                _writer4?.Flush();
-                _writer4?.Close();
-                _writer4 = null;
+                // IMPORTANTE:
+                // logging rimane TRUE durante tutta la risposta
+                logging = true;
 
-                _writer5?.Flush();
-                _writer5?.Close();
-                _writer5 = null;
+                // Comando al microcontrollore:
+                // "mandami il log"
+                if (settings.log_message2 != "")
+                    send_log_message(settings.log_message2);
 
-                OpenLogForms();
+                // Se non dobbiamo aspettare la fine,
+                // possiamo chiudere subito.
+                if (!settings.log_check)
+                {
+                    _stopRequested = false;
+                    logging = false;
+
+                    checkBox8.Enabled = true;
+                    checkBox7.Enabled = true;
+                    checkBox6.Enabled = true;
+                    checkBox5.Enabled = true;
+                    checkBox9.Enabled = true;
+
+                    button14.Text = "Start Logging";
+
+                    _writer1?.Close();
+                    _writer1 = null;
+
+                    _writer2?.Close();
+                    _writer2 = null;
+
+                    _writer3?.Close();
+                    _writer3 = null;
+
+                    _writer4?.Close();
+                    _writer4 = null;
+
+                    _writer5?.Close();
+                    _writer5 = null;
+
+                    OpenLogForms();
+                    return;
+                }
+
+                _lastLogMessageTick = Environment.TickCount64;
+                _startWatchdog();
+            }
+        }
+
+        private void StopLogging()
+        {
+            if (!_stopRequested)
+                return;
+
+            _stopRequested = false;
+            logging = false;
+
+            _watchdogCts?.Cancel();
+            _watchdogCts = null;
+
+            checkBox8.Enabled = true;
+            checkBox7.Enabled = true;
+            checkBox6.Enabled = true;
+            checkBox5.Enabled = true;
+            checkBox9.Enabled = true;
+
+            button14.Text = "Start Logging";
+
+            _writer1?.Flush();
+            _writer1?.Close();
+            _writer1 = null;
+
+            _writer2?.Flush();
+            _writer2?.Close();
+            _writer2 = null;
+
+            _writer3?.Flush();
+            _writer3?.Close();
+            _writer3 = null;
+
+            _writer4?.Flush();
+            _writer4?.Close();
+            _writer4 = null;
+
+            _writer5?.Flush();
+            _writer5?.Close();
+            _writer5 = null;
+
+            OpenLogForms();
+        }
+
+
+        private async void _startWatchdog()
+        {
+            _watchdogCts?.Cancel();
+            _watchdogCts = new CancellationTokenSource();
+
+            CancellationToken token = _watchdogCts.Token;
+
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    await Task.Delay(500, token);
+
+                    if (!_stopRequested)
+                        return;
+
+                    if (Environment.TickCount64 - _lastLogMessageTick >= 1000)
+                    {
+                        StopLogging();
+                        return;
+                    }
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // Watchdog cancellato: nessun problema
             }
         }
 
@@ -1110,7 +1239,7 @@ namespace SerialPortMacros
             {
                 if (!string.IsNullOrEmpty(path) && File.Exists(path))
                 {
-                    Form5 form = new Form5(path);
+                    Log form = new Log(path);
                     form.Show();
                 }
             }
@@ -1840,8 +1969,19 @@ namespace SerialPortMacros
             if (!File.Exists(path))
                 return;
 
-            Form5 form = new Form5(path);
+            Log form = new Log(path);
             form.Show();
+        }
+
+        private void button20_Click(object sender, EventArgs e)
+        {
+            var form = new Form6(this, settings.log_message1, settings.log_message2, settings.log_check);
+            form.Show();
+        }
+        public void Set_logging_messages(string mes1, string mes2, bool check) {
+            settings.log_message1 = mes1;
+            settings.log_message2 = mes2;
+            settings.log_check = check;
         }
     }
 
@@ -1911,6 +2051,12 @@ namespace SerialPortMacros
 
         public int line_end_index { get; set; } = 0;
 
+
+        //log messages
+        public string log_message1 { get; set; } = "";
+        public string log_message2 { get; set; } = "";
+
+        public bool log_check { get; set; } = false;
 
         // PORTA 1
         public string Parity1 { get; set; } = "None";

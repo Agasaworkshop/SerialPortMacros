@@ -80,6 +80,7 @@
             comboBox6 = new ComboBox();
             checkBox10 = new CheckBox();
             label5 = new Label();
+            button20 = new Button();
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown3).BeginInit();
@@ -649,11 +650,23 @@
             label5.DragDrop += label5_DragDrop;
             label5.DragEnter += label5_DragEnter;
             // 
+            // button20
+            // 
+            button20.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            button20.Image = Properties.Resources.Settings;
+            button20.Location = new Point(612, 395);
+            button20.Name = "button20";
+            button20.Size = new Size(27, 29);
+            button20.TabIndex = 46;
+            button20.UseVisualStyleBackColor = true;
+            button20.Click += button20_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 487);
+            Controls.Add(button20);
             Controls.Add(label5);
             Controls.Add(checkBox10);
             Controls.Add(button7);
@@ -770,5 +783,6 @@
         private Button button7;
         private CheckBox checkBox10;
         private Label label5;
+        private Button button20;
     }
 }

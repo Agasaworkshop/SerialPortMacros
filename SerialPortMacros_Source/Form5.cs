@@ -14,14 +14,14 @@ using System.Windows.Forms;
 
 namespace SerialPortMacros
 {
-    public partial class Form5 : Form
+    public partial class Log : Form
     {
         private LogParser parser;
         private string logPath;
         public bool plot_ready = false;
 
 
-        public Form5(string logPath)
+        public Log(string logPath)
         {
             InitializeComponent();
 
