@@ -38,6 +38,7 @@
             button3 = new Button();
             label2 = new Label();
             toolTip1 = new ToolTip(components);
+            button4 = new Button();
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
             SuspendLayout();
             // 
@@ -117,11 +118,23 @@
             label2.TabIndex = 5;
             label2.Text = "Legend";
             // 
+            // button4
+            // 
+            button4.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            button4.Image = Properties.Resources.Pause;
+            button4.Location = new Point(748, 444);
+            button4.Name = "button4";
+            button4.Size = new Size(27, 27);
+            button4.TabIndex = 6;
+            button4.UseVisualStyleBackColor = true;
+            button4.Click += button4_Click;
+            // 
             // Form4
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(787, 477);
+            Controls.Add(button4);
             Controls.Add(label2);
             Controls.Add(button3);
             Controls.Add(button2);
@@ -149,5 +162,6 @@
         private Button button3;
         private Label label2;
         private ToolTip toolTip1;
+        private Button button4;
     }
 }

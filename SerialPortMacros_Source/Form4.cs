@@ -38,6 +38,8 @@ namespace SerialPortMacros
         public Form1 mainform;
         public bool is_visible = true;
 
+        public bool playing = true;
+
 
         public Form4(Form1 form1, bool masterFlag = false)
         {
@@ -113,6 +115,10 @@ namespace SerialPortMacros
 
         private void TimerPlot_Tick(object sender, EventArgs e)
         {
+            // Se in pausa, congela completamente il grafico
+            if (!playing)
+                return;
+
             bool updated = false;
             double now = sw.Elapsed.TotalSeconds;
 
@@ -129,6 +135,7 @@ namespace SerialPortMacros
                         catch
                         {
                         }
+
                         updated = true;
                     }
                 }
@@ -141,7 +148,10 @@ namespace SerialPortMacros
                     {
                         logger_main.Add(p.t, p.y);
                     }
-                    catch { }
+                    catch
+                    {
+                    }
+
                     updated = true;
                 }
             }
@@ -150,19 +160,25 @@ namespace SerialPortMacros
             {
                 double xMax = now;
                 double xMin = now - timeWindow;
+
                 formsPlot1.Plot.Axes.ContinuouslyAutoscale = false;
 
                 if (isMaster)
                 {
                     foreach (var childEntry in children.Values)
                     {
-                        childEntry.logger.Data.Coordinates.RemoveAll(c => c.X < now - timeWindow);
+                        childEntry.logger.Data.Coordinates.RemoveAll(
+                            c => c.X < now - timeWindow
+                        );
                     }
                 }
                 else
                 {
-                    logger_main.Data.Coordinates.RemoveAll(c => c.X < now - timeWindow);
+                    logger_main.Data.Coordinates.RemoveAll(
+                        c => c.X < now - timeWindow
+                    );
                 }
+
                 formsPlot1.Plot.Axes.SetLimitsX(xMin, xMax);
                 formsPlot1.Refresh();
             }
@@ -249,6 +265,24 @@ namespace SerialPortMacros
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
         {
             timeWindow = (double)numericUpDown1.Value;
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            if (playing)
+            {
+                // PAUSA
+                playing = false;
+                button4.Image = Properties.Resources.Play;
+                toolTip1.SetToolTip(button4, "Play");
+            }
+            else
+            {
+                // PLAY
+                playing = true;
+                button4.Image = Properties.Resources.Pause;
+                toolTip1.SetToolTip(button4, "Pause");
+            }
         }
     }
     public class CircularPlotBuffer
