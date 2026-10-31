@@ -326,18 +326,7 @@ namespace SerialPortMacros
 
         private void DeleteButton_Click(object sender, EventArgs e)
         {
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(ModuleDirectory) && Directory.Exists(ModuleDirectory))
-                {
-                    Directory.Delete(ModuleDirectory, true);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("Delete error: " + ex.Message);
-            }
-
+            // Non elimina più la cartella dal disco, segnala solo di rimuovere l'elemento singolo
             DialogResult = DialogResult.Abort;
             Close();
         }

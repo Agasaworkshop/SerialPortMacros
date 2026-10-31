@@ -439,7 +439,8 @@ namespace SerialPortMacros
                 DialogResult result = form8.ShowDialog();
                 if (result == DialogResult.Abort)
                 {
-                    _document.Elements.RemoveAll(el => el.ModuleName == element.ModuleName);
+                    // Rimuove esclusivamente questo singolo elemento basandosi sul suo ID univoco
+                    _document.Elements.RemoveAll(el => el.Id == element.Id);
                     RenderDocument();
                     return;
                 }
