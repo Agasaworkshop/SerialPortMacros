@@ -81,6 +81,13 @@
             checkBox10 = new CheckBox();
             label5 = new Label();
             button20 = new Button();
+            checkBox11 = new CheckBox();
+            checkBox12 = new CheckBox();
+            checkBox13 = new CheckBox();
+            checkBox14 = new CheckBox();
+            button21 = new Button();
+            button22 = new Button();
+            button23 = new Button();
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown3).BeginInit();
@@ -134,7 +141,7 @@
             button3.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             button3.BackColor = Color.White;
             button3.Image = Properties.Resources.AddConnection;
-            button3.Location = new Point(126, 360);
+            button3.Location = new Point(126, 387);
             button3.Name = "button3";
             button3.Size = new Size(27, 29);
             button3.TabIndex = 5;
@@ -147,7 +154,7 @@
             button4.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             button4.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             button4.Image = (Image)resources.GetObject("button4.Image");
-            button4.Location = new Point(407, 361);
+            button4.Location = new Point(407, 388);
             button4.Name = "button4";
             button4.Size = new Size(27, 29);
             button4.TabIndex = 7;
@@ -176,7 +183,7 @@
             button5.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             button5.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             button5.Image = (Image)resources.GetObject("button5.Image");
-            button5.Location = new Point(265, 361);
+            button5.Location = new Point(265, 388);
             button5.Name = "button5";
             button5.Size = new Size(27, 29);
             button5.TabIndex = 7;
@@ -189,7 +196,7 @@
             button6.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             button6.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             button6.Image = Properties.Resources.AddConnection;
-            button6.Location = new Point(545, 361);
+            button6.Location = new Point(545, 388);
             button6.Name = "button6";
             button6.Size = new Size(27, 29);
             button6.TabIndex = 9;
@@ -210,7 +217,7 @@
             comboBox2.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             comboBox2.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox2.FormattingEnabled = true;
-            comboBox2.Location = new Point(59, 361);
+            comboBox2.Location = new Point(59, 388);
             comboBox2.Name = "comboBox2";
             comboBox2.Size = new Size(71, 28);
             comboBox2.TabIndex = 11;
@@ -222,7 +229,7 @@
             comboBox1.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox1.FormattingEnabled = true;
-            comboBox1.Location = new Point(197, 361);
+            comboBox1.Location = new Point(197, 388);
             comboBox1.Name = "comboBox1";
             comboBox1.Size = new Size(71, 28);
             comboBox1.TabIndex = 12;
@@ -234,7 +241,7 @@
             comboBox3.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             comboBox3.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox3.FormattingEnabled = true;
-            comboBox3.Location = new Point(337, 361);
+            comboBox3.Location = new Point(337, 388);
             comboBox3.Name = "comboBox3";
             comboBox3.Size = new Size(71, 28);
             comboBox3.TabIndex = 13;
@@ -246,7 +253,7 @@
             comboBox4.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             comboBox4.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox4.FormattingEnabled = true;
-            comboBox4.Location = new Point(475, 361);
+            comboBox4.Location = new Point(475, 388);
             comboBox4.Name = "comboBox4";
             comboBox4.Size = new Size(71, 28);
             comboBox4.TabIndex = 14;
@@ -346,7 +353,7 @@
             // 
             checkBox1.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             checkBox1.AutoSize = true;
-            checkBox1.Location = new Point(32, 367);
+            checkBox1.Location = new Point(32, 394);
             checkBox1.Name = "checkBox1";
             checkBox1.Size = new Size(18, 17);
             checkBox1.TabIndex = 24;
@@ -357,7 +364,7 @@
             // 
             checkBox2.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             checkBox2.AutoSize = true;
-            checkBox2.Location = new Point(173, 367);
+            checkBox2.Location = new Point(173, 394);
             checkBox2.Name = "checkBox2";
             checkBox2.Size = new Size(18, 17);
             checkBox2.TabIndex = 25;
@@ -368,7 +375,7 @@
             // 
             checkBox3.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             checkBox3.AutoSize = true;
-            checkBox3.Location = new Point(313, 368);
+            checkBox3.Location = new Point(313, 395);
             checkBox3.Name = "checkBox3";
             checkBox3.Size = new Size(18, 17);
             checkBox3.TabIndex = 26;
@@ -379,7 +386,7 @@
             // 
             checkBox4.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             checkBox4.AutoSize = true;
-            checkBox4.Location = new Point(451, 368);
+            checkBox4.Location = new Point(451, 395);
             checkBox4.Name = "checkBox4";
             checkBox4.Size = new Size(18, 17);
             checkBox4.TabIndex = 27;
@@ -428,7 +435,7 @@
             // 
             checkBox5.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             checkBox5.AutoSize = true;
-            checkBox5.Location = new Point(490, 401);
+            checkBox5.Location = new Point(488, 422);
             checkBox5.Name = "checkBox5";
             checkBox5.Size = new Size(53, 24);
             checkBox5.TabIndex = 31;
@@ -440,7 +447,7 @@
             // 
             checkBox6.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             checkBox6.AutoSize = true;
-            checkBox6.Location = new Point(351, 401);
+            checkBox6.Location = new Point(349, 422);
             checkBox6.Name = "checkBox6";
             checkBox6.Size = new Size(53, 24);
             checkBox6.TabIndex = 32;
@@ -452,7 +459,7 @@
             // 
             checkBox7.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             checkBox7.AutoSize = true;
-            checkBox7.Location = new Point(206, 401);
+            checkBox7.Location = new Point(204, 422);
             checkBox7.Name = "checkBox7";
             checkBox7.Size = new Size(53, 24);
             checkBox7.TabIndex = 33;
@@ -464,7 +471,7 @@
             // 
             checkBox8.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             checkBox8.AutoSize = true;
-            checkBox8.Location = new Point(74, 401);
+            checkBox8.Location = new Point(72, 422);
             checkBox8.Name = "checkBox8";
             checkBox8.Size = new Size(53, 24);
             checkBox8.TabIndex = 34;
@@ -509,7 +516,7 @@
             // numericUpDown1
             // 
             numericUpDown1.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            numericUpDown1.Location = new Point(72, 427);
+            numericUpDown1.Location = new Point(70, 448);
             numericUpDown1.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
             numericUpDown1.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             numericUpDown1.Name = "numericUpDown1";
@@ -522,7 +529,7 @@
             // 
             button16.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             button16.Image = (Image)resources.GetObject("button16.Image");
-            button16.Location = new Point(121, 425);
+            button16.Location = new Point(119, 446);
             button16.Name = "button16";
             button16.Size = new Size(32, 29);
             button16.TabIndex = 39;
@@ -533,7 +540,7 @@
             // numericUpDown2
             // 
             numericUpDown2.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            numericUpDown2.Location = new Point(211, 427);
+            numericUpDown2.Location = new Point(209, 448);
             numericUpDown2.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
             numericUpDown2.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             numericUpDown2.Name = "numericUpDown2";
@@ -546,7 +553,7 @@
             // 
             button17.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             button17.Image = (Image)resources.GetObject("button17.Image");
-            button17.Location = new Point(260, 425);
+            button17.Location = new Point(258, 446);
             button17.Name = "button17";
             button17.Size = new Size(32, 29);
             button17.TabIndex = 39;
@@ -557,7 +564,7 @@
             // numericUpDown3
             // 
             numericUpDown3.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            numericUpDown3.Location = new Point(353, 427);
+            numericUpDown3.Location = new Point(351, 448);
             numericUpDown3.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
             numericUpDown3.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             numericUpDown3.Name = "numericUpDown3";
@@ -570,7 +577,7 @@
             // 
             button18.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             button18.Image = (Image)resources.GetObject("button18.Image");
-            button18.Location = new Point(402, 425);
+            button18.Location = new Point(400, 446);
             button18.Name = "button18";
             button18.Size = new Size(32, 29);
             button18.TabIndex = 39;
@@ -581,7 +588,7 @@
             // numericUpDown4
             // 
             numericUpDown4.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            numericUpDown4.Location = new Point(491, 427);
+            numericUpDown4.Location = new Point(489, 448);
             numericUpDown4.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
             numericUpDown4.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             numericUpDown4.Name = "numericUpDown4";
@@ -594,7 +601,7 @@
             // 
             button19.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             button19.Image = (Image)resources.GetObject("button19.Image");
-            button19.Location = new Point(540, 425);
+            button19.Location = new Point(538, 446);
             button19.Name = "button19";
             button19.Size = new Size(32, 29);
             button19.TabIndex = 39;
@@ -661,11 +668,99 @@
             button20.UseVisualStyleBackColor = true;
             button20.Click += button20_Click;
             // 
+            // checkBox11
+            // 
+            checkBox11.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            checkBox11.AutoSize = true;
+            checkBox11.Location = new Point(351, 358);
+            checkBox11.Name = "checkBox11";
+            checkBox11.Size = new Size(55, 24);
+            checkBox11.TabIndex = 47;
+            checkBox11.Text = "wifi";
+            checkBox11.UseVisualStyleBackColor = true;
+            checkBox11.CheckedChanged += checkBox11_CheckedChanged;
+            // 
+            // checkBox12
+            // 
+            checkBox12.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            checkBox12.AutoSize = true;
+            checkBox12.Location = new Point(206, 358);
+            checkBox12.Name = "checkBox12";
+            checkBox12.Size = new Size(55, 24);
+            checkBox12.TabIndex = 47;
+            checkBox12.Text = "wifi";
+            checkBox12.UseVisualStyleBackColor = true;
+            checkBox12.CheckedChanged += checkBox12_CheckedChanged;
+            // 
+            // checkBox13
+            // 
+            checkBox13.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            checkBox13.AutoSize = true;
+            checkBox13.Location = new Point(74, 358);
+            checkBox13.Name = "checkBox13";
+            checkBox13.Size = new Size(55, 24);
+            checkBox13.TabIndex = 47;
+            checkBox13.Text = "wifi";
+            checkBox13.UseVisualStyleBackColor = true;
+            checkBox13.CheckedChanged += checkBox13_CheckedChanged;
+            // 
+            // checkBox14
+            // 
+            checkBox14.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            checkBox14.AutoSize = true;
+            checkBox14.Location = new Point(490, 358);
+            checkBox14.Name = "checkBox14";
+            checkBox14.Size = new Size(55, 24);
+            checkBox14.TabIndex = 47;
+            checkBox14.Text = "wifi";
+            checkBox14.UseVisualStyleBackColor = true;
+            checkBox14.CheckedChanged += checkBox14_CheckedChanged;
+            // 
+            // button21
+            // 
+            button21.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            button21.Image = Properties.Resources.AddModule;
+            button21.Location = new Point(661, 323);
+            button21.Name = "button21";
+            button21.Size = new Size(30, 26);
+            button21.TabIndex = 48;
+            button21.UseVisualStyleBackColor = true;
+            button21.Click += button21_Click;
+            // 
+            // button22
+            // 
+            button22.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            button22.Image = Properties.Resources.Module;
+            button22.Location = new Point(627, 323);
+            button22.Name = "button22";
+            button22.Size = new Size(28, 26);
+            button22.TabIndex = 49;
+            button22.UseVisualStyleBackColor = true;
+            button22.Click += button22_Click;
+            // 
+            // button23
+            // 
+            button23.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            button23.Image = Properties.Resources.EditModule1;
+            button23.Location = new Point(594, 323);
+            button23.Name = "button23";
+            button23.Size = new Size(27, 26);
+            button23.TabIndex = 50;
+            button23.UseVisualStyleBackColor = true;
+            button23.Click += button23_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 487);
+            Controls.Add(button23);
+            Controls.Add(button22);
+            Controls.Add(button21);
+            Controls.Add(checkBox13);
+            Controls.Add(checkBox12);
+            Controls.Add(checkBox14);
+            Controls.Add(checkBox11);
             Controls.Add(button20);
             Controls.Add(label5);
             Controls.Add(checkBox10);
@@ -784,5 +879,12 @@
         private CheckBox checkBox10;
         private Label label5;
         private Button button20;
+        private CheckBox checkBox11;
+        private CheckBox checkBox12;
+        private CheckBox checkBox13;
+        private CheckBox checkBox14;
+        private Button button21;
+        private Button button22;
+        private Button button23;
     }
 }

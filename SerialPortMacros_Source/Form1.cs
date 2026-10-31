@@ -1,4 +1,4 @@
-ï»¿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO.Ports;
 using System.Text;
 using WindowsInput;
@@ -10,12 +10,90 @@ using System.Globalization;          // CultureInfo
 using System.Windows.Forms;
 using System.Text.Json;
 
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 
 namespace SerialPortMacros
 {
     public partial class Form1 : Form
     {
+
+        public enum ConnectionMode
+        {
+            Serial,
+            Tcp
+        }
+
+        // All ports start in serial mode.
+        private readonly ConnectionMode[] _connectionModes =
+        {
+            ConnectionMode.Serial,
+            ConnectionMode.Serial,
+            ConnectionMode.Serial,
+            ConnectionMode.Serial
+        };
+
+        public ConcurrentDictionary<string, double> PanelVariables = new ConcurrentDictionary<string, double>();
+        public ConcurrentDictionary<string, string> LatestSerialValues = new ConcurrentDictionary<string, string>();
+        public ConcurrentDictionary<int, List<double>> LatestPortNumbers = new ConcurrentDictionary<int, List<double>>();
+
+
+        // ---- Receive pipeline ----
+        // Serial/TCP threads put messages in this queue (with the receive timestamp);
+        // the UI thread drains them in batches from the _uiTimer timer.
+        private readonly struct RxMessage
+        {
+            public readonly string Text;
+            public readonly string? PortName;   // null => to be resolved on the UI thread (TCP)
+            public readonly int Logical;
+            public readonly Color Color;
+            public readonly DateTime Wall;
+            public readonly double Clock;
+
+            public RxMessage(string text, string? portName, int logical, Color color, DateTime wall, double clock)
+            {
+                Text = text; PortName = portName; Logical = logical;
+                Color = color; Wall = wall; Clock = clock;
+            }
+        }
+
+        private readonly ConcurrentQueue<RxMessage> _rxQueue = new ConcurrentQueue<RxMessage>();
+        private readonly List<(string Text, Color Color)> _pendingDisplay = new List<(string, Color)>();
+        private readonly List<(string Text, Color Color)> _heldDisplay = new List<(string, Color)>();
+        private readonly StringBuilder _displaySb = new StringBuilder();
+        private long _lastWriterFlushTick;
+        private bool _scanningPorts = false;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+        private const int WM_SETREDRAW = 0x000B;
+
+        private readonly int[] _tcpLocalPorts = { 5001, 5002, 5003, 5004 }; // configurable TCP ports
+        private readonly string[] _baudRates = { "9600", "9600", "9600", "9600" };
+        private bool _loadingSettings = false;
+
+        private readonly TcpListener?[] _tcpListeners = new TcpListener?[4];
+        private readonly TcpClient?[] _tcpClients = new TcpClient?[4];
+        private readonly NetworkStream?[] _tcpStreams = new NetworkStream?[4];
+        private readonly CancellationTokenSource?[] _tcpCts =
+            new CancellationTokenSource?[4];
+
+        private readonly object[] _tcpSendLocks =
+        {
+            new object(), new object(), new object(), new object()
+        };
+
+        private readonly StringBuilder[] _tcpBuffers =
+        {
+            new StringBuilder(), new StringBuilder(),
+            new StringBuilder(), new StringBuilder()
+        };
+
+
         public SerialPort port1 = new SerialPort();
         public SerialPort port2 = new SerialPort();
         public SerialPort port3 = new SerialPort();
@@ -49,7 +127,6 @@ namespace SerialPortMacros
         private Form4 merging_form = null;
         public Dictionary<string, List<Form4>> openGraphs = new Dictionary<string, List<Form4>>();
         private System.Windows.Forms.Timer _uiTimer;
-        private readonly Action<string, string, bool, bool, bool, bool, Color> _processUiAction;
         private System.Windows.Forms.Timer port_timeout;
         string exeFolder = AppDomain.CurrentDomain.BaseDirectory;
         private readonly string settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
@@ -63,7 +140,6 @@ namespace SerialPortMacros
         public Form1()
         {
             InitializeComponent();
-            _processUiAction = UiProcess;
         }
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -86,9 +162,14 @@ namespace SerialPortMacros
 
 
             port_timeout = new System.Windows.Forms.Timer();
-            port_timeout.Interval = 1000;
+            port_timeout.Interval = 2000;
             port_timeout.Tick += remove_ports;
             port_timeout.Start();
+
+            _uiTimer = new System.Windows.Forms.Timer();
+            _uiTimer.Interval = 25;
+            _uiTimer.Tick += UiTimer_Tick;
+            _uiTimer.Start();
 
             LoadSettings();
         }
@@ -117,7 +198,7 @@ namespace SerialPortMacros
         }
 
         private List<string> commandHistory = new List<string>();
-        private int historyIndex = 0; // 0 = textbox normale (nessuna history attiva)
+        private int historyIndex = 0; // 0 = normal textbox (no history active)
         private const int maxHistory = 50;
 
         private void textBox1_Keypress(object sender, KeyPressEventArgs e)
@@ -130,21 +211,21 @@ namespace SerialPortMacros
 
                 if (!string.IsNullOrWhiteSpace(inputText))
                 {
-                    // Aggiunge alla history
+                    // Add to history
                     commandHistory.Add(inputText);
 
-                    // Mantieni solo gli ultimi 50
+                    // Keep only the last 50
                     if (commandHistory.Count > maxHistory)
                         commandHistory.RemoveAt(0);
                 }
 
-                historyIndex = 0; // reset indice
+                historyIndex = 0; // reset index
 
                 aggiungi_a_textbox2(inputText, "You", Color.Black);
                 textBox1.Text = "";
                 Sendtoports(inputText);
 
-                Task.Run(() => LogUserInput(inputText));
+                LogUserInput(inputText);
             }
         }
 
@@ -153,13 +234,17 @@ namespace SerialPortMacros
             aggiungi_a_textbox2(inputText, "You", Color.Black);
             Sendtoports(inputText);
 
-            if (logging)
-                Task.Run(() => LogUserInput(inputText));
-        }   
+            LogUserInput(inputText);
+        }
 
 
+        // Always on the UI thread (like all other log writes): no concurrency
+        // on the StreamWriters. Writing is buffered.
         private void LogUserInput(string inputText)
         {
+            if (!logging || !checkBox9.Checked)
+                return;
+
             string log_input_text = $"You: {inputText}";
 
             if (time_log)
@@ -168,145 +253,19 @@ namespace SerialPortMacros
                 log_input_text = $"{timestamp} | You: {inputText}";
             }
 
-            if (!checkBox9.Checked)
-                return;
-
-            if (checkBox8.Checked) _writer1.WriteLine(log_input_text);
-            if (checkBox7.Checked) _writer2.WriteLine(log_input_text);
-            if (checkBox6.Checked) _writer3.WriteLine(log_input_text);
-            if (checkBox5.Checked) _writer4.WriteLine(log_input_text);
-            if (multilog) _writer5.WriteLine(log_input_text);
+            if (checkBox8.Checked) _writer1?.WriteLine(log_input_text);
+            if (checkBox7.Checked) _writer2?.WriteLine(log_input_text);
+            if (checkBox6.Checked) _writer3?.WriteLine(log_input_text);
+            if (checkBox5.Checked) _writer4?.WriteLine(log_input_text);
+            if (multilog) _writer5?.WriteLine(log_input_text);
         }
 
 
-        private void button3_Click(object sender, EventArgs e)
-        {
-            if (opn_p1 == false)
-            {
-                int baud = int.Parse(textBox3.Text);
-                string name = comboBox2.Text;
 
-
-                if (Openport(baud, port1, name) == 1)
-                {
-
-                    textBox3.Enabled = false;
-                    button3.Image = Properties.Resources.Disconnect;
-                    toolTip1.SetToolTip(button3, "Disconnect");
-                    opn_p1 = true;
-                    string iconPath = Path.Combine(exeFolder, "icon_closed.ico");
-                    this.Icon = new Icon(iconPath);
-                }
-            }
-            else
-            {
-                textBox3.Enabled = true;
-                port1.Close();
-                button3.Image = Properties.Resources.AddConnection;
-                toolTip1.SetToolTip(button3, "Connect");
-                opn_p1 = false;
-                if (opn_p4 == false && opn_p2 == false && opn_p3 == false)
-                {
-                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
-                    this.Icon = new Icon(iconPath);
-                }
-            }
-        }
-
-        private void button4_Click(object sender, EventArgs e)
-        {
-            if (opn_p3 == false)
-            {
-                int baud = int.Parse(textBox4.Text);
-                string name = comboBox3.Text;
-                if (Openport(baud, port3, name) == 1)
-                {
-                    textBox4.Enabled = false;
-                    button4.Image = Properties.Resources.Disconnect;
-                    toolTip1.SetToolTip(button4, "Disconnect");
-                    opn_p3 = true;
-                    string iconPath = Path.Combine(exeFolder, "icon_closed.ico");
-                    this.Icon = new Icon(iconPath);
-                }
-            }
-            else
-            {
-                port3.Close();
-                textBox4.Enabled = true;
-                button4.Image = Properties.Resources.AddConnection;
-                toolTip1.SetToolTip(button4, "Connect");
-                opn_p3 = false;
-                if (opn_p1 == false && opn_p2 == false && opn_p4 == false)
-                {
-                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
-                    this.Icon = new Icon(iconPath);
-                }
-            }
-        }
-
-        private void button5_Click(object sender, EventArgs e)
-        {
-            if (opn_p2 == false)
-            {
-                int baud = int.Parse(textBox5.Text);
-                string name = comboBox1.Text;
-
-                if (Openport(baud, port2, name) == 1)
-                {
-                    textBox5.Enabled = false;
-                    button5.Image = Properties.Resources.Disconnect;
-                    toolTip1.SetToolTip(button5, "Disconnect");
-                    opn_p2 = true;
-                    string iconPath = Path.Combine(exeFolder, "icon_closed.ico");
-                    this.Icon = new Icon(iconPath);
-                }
-            }
-            else
-            {
-                textBox5.Enabled = true;
-                port2.Close();
-                button5.Image = Properties.Resources.AddConnection;
-                toolTip1.SetToolTip(button5, "Connect");
-                opn_p2 = false;
-                if (opn_p1 == false && opn_p4 == false && opn_p3 == false)
-                {
-                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
-                    this.Icon = new Icon(iconPath);
-                }
-
-            }
-        }
-        private void button6_Click(object sender, EventArgs e)
-        {
-            if (opn_p4 == false)
-            {
-                int baud = int.Parse(textBox6.Text);
-                string name = comboBox4.Text;
-
-                if (Openport(baud, port4, name) == 1)
-                {
-                    textBox6.Enabled = false;
-                    button6.Image = Properties.Resources.Disconnect;
-                    toolTip1.SetToolTip(button6, "Disconnect");
-                    opn_p4 = true;
-                    string iconPath = Path.Combine(exeFolder, "icon_closed.ico");
-                    this.Icon = new Icon(iconPath);
-                }
-            }
-            else
-            {
-                port4.Close();
-                textBox6.Enabled = true;
-                button6.Image = Properties.Resources.AddConnection;
-                toolTip1.SetToolTip(button6, "Connect");
-                opn_p4 = false;
-                if (opn_p1 == false && opn_p2 == false && opn_p3 == false)
-                {
-                    string iconPath = Path.Combine(exeFolder, "icon_open.ico");
-                    this.Icon = new Icon(iconPath);
-                }
-            }
-        }
+        private async void button3_Click(object sender, EventArgs e) => await ToggleConnectionAsync(1);
+        private async void button5_Click(object sender, EventArgs e) => await ToggleConnectionAsync(2);
+        private async void button4_Click(object sender, EventArgs e) => await ToggleConnectionAsync(3);
+        private async void button6_Click(object sender, EventArgs e) => await ToggleConnectionAsync(4);
 
         private void button7_Click(object sender, EventArgs e)
         {
@@ -436,59 +395,121 @@ namespace SerialPortMacros
 
         const int MaxChars = 30000;
 
-        private readonly Queue<(string Text, Color Color)> _logBuffer = new();
+        private bool _draining = false;
 
-
-        private void aggiungi_a_textbox2(string inputText, string usr, Color color, bool queue_ign = false)
+        private string FormatLine(string text, string usr, DateTime when)
         {
+            return time_log
+                ? $"{when:HH:mm:ss.fff} | {usr}: {text}"
+                : $"{usr}: {text}";
+        }
+
+        private void QueueDisplay(string line, Color color)
+        {
+            _pendingDisplay.Add((line, color));
+        }
+
+        // API used by the rest of the code (UI thread). Outside the drain the
+        // text is shown immediately; during the drain it is accumulated and
+        // written in a single operation at the end of the batch.
+        private void aggiungi_a_textbox2(string inputText, string usr, Color color)
+        {
+            QueueDisplay(FormatLine(inputText, usr, DateTime.Now), color);
+            if (!_draining)
+                FlushDisplay();
+        }
+
+        // Writes all pending lines to the RichTextBox, grouping consecutive lines
+        // of the same color into a single AppendText.
+        private void FlushDisplay()
+        {
+            if (stop_text)
+            {
+                // The user is selecting text: hold the lines back.
+                if (_pendingDisplay.Count > 0)
+                {
+                    _heldDisplay.AddRange(_pendingDisplay);
+                    _pendingDisplay.Clear();
+                    if (_heldDisplay.Count > 20000)
+                        _heldDisplay.RemoveRange(0, _heldDisplay.Count - 20000);
+                }
+                return;
+            }
+
+            List<(string Text, Color Color)> items;
+            if (_heldDisplay.Count > 0)
+            {
+                _heldDisplay.AddRange(_pendingDisplay);
+                _pendingDisplay.Clear();
+                items = _heldDisplay;
+            }
+            else
+            {
+                items = _pendingDisplay;
+            }
+
+            if (items.Count == 0)
+                return;
+
             int selStart = textBox2.SelectionStart;
             int selLength = textBox2.SelectionLength;
 
-            string line;
-            if (!queue_ign)
+            // With autoscroll on, text older than MaxChars would be discarded anyway,
+            // so there is no need to write it at all.
+            int startIdx = 0;
+            if (is_locked)
             {
-                if (time_log)
+                int total = 0;
+                for (int k = items.Count - 1; k >= 0; k--)
                 {
-                    string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
-                    line = $"{timestamp} | {usr}: {inputText}";
-                }
-                else
-                {
-                    line = $"{usr}: {inputText}";
-                }
-                if (stop_text)
-                {
-                    _logBuffer.Enqueue((line, color));
-                    return;
-                }
-                else
-                {
-                    while (_logBuffer.Count > 0)
+                    total += items[k].Text.Length + 2;
+                    if (total > MaxChars)
                     {
-                        var item = _logBuffer.Dequeue();
-                        aggiungi_a_textbox2(item.Text, usr, item.Color, true);
+                        startIdx = k + 1;
+                        break;
                     }
                 }
-            }
-            else
-                line = inputText;
 
-
-            if (textBox2.TextLength > MaxChars)
-            {
-                if (is_locked)
+                if (textBox2.TextLength > MaxChars)
                     textBox2.Text = "";
             }
 
+            bool suspend = is_locked && (items.Count - startIdx) > 1;
+            if (suspend)
+                SendMessage(textBox2.Handle, WM_SETREDRAW, 0, 0);
 
+            try
+            {
+                bool hasText = textBox2.TextLength > 0;
+                int i = startIdx;
+                while (i < items.Count)
+                {
+                    Color c = items[i].Color;
+                    _displaySb.Clear();
 
-            if (textBox2.TextLength > 0)
-                line = Environment.NewLine + line;
+                    while (i < items.Count && items[i].Color == c)
+                    {
+                        if (hasText)
+                            _displaySb.Append(Environment.NewLine);
+                        _displaySb.Append(items[i].Text);
+                        hasText = true;
+                        i++;
+                    }
 
-            textBox2.SelectionStart = textBox2.TextLength;
-            textBox2.SelectionLength = 0;
-            textBox2.SelectionColor = color;
-            textBox2.AppendText(line);
+                    textBox2.SelectionStart = textBox2.TextLength;
+                    textBox2.SelectionLength = 0;
+                    textBox2.SelectionColor = c;
+                    textBox2.AppendText(_displaySb.ToString());
+                }
+            }
+            finally
+            {
+                if (suspend)
+                {
+                    SendMessage(textBox2.Handle, WM_SETREDRAW, 1, 0);
+                    textBox2.Invalidate();
+                }
+            }
 
             if (is_locked)
             {
@@ -496,11 +517,183 @@ namespace SerialPortMacros
             }
             else
             {
-                // Ripristina posizione utente
+                // Restore the user's position
                 textBox2.SelectionStart = selStart;
                 textBox2.SelectionLength = selLength;
             }
 
+            _heldDisplay.Clear();
+            _pendingDisplay.Clear();
+        }
+
+        // Drains in batches the messages coming from the receive threads.
+        private void UiTimer_Tick(object? sender, EventArgs e)
+        {
+            if (IsDisposed)
+                return;
+
+            _draining = true;
+            try
+            {
+                long deadline = Stopwatch.GetTimestamp() + Stopwatch.Frequency * 12 / 1000;
+                int n = 0;
+
+                while (_rxQueue.TryDequeue(out RxMessage m))
+                {
+                    try { ProcessRx(m); }
+                    catch (Exception ex) { Debug.WriteLine("ProcessRx: " + ex.Message); }
+
+                    if ((++n & 15) == 0 && Stopwatch.GetTimestamp() > deadline)
+                        break;
+                }
+            }
+            finally
+            {
+                _draining = false;
+            }
+
+            FlushDisplay();
+
+            if (logging && Environment.TickCount64 - _lastWriterFlushTick >= 500)
+                FlushWriters();
+        }
+
+        private void FlushWriters()
+        {
+            _lastWriterFlushTick = Environment.TickCount64;
+            try { _writer1?.Flush(); } catch { }
+            try { _writer2?.Flush(); } catch { }
+            try { _writer3?.Flush(); } catch { }
+            try { _writer4?.Flush(); } catch { }
+            try { _writer5?.Flush(); } catch { }
+        }
+
+        private void ProcessRx(in RxMessage m)
+        {
+            int n = m.Logical;
+            bool po1 = n == 1, po2 = n == 2, po3 = n == 3, po4 = n == 4;
+
+            string portName = m.PortName ?? GetGraphPortName(n);
+            if (string.IsNullOrWhiteSpace(portName))
+                portName = $"TCP{n}";
+
+            // --- AGGIUNTA MINIMA PER FORM7 ---
+            LatestSerialValues[$"port{n}"] = m.Text;
+            LatestSerialValues[portName] = m.Text;
+            List<double> nums = ParseNumbers(m.Text);
+            if (nums.Count > 0)
+            {
+                LatestPortNumbers[n] = nums;
+            }
+            // ---------------------------------
+
+            if (logging)
+                write_logs(po1, po2, po3, po4, m.Text, portName, m.Wall);
+
+            QueueDisplay(FormatLine(m.Text, portName, m.Wall), m.Color);
+
+            scriptcheck(m.Text, po1, po2, po3, po4);
+
+            if (openGraphs.Count > 0 &&
+                openGraphs.TryGetValue(portName, out var forms) &&
+                forms.Count > 0)
+            {
+                int count = Math.Min(forms.Count, nums.Count);
+                for (int i = 0; i < count; i++)
+                {
+                    Form4 graph = forms[i];
+                    if (graph != null && !graph.IsDisposed)
+                        graph.AddDataPoint(nums[i], m.Clock);
+                }
+            }
+        }
+        public void SendCustomMacroLine(bool[] targetPorts, string message, string customLineEnding = "")
+        {
+            // Verifica se è stata spuntata almeno una porta
+            bool hasTargetPorts = targetPorts != null && targetPorts.Length >= 4 && (targetPorts[0] || targetPorts[1] || targetPorts[2] || targetPorts[3]);
+
+            // Se ci sono porte selezionate, invia il messaggio
+            if (hasTargetPorts)
+            {
+                string lineEnding = "";
+                if (!string.IsNullOrEmpty(customLineEnding))
+                {
+                    if (customLineEnding.Contains("New line")) lineEnding = "\n";
+                    else if (customLineEnding.Contains("Carriage return") && !customLineEnding.Contains("Both")) lineEnding = "\r";
+                    else if (customLineEnding.Contains("Both")) lineEnding = "\r\n";
+                }
+                else
+                {
+                    switch (comboBox6.SelectedIndex)
+                    {
+                        case 1: lineEnding = "\n"; break;
+                        case 2: lineEnding = "\r"; break;
+                        case 3: lineEnding = "\r\n"; break;
+                    }
+                }
+
+                string[] subMessages = message.Split(new string[] { "\n", "\\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (string subMsg in subMessages)
+                {
+                    string trimmedMsg = subMsg.Trim();
+                    if (string.IsNullOrEmpty(trimmedMsg)) continue;
+
+                    string dataToSend = trimmedMsg + lineEnding;
+
+                    if (targetPorts[0]) SendToLogicalPort(1, opn_p1, checkBox1.Checked, port1, dataToSend);
+                    if (targetPorts[1]) SendToLogicalPort(2, opn_p2, checkBox2.Checked, port2, dataToSend);
+                    if (targetPorts[2]) SendToLogicalPort(3, opn_p3, checkBox3.Checked, port3, dataToSend);
+                    if (targetPorts[3]) SendToLogicalPort(4, opn_p4, checkBox4.Checked, port4, dataToSend);
+
+                    aggiungi_a_textbox2(trimmedMsg, "Macro/Form7", Color.Purple);
+                    LogUserInput(trimmedMsg);
+
+                    if (subMessages.Length > 1) Thread.Sleep(50);
+                }
+            }
+            else
+            {
+                // Nessuna porta selezionata: aggiorna solo la textbox/log per tracciare l'azione (es. toggle di sola variabile)
+                aggiungi_a_textbox2(message, "Macro/Form7 (No Port)", Color.Purple);
+                LogUserInput(message);
+            }
+        }
+
+        // Last receive time per logical port (indices 1..4).
+        private readonly double[] _lastRxClock = new double[5];
+
+        // Several lines can arrive in the same packet (a single serial/TCP read).
+        // If they all had the same timestamp, the plot would show vertical jumps
+        // ("steps") instead of segments. The lines of the packet are therefore
+        // spread evenly between the arrival of the previous packet and the
+        // current one.
+        private void EnqueueBatch(List<string> messages, string? portName, int logical, Color color)
+        {
+            int n = messages.Count;
+            if (n == 0)
+                return;
+
+            if (_stopRequested)
+                _lastLogMessageTick = Environment.TickCount64;
+
+            double now = Form4.NowSeconds;
+            DateTime wallNow = DateTime.Now;
+
+            double prev = _lastRxClock[logical];
+            // After a period of silence it is unknown when the lines were generated:
+            // limit the interval over which they are spread.
+            double span = n > 1 ? Math.Min(Math.Max(now - prev, 0.0), 0.25) : 0.0;
+            _lastRxClock[logical] = now;
+
+            for (int i = 0; i < n; i++)
+            {
+                // The last line gets exactly the arrival time.
+                double back = span * (n - 1 - i) / n;
+                _rxQueue.Enqueue(new RxMessage(
+                    messages[i], portName, logical, color,
+                    wallNow.AddSeconds(-back), now - back));
+            }
         }
 
 
@@ -536,6 +729,7 @@ namespace SerialPortMacros
             }
             return 0;
         }
+
         private void Sendtoports(string output)
         {
             string lineEnding = "";
@@ -561,34 +755,189 @@ namespace SerialPortMacros
 
             string dataToSend = output + lineEnding;
 
-            if (opn_p1 && checkBox1.Checked)
-                try
-                {
-                    port1.Write(dataToSend);
-                }
-                catch { }
-
-            if (opn_p2 && checkBox2.Checked)
-                try
-                {
-                    port2.Write(dataToSend);
-                }
-                catch { }
-
-            if (opn_p3 && checkBox3.Checked)
-                try
-                {
-                    port3.Write(dataToSend);
-                }
-                catch { }
-
-            if (opn_p4 && checkBox4.Checked)
-                try
-                {
-                    port4.Write(dataToSend);
-                }
-                catch { }
+            SendToLogicalPort(1, opn_p1, checkBox1.Checked, port1, dataToSend);
+            SendToLogicalPort(2, opn_p2, checkBox2.Checked, port2, dataToSend);
+            SendToLogicalPort(3, opn_p3, checkBox3.Checked, port3, dataToSend);
+            SendToLogicalPort(4, opn_p4, checkBox4.Checked, port4, dataToSend);
         }
+
+
+        private void CambiaModalitaPorta(int porta, bool usaWifi)
+        {
+            int index = porta - 1;
+            if (index < 0 || index >= 4) return;
+
+            ConnectionMode newMode = usaWifi ? ConnectionMode.Tcp : ConnectionMode.Serial;
+            ConnectionMode oldMode = _connectionModes[index];
+            TextBox[] valueBoxes = { textBox3, textBox5, textBox4, textBox6 };
+            Label[] labels = { label1, label2, label3, label4 };
+            ComboBox[] serialCombos = { comboBox2, comboBox1, comboBox3, comboBox4 };
+
+            // Keep the value of the mode being left.
+            if (!_loadingSettings && oldMode == ConnectionMode.Serial && newMode == ConnectionMode.Tcp)
+                _baudRates[index] = valueBoxes[index].Text;
+            else if (!_loadingSettings && oldMode == ConnectionMode.Tcp && newMode == ConnectionMode.Serial)
+            {
+                if (int.TryParse(valueBoxes[index].Text, out int currentPort) && currentPort >= 1 && currentPort <= 65535)
+                    _tcpLocalPorts[index] = currentPort;
+            }
+
+            if (oldMode != newMode && newMode == ConnectionMode.Serial)
+                StopTcpPort(porta);
+
+            _connectionModes[index] = newMode;
+            labels[index].Text = usaWifi ? "port" : "baud";
+            serialCombos[index].Enabled = !usaWifi;
+
+            if (!_loadingSettings)
+            {
+                if (usaWifi)
+                {
+                    // First restore the saved port: the previous text was the baud rate.
+                    valueBoxes[index].Text = _tcpLocalPorts[index].ToString();
+                    EnsureUniqueTcpPort(porta);
+                }
+                else
+                {
+                    valueBoxes[index].Text = _baudRates[index];
+                }
+            }
+
+            if (newMode == ConnectionMode.Serial)
+            {
+                Button[] buttons = { button3, button5, button4, button6 };
+                buttons[index].Image = Properties.Resources.AddConnection;
+                toolTip1.SetToolTip(buttons[index], "Connect");
+                valueBoxes[index].Enabled = true;
+            }
+        }
+
+        private int FindAvailableTcpPort(int logicalPort, int preferredPort)
+        {
+            // A port is logically in use only if another TCP connection is enabled.
+            bool InUse(int candidate) => Enumerable.Range(0, 4).Any(i =>
+                i != logicalPort - 1 &&
+                _connectionModes[i] == ConnectionMode.Tcp &&
+                _tcpLocalPorts[i] == candidate);
+
+            if (preferredPort >= 1 && preferredPort <= 65535 && !InUse(preferredPort))
+                return preferredPort;
+
+            for (int candidate = 5001; candidate <= 65535; candidate++)
+                if (!InUse(candidate)) return candidate;
+
+            throw new InvalidOperationException("No TCP ports available.");
+        }
+
+        private void EnsureUniqueTcpPort(int logicalPort)
+        {
+            int index = logicalPort - 1;
+            TextBox[] valueBoxes = { textBox3, textBox5, textBox4, textBox6 };
+            int requested = _tcpLocalPorts[index];
+            if (int.TryParse(valueBoxes[index].Text, out int typed) && typed >= 1 && typed <= 65535)
+                requested = typed;
+
+            int assigned = FindAvailableTcpPort(logicalPort, requested);
+            _tcpLocalPorts[index] = assigned;
+            valueBoxes[index].Text = assigned.ToString();
+            if (assigned != requested)
+                aggiungi_a_textbox2($"TCP port {requested} was already used by another active Wi-Fi connection. Automatically assigned port {assigned} to logical port {logicalPort}.", "System", Color.DarkOrange);
+        }
+
+        private Task ToggleConnectionAsync(int logicalPort)
+        {
+            int index = logicalPort - 1;
+            Button[] buttons = { button3, button5, button4, button6 };
+            TextBox[] baudBoxes = { textBox3, textBox5, textBox4, textBox6 };
+            ComboBox[] portCombos = { comboBox2, comboBox1, comboBox3, comboBox4 };
+            SerialPort[] serialPorts = { port1, port2, port3, port4 };
+            bool[] isOpen = { opn_p1, opn_p2, opn_p3, opn_p4 };
+            if (index < 0 || index >= 4) return Task.CompletedTask;
+
+            Button button = buttons[index];
+            if (_connectionModes[index] == ConnectionMode.Tcp)
+            {
+                if (_tcpListeners[index] != null)
+                {
+                    StopTcpPort(logicalPort);
+                    baudBoxes[index].Enabled = true;
+                    button.Image = Properties.Resources.AddConnection;
+                    toolTip1.SetToolTip(button, "Connect");
+                }
+                else
+                {
+                    if (!int.TryParse(baudBoxes[index].Text, out int tcpPort) || tcpPort < 1 || tcpPort > 65535)
+                    {
+                        MessageBox.Show("Enter a valid TCP port (1-65535).", "Invalid TCP port", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return Task.CompletedTask;
+                    }
+                    _tcpLocalPorts[index] = tcpPort;
+                    int uniquePort = FindAvailableTcpPort(logicalPort, tcpPort);
+                    if (uniquePort != tcpPort)
+                    {
+                        _tcpLocalPorts[index] = uniquePort;
+                        baudBoxes[index].Text = uniquePort.ToString();
+                        aggiungi_a_textbox2($"TCP port {tcpPort} is already used by an active Wi-Fi connection. Automatically assigned port {uniquePort}.", "System", Color.DarkOrange);
+                    }
+                    if (isOpen[index]) CloseSerialPort(logicalPort);
+                    StartTcpPort(logicalPort);
+                    if (_tcpListeners[index] != null)
+                    {
+                        baudBoxes[index].Enabled = false;
+                        button.Image = Properties.Resources.Disconnect;
+                        toolTip1.SetToolTip(button, $"TCP listening on port {_tcpLocalPorts[index]}");
+                    }
+                }
+                return Task.CompletedTask;
+            }
+
+            if (isOpen[index])
+            {
+                CloseSerialPort(logicalPort);
+                button.Image = Properties.Resources.AddConnection;
+                toolTip1.SetToolTip(button, "Connect");
+            }
+            else
+            {
+                if (!int.TryParse(baudBoxes[index].Text, out int baud) || baud <= 0)
+                {
+                    MessageBox.Show("Enter a valid baud rate.");
+                    return Task.CompletedTask;
+                }
+                if (Openport(baud, serialPorts[index], portCombos[index].Text) != 1) return Task.CompletedTask;
+                SetSerialOpenFlag(logicalPort, true);
+                baudBoxes[index].Enabled = false;
+                button.Image = Properties.Resources.Disconnect;
+                toolTip1.SetToolTip(button, "Disconnect");
+                this.Icon = new Icon(Path.Combine(exeFolder, "icon_closed.ico"));
+            }
+            return Task.CompletedTask;
+        }
+
+        private void CloseSerialPort(int logicalPort)
+        {
+            SerialPort[] ports = { port1, port2, port3, port4 };
+            TextBox[] baudBoxes = { textBox3, textBox5, textBox4, textBox6 };
+            int index = logicalPort - 1;
+            try { if (ports[index].IsOpen) ports[index].Close(); } catch { }
+            SetSerialOpenFlag(logicalPort, false);
+            baudBoxes[index].Enabled = true;
+            if (!opn_p1 && !opn_p2 && !opn_p3 && !opn_p4 && _tcpListeners.All(x => x == null))
+                this.Icon = new Icon(Path.Combine(exeFolder, "icon_open.ico"));
+        }
+
+        private void SetSerialOpenFlag(int logicalPort, bool value)
+        {
+            switch (logicalPort)
+            {
+                case 1: opn_p1 = value; break;
+                case 2: opn_p2 = value; break;
+                case 3: opn_p3 = value; break;
+                case 4: opn_p4 = value; break;
+            }
+        }
+
+
         private void SerialPort_DataReceived1(object sender, SerialDataReceivedEventArgs e)
         {
             Serial_port_data2(port1, 1, true, false, false, false, opn_p1, checkBox1, Color.Red, mes1, port1Enabled);
@@ -613,34 +962,44 @@ namespace SerialPortMacros
             scripts = new Script[paths.Length];
             foreach (string path in paths)
             {
-                string name = path.Substring(10);
+                string name = Path.GetFileName(path);
                 scripts[i] = new Script();
                 scripts[i].name = name;
                 scripts[i].path = path;
                 string[] lines = File.ReadAllLines(path);
-                scripts[i].key = lines[0];
-                scripts[i].trigger = int.Parse(lines[1]);
-                scripts[i].p1 = bool.Parse(lines[2]);
-                scripts[i].p2 = bool.Parse(lines[3]);
-                scripts[i].p3 = bool.Parse(lines[4]);
-                scripts[i].p4 = bool.Parse(lines[5]);
+
+                if (lines.Length > 0) scripts[i].key = lines[0];
+                if (lines.Length > 1) scripts[i].trigger = int.Parse(lines[1]);
+                if (lines.Length > 2) scripts[i].p1 = bool.Parse(lines[2]);
+                if (lines.Length > 3) scripts[i].p2 = bool.Parse(lines[3]);
+                if (lines.Length > 4) scripts[i].p3 = bool.Parse(lines[4]);
+                if (lines.Length > 5) scripts[i].p4 = bool.Parse(lines[5]);
+
                 if (scripts[i].trigger == 1)
                 {
-                    scripts[i].keypress = lines[6];
-                    scripts[i].active = bool.Parse(lines[7]);
+                    if (lines.Length > 6) scripts[i].keypress = lines[6];
+                    if (lines.Length > 7) scripts[i].active = bool.Parse(lines[7]);
                 }
                 else if (scripts[i].trigger == 2)
                 {
-                    scripts[i].reply = lines[6];
-                    scripts[i].p1_w = bool.Parse(lines[7]);
-                    scripts[i].p2_w = bool.Parse(lines[8]);
-                    scripts[i].p3_w = bool.Parse(lines[9]);
-                    scripts[i].p4_w = bool.Parse(lines[10]);
-                    scripts[i].active = bool.Parse(lines[11]);
+                    if (lines.Length > 6) scripts[i].reply = lines[6];
+                    if (lines.Length > 7) scripts[i].p1_w = bool.Parse(lines[7]);
+                    if (lines.Length > 8) scripts[i].p2_w = bool.Parse(lines[8]);
+                    if (lines.Length > 9) scripts[i].p3_w = bool.Parse(lines[9]);
+                    if (lines.Length > 10) scripts[i].p4_w = bool.Parse(lines[10]);
+                    if (lines.Length > 11) scripts[i].active = bool.Parse(lines[11]);
+
+                    if (lines.Length > 12 && int.TryParse(lines[12], out int le))
+                    {
+                        scripts[i].lineEndingIndex = le;
+                    }
+                    else
+                    {
+                        scripts[i].lineEndingIndex = 1; // Default a NL per vecchi script
+                    }
                 }
                 i++;
             }
-
         }
         public void scriptcheck(string data, bool p1, bool p2, bool p3, bool p4)
         {
@@ -651,10 +1010,13 @@ namespace SerialPortMacros
                     if ((script.active && ((data.Contains(script.key)) || ((script.key == "===") && data.StartsWith("===")) || (script.key == "*")) && (((p1 == script.p1 && script.p1 == true)) || (p2 == script.p2 && script.p2 == true) || (p3 == script.p3 && script.p3 == true) || (p4 == script.p4 && script.p4 == true))))
                         if (script.trigger == 1)
                         {
+                            string keypressCopy = script.keypress;
                             Thread inputThread = new Thread(() =>
                             {
-                                scr_KeyPress(script.keypress, data);
+                                try { scr_KeyPress(keypressCopy, data); }
+                                catch (Exception ex) { Debug.WriteLine("Script: " + ex.Message); }
                             });
+                            inputThread.IsBackground = true;
                             inputThread.Start();
                         }
                         else if (script.trigger == 2)
@@ -779,22 +1141,22 @@ namespace SerialPortMacros
         public void Reply(Script c_script)
         {
             aggiungi_a_textbox2(c_script.reply, c_script.name, Color.Brown);
-            if (c_script.p1_w == true && opn_p1)
+
+            string lineEnding = "";
+            switch (c_script.lineEndingIndex)
             {
-                port1.WriteLine(c_script.reply);
+                case 0: lineEnding = ""; break;       // None
+                case 1: lineEnding = "\n"; break;     // NL
+                case 2: lineEnding = "\r"; break;     // CR
+                case 3: lineEnding = "\r\n"; break;   // Both
+                default: lineEnding = "\n"; break;
             }
-            if (c_script.p2_w == true && opn_p2)
-            {
-                port2.WriteLine(c_script.reply);
-            }
-            if (c_script.p3_w == true && opn_p3)
-            {
-                port3.WriteLine(c_script.reply);
-            }
-            if (c_script.p4_w == true && opn_p4)
-            {
-                port4.WriteLine(c_script.reply);
-            }
+
+            string replyData = c_script.reply + lineEnding;
+            SendToLogicalPort(1, opn_p1, c_script.p1_w, port1, replyData);
+            SendToLogicalPort(2, opn_p2, c_script.p2_w, port2, replyData);
+            SendToLogicalPort(3, opn_p3, c_script.p3_w, port3, replyData);
+            SendToLogicalPort(4, opn_p4, c_script.p4_w, port4, replyData);
         }
 
         private void button12_Click(object sender, EventArgs e)
@@ -843,78 +1205,44 @@ namespace SerialPortMacros
         bool opn, CheckBox checkbox, Color color,
         StringBuilder sb, bool log)
         {
-            sb.Append(port.ReadExisting());
+            // Runs on the serial port thread: no UI here. Lines are split and
+            // queued with the receive timestamp.
+            string chunk;
+            try { chunk = port.ReadExisting(); }
+            catch (Exception) { return; }
 
-            for (int i = 0; i < sb.Length; i++)
+            string data = sb.Length == 0 ? chunk : sb.ToString() + chunk;
+            sb.Clear();
+
+            string portName = port.PortName;
+            var batch = new List<string>();
+
+            int start = 0;
+            for (int i = 0; i < data.Length; i++)
             {
-                char c = sb[i];
+                char c = data[i];
+                if (c != '\n' && c != '\r')
+                    continue;
 
-                if (c == '\n' || c == '\r')
+                if (i > start)
                 {
-                    int len = i;
+                    string mess = data.Substring(start, i - start).Trim();
 
-                    if (len == 0)
-                    {
-                        sb.Remove(0, 1);
-                        i--;
-                        continue;
-                    }
-
-                    string mess = sb.ToString(0, len).Trim();
-
-                    sb.Remove(0, i + 1);
-                    i = -1;
-
-                    if (mess.Length == 0)
-                        continue;
-
-                    ProcessMessage(mess, port.PortName, po1, po2, po3, po4, opn, color);
+                    if (mess.Length > 0 && opn && !string.IsNullOrWhiteSpace(portName))
+                        batch.Add(mess);
                 }
+
+                start = i + 1;
             }
-        }
 
+            EnqueueBatch(batch, portName, num, color);
 
-
-
-        private void ProcessMessage(
-            string mess, string portName,
-            bool po1, bool po2, bool po3, bool po4,
-            bool opn, Color color)
-        {
-            if (!opn) return;
-
-            if (_stopRequested)
+            if (start < data.Length)
             {
-                _lastLogMessageTick = Environment.TickCount64;
+                // Incomplete line: wait for the rest (with a safety limit).
+                if (data.Length - start <= 30000)
+                    sb.Append(data, start, data.Length - start);
             }
-
-            BeginInvoke(_processUiAction, new object[]
-            { mess, portName, po1, po2, po3, po4, color });
-
-            if (openGraphs.TryGetValue(portName, out var forms))
-            {
-                var nums = ParseNumbers(mess);
-
-                for (int i = 0; i < forms.Count && i < nums.Count; i++)
-                {
-                    forms[i].AddDataPoint(nums[i]);
-                }
-            }
-        }
-
-
-
-        private void UiProcess(string mess, string portName,
-            bool po1, bool po2, bool po3, bool po4, Color color)
-        {
-            if (logging)
-            {
-                write_logs(po1, po2, po3, po4, mess, portName);
-
-            }
-
-            aggiungi_a_textbox2(mess, portName, color);
-            scriptcheck(mess, po1, po2, po3, po4);
         }
 
 
@@ -956,34 +1284,34 @@ namespace SerialPortMacros
         }
 
 
-        private void write_logs(bool po1, bool po2, bool po3, bool po4, string line, string usr)
+        private void write_logs(bool po1, bool po2, bool po3, bool po4, string line, string usr, DateTime when)
         {
             string multilog_line = $"{usr}: {line}";
             if (time_log)
             {
-                string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+                string timestamp = when.ToString("HH:mm:ss.fff");
                 multilog_line = $"{timestamp} | {usr}: {line}";
                 line = $"{timestamp} | {line}";
             }
             if (po1 && checkBox8.Checked)
             {
-                _writer1.WriteLine(line);
+                _writer1?.WriteLine(line);
             }
             if (po2 && checkBox7.Checked)
             {
-                _writer2.WriteLine(line);
+                _writer2?.WriteLine(line);
             }
             if (po3 && checkBox6.Checked)
             {
-                _writer3.WriteLine(line);
+                _writer3?.WriteLine(line);
             }
             if (po4 && checkBox5.Checked)
             {
-                _writer4.WriteLine(line);
+                _writer4?.WriteLine(line);
             }
             if (multilog)
             {
-                _writer5.WriteLine(multilog_line);
+                _writer5?.WriteLine(multilog_line);
             }
         }
 
@@ -1023,7 +1351,7 @@ namespace SerialPortMacros
                 string sessionDir = Path.Combine(logsDir, timestamp);
                 Directory.CreateDirectory(sessionDir);
                 int check_n = 0;
-                if (checkBox8.Checked) //first serial port 
+                if (checkBox8.Checked) //first serial port
                 {
                     check_n++;
                     _logFilePath1 = Path.Combine(sessionDir, "log1.txt");
@@ -1035,7 +1363,7 @@ namespace SerialPortMacros
                             FileShare.Read
                         )
                      );
-                    _writer1.AutoFlush = true;
+                    _writer1.AutoFlush = false;
                 }
                 if (checkBox7.Checked) //second serial port 
                 {
@@ -1049,7 +1377,7 @@ namespace SerialPortMacros
                             FileShare.Read
                         )
                      );
-                    _writer2.AutoFlush = true;
+                    _writer2.AutoFlush = false;
                 }
                 if (checkBox6.Checked) //third serial port 
                 {
@@ -1063,7 +1391,7 @@ namespace SerialPortMacros
                             FileShare.Read
                         )
                      );
-                    _writer3.AutoFlush = true;
+                    _writer3.AutoFlush = false;
                 }
                 if (checkBox5.Checked) //third serial port 
                 {
@@ -1077,7 +1405,7 @@ namespace SerialPortMacros
                             FileShare.Read
                         )
                      );
-                    _writer4.AutoFlush = true;
+                    _writer4.AutoFlush = false;
                 }
                 if (check_n > 1)
                 {
@@ -1091,7 +1419,7 @@ namespace SerialPortMacros
                             FileShare.Read
                         )
                      );
-                    _writer5.AutoFlush = true;
+                    _writer5.AutoFlush = false;
                 }
                 else
                     multilog = false;
@@ -1105,17 +1433,17 @@ namespace SerialPortMacros
 
                 button14.Text = "Waiting...";
 
-                // IMPORTANTE:
-                // logging rimane TRUE durante tutta la risposta
+                // IMPORTANT:
+                // logging stays TRUE for the whole response
                 logging = true;
 
-                // Comando al microcontrollore:
-                // "mandami il log"
+                // Command to the microcontroller:
+                // "send me the log"
                 if (settings.log_message2 != "")
                     send_log_message(settings.log_message2);
 
-                // Se non dobbiamo aspettare la fine,
-                // possiamo chiudere subito.
+                // If we don't need to wait for the end,
+                // we can close right away.
                 if (!settings.log_check)
                 {
                     _stopRequested = false;
@@ -1143,8 +1471,8 @@ namespace SerialPortMacros
 
                     _writer5?.Close();
                     _writer5 = null;
-
-                    OpenLogForms();
+                    if (checkBox10.Checked)
+                        OpenLogForms();
                     return;
                 }
 
@@ -1221,7 +1549,7 @@ namespace SerialPortMacros
             }
             catch (TaskCanceledException)
             {
-                // Watchdog cancellato: nessun problema
+                // Watchdog cancelled: no problem
             }
         }
 
@@ -1263,26 +1591,55 @@ namespace SerialPortMacros
 
         private void button16_Click(object sender, EventArgs e)
         {
-            if (comboBox2.Text != "")
-                launch_graphs((int)numericUpDown1.Value, comboBox2.Text);
+            if (comboBox2.Text != "" || checkBox13.Checked)
+                launch_graphs((int)numericUpDown1.Value, GetGraphPortName(1));
         }
 
         private void button17_Click(object sender, EventArgs e)
         {
-            if (comboBox1.Text != "")
-                launch_graphs((int)numericUpDown2.Value, comboBox1.Text);
+            if (comboBox1.Text != "" || checkBox12.Checked)
+                launch_graphs((int)numericUpDown2.Value, GetGraphPortName(2));
         }
 
         private void button18_Click(object sender, EventArgs e)
         {
-            if (comboBox3.Text != "")
-                launch_graphs((int)numericUpDown3.Value, comboBox3.Text);
+            if (comboBox3.Text != "" || checkBox11.Checked)
+                launch_graphs((int)numericUpDown3.Value, GetGraphPortName(3));
         }
 
         private void button19_Click(object sender, EventArgs e)
         {
-            if (comboBox4.Text != "")
-                launch_graphs((int)numericUpDown4.Value, comboBox4.Text);
+            if (comboBox4.Text != "" || checkBox14.Checked)
+                launch_graphs((int)numericUpDown4.Value, GetGraphPortName(4));
+        }
+
+        // The key must be identical both when opening the graphs and
+        // when a TCP message arrives. If the ComboBox is empty but TCP is active,
+        // we use a stable key for the logical port.
+        private string GetGraphPortName(int logicalPort)
+        {
+            string selectedSerialPort = logicalPort switch
+            {
+                1 => comboBox2.Text,
+                2 => comboBox1.Text,
+                3 => comboBox3.Text,
+                4 => comboBox4.Text,
+                _ => string.Empty
+            };
+
+            if (!string.IsNullOrWhiteSpace(selectedSerialPort))
+                return selectedSerialPort.Trim();
+
+            bool tcpEnabled = logicalPort switch
+            {
+                1 => checkBox13.Checked,
+                2 => checkBox12.Checked,
+                3 => checkBox11.Checked,
+                4 => checkBox14.Checked,
+                _ => false
+            };
+
+            return tcpEnabled ? $"TCP{logicalPort}" : string.Empty;
         }
         private void launch_graphs(int n_grafici, string nome_porta)
         {
@@ -1301,7 +1658,7 @@ namespace SerialPortMacros
             for (int i = 1; i <= n_grafici; i++)
             {
                 var form = new Form4(this);
-                form.Text = $"{nome_porta} {i}";  // nome della finestra
+                form.Text = $"{nome_porta} {i}";  // window name
                 form.Show();
                 openGraphs[nome_porta].Add(form);
             }
@@ -1382,7 +1739,7 @@ namespace SerialPortMacros
             for (int i = 0; i < slaves.Count; i++)
             {
                 var s = slaves[i];
-                var color = GetDistinctColor(i, slaves.Count); // colore unico e distinguibile
+                var color = GetDistinctColor(i, slaves.Count); // unique, distinguishable color
                 var childEntry = new child_form(s, color, master.formsPlot1);
                 master.children.Add(s, childEntry);
             }
@@ -1426,10 +1783,10 @@ namespace SerialPortMacros
 
         private System.Drawing.Color GetDistinctColor(int index, int total)
         {
-            // Distribuisci la tonalitÃ  uniformemente nello spettro
-            float hue = (360f / total) * index; // tonalitÃ  da 0 a 360
-            float saturation = 0.7f; // saturazione alta
-            float value = 0.9f;      // luminositÃ  alta
+            // Spread the hue evenly across the spectrum
+            float hue = (360f / total) * index; // hue from 0 to 360
+            float saturation = 0.7f; // high saturation
+            float value = 0.9f;      // high brightness
 
             return ColorFromHSV(hue, saturation, value);
         }
@@ -1478,7 +1835,7 @@ namespace SerialPortMacros
         {
             if (e.KeyCode == Keys.Up)
             {
-                e.SuppressKeyPress = true; // evita beep o comportamento default
+                e.SuppressKeyPress = true; // avoid beep or default behavior
 
                 if (commandHistory.Count == 0)
                     return;
@@ -1519,14 +1876,33 @@ namespace SerialPortMacros
         bool stop_text = false;
 
 
-        private void remove_ports(object sender, EventArgs e)
+        // GetPortNames() queries the system and can be slow: keep it off the UI thread.
+        private async void remove_ports(object? sender, EventArgs e)
         {
-            string[] availablePorts = SerialPort.GetPortNames();
+            if (_scanningPorts)
+                return;
 
-            CheckCombo(comboBox1, availablePorts);
-            CheckCombo(comboBox2, availablePorts);
-            CheckCombo(comboBox3, availablePorts);
-            CheckCombo(comboBox4, availablePorts);
+            _scanningPorts = true;
+            try
+            {
+                string[] availablePorts = await Task.Run(() => SerialPort.GetPortNames());
+
+                if (IsDisposed)
+                    return;
+
+                CheckCombo(comboBox1, availablePorts);
+                CheckCombo(comboBox2, availablePorts);
+                CheckCombo(comboBox3, availablePorts);
+                CheckCombo(comboBox4, availablePorts);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("remove_ports: " + ex.Message);
+            }
+            finally
+            {
+                _scanningPorts = false;
+            }
         }
 
         private void CheckCombo(ComboBox combo, string[] availablePorts)
@@ -1539,7 +1915,7 @@ namespace SerialPortMacros
 
                 if (!exists)
                 {
-                    combo.SelectedIndex = -1; // opzionale: deseleziona
+                    combo.SelectedIndex = -1; // optional: deselect
                 }
             }
         }
@@ -1633,6 +2009,7 @@ namespace SerialPortMacros
             if (!is_locked)
             {
                 stop_text = false;
+                FlushDisplay();
             }
         }
 
@@ -1677,8 +2054,8 @@ namespace SerialPortMacros
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"Errore nel caricamento delle impostazioni:\n\n{ex.Message}",
-                    "Errore",
+                    $"Error loading settings:\n\n{ex.Message}",
+                    "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
 
@@ -1690,122 +2067,160 @@ namespace SerialPortMacros
 
         private void ApplySettingsToControls()
         {
-            // =========================
-            // CHECKBOX
-            // =========================
-
-            checkBox1.Checked = settings.check1;
-            checkBox2.Checked = settings.check2;
-            checkBox3.Checked = settings.check3;
-            checkBox4.Checked = settings.check4;
-            checkBox5.Checked = settings.check5;
-            checkBox6.Checked = settings.check6;
-            checkBox7.Checked = settings.check7;
-            checkBox8.Checked = settings.check8;
-            checkBox9.Checked = settings.check9;
-            checkBox10.Checked = settings.check10;
-
-            // =========================
-            // BAUD RATE
-            // =========================
-
-            textBox3.Text = settings.BaudRate1;
-            textBox5.Text = settings.BaudRate2;
-            textBox4.Text = settings.BaudRate3;
-            textBox6.Text = settings.BaudRate4;
-
-
-            // =========================
-            // NUMERIC UP DOWN
-            // =========================
-
-            numericUpDown1.Value = settings.graph_num1;
-            numericUpDown2.Value = settings.graph_num2;
-            numericUpDown3.Value = settings.graph_num3;
-            numericUpDown4.Value = settings.graph_num4;
-
-
-            // =========================
-            // COMBOBOX
-            // =========================
-
-            if (settings.line_end_index >= 0 &&
-                settings.line_end_index < comboBox6.Items.Count)
+            _loadingSettings = true;
+            try
             {
-                comboBox6.SelectedIndex = settings.line_end_index;
+                // =========================
+                // CHECKBOX
+                // =========================
+
+                checkBox1.Checked = settings.check1;
+                checkBox2.Checked = settings.check2;
+                checkBox3.Checked = settings.check3;
+                checkBox4.Checked = settings.check4;
+                checkBox5.Checked = settings.check5;
+                checkBox6.Checked = settings.check6;
+                checkBox7.Checked = settings.check7;
+                checkBox8.Checked = settings.check8;
+                checkBox9.Checked = settings.check9;
+                checkBox10.Checked = settings.check10;
+                checkBox13.Checked = settings.UseTcp1;
+                checkBox12.Checked = settings.UseTcp2;
+                checkBox11.Checked = settings.UseTcp3;
+                checkBox14.Checked = settings.UseTcp4;
+
+                _tcpLocalPorts[0] = settings.TcpPort1 is >= 1 and <= 65535 ? settings.TcpPort1 : 5001;
+                _tcpLocalPorts[1] = settings.TcpPort2 is >= 1 and <= 65535 ? settings.TcpPort2 : 5002;
+                _tcpLocalPorts[2] = settings.TcpPort3 is >= 1 and <= 65535 ? settings.TcpPort3 : 5003;
+                _tcpLocalPorts[3] = settings.TcpPort4 is >= 1 and <= 65535 ? settings.TcpPort4 : 5004;
+                _baudRates[0] = settings.BaudRate1;
+                _baudRates[1] = settings.BaudRate2;
+                _baudRates[2] = settings.BaudRate3;
+                _baudRates[3] = settings.BaudRate4;
+                CambiaModalitaPorta(1, settings.UseTcp1);
+                CambiaModalitaPorta(2, settings.UseTcp2);
+                CambiaModalitaPorta(3, settings.UseTcp3);
+                CambiaModalitaPorta(4, settings.UseTcp4);
+
+                // =========================
+                // BAUD RATE
+                // =========================
+
+                textBox3.Text = settings.BaudRate1;
+                textBox5.Text = settings.BaudRate2;
+                textBox4.Text = settings.BaudRate3;
+                textBox6.Text = settings.BaudRate4;
+                TextBox[] modeBoxes = { textBox3, textBox5, textBox4, textBox6 };
+                for (int i = 0; i < 4; i++)
+                {
+                    if (_connectionModes[i] == ConnectionMode.Tcp)
+                        modeBoxes[i].Text = _tcpLocalPorts[i].ToString();
+                    else
+                        modeBoxes[i].Text = _baudRates[i];
+                }
+
+                // =========================
+                // NUMERIC UP DOWN
+                // =========================
+
+                numericUpDown1.Value = settings.graph_num1;
+                numericUpDown2.Value = settings.graph_num2;
+                numericUpDown3.Value = settings.graph_num3;
+                numericUpDown4.Value = settings.graph_num4;
+
+
+                // =========================
+                // COMBOBOX
+                // =========================
+
+                if (settings.line_end_index >= 0 &&
+                    settings.line_end_index < comboBox6.Items.Count)
+                {
+                    comboBox6.SelectedIndex = settings.line_end_index;
+                }
+
+
+                // =========================
+                // VARIABLES
+                // =========================
+
+                time_log = settings.time_button;
+                is_locked = settings.locked_button;
+
+
+                if (!is_locked)
+                {
+                    toolTip1.SetToolTip(button12, "AutoScrolling off");
+                    button12.Image = Properties.Resources.Unlock;
+                    textBox2.ScrollBars = RichTextBoxScrollBars.Both;
+                    //               textBox2.Enabled = true;
+
+                }
+                else
+                {
+                    button12.Image = Properties.Resources.Lock;
+                    toolTip1.SetToolTip(button12, "AutoScrolling on");
+                    textBox2.ScrollBars = RichTextBoxScrollBars.None;
+                    //               textBox2.Enabled = false;
+                }
+                textBox2.SelectionStart = textBox2.Text.Length;
+                textBox2.SelectionLength = 0;
+                textBox2.ScrollToCaret();
+
+
+                if (!time_log)
+                {
+                    button15.Image = Properties.Resources.Time_16x_cross2;
+                    toolTip1.SetToolTip(button15, "Timestamps off");
+                }
+                else
+                {
+                    button15.Image = Properties.Resources.Time_color_16x;
+                    toolTip1.SetToolTip(button15, "Timestamps on");
+                }
+
+                port1.Parity = ParseParity(settings.Parity1);
+                port1.DataBits = settings.DataBits1;
+                port1.StopBits = ParseStopBits(settings.StopBits1);
+
+                if (settings.CustomBuffer1)
+                    port1.ReadBufferSize = settings.ReadBufferSize1;
+
+
+                port2.Parity = ParseParity(settings.Parity2);
+                port2.DataBits = settings.DataBits2;
+                port2.StopBits = ParseStopBits(settings.StopBits2);
+
+                if (settings.CustomBuffer2)
+                    port2.ReadBufferSize = settings.ReadBufferSize2;
+
+
+                port3.Parity = ParseParity(settings.Parity3);
+                port3.DataBits = settings.DataBits3;
+                port3.StopBits = ParseStopBits(settings.StopBits3);
+
+                if (settings.CustomBuffer3)
+                    port3.ReadBufferSize = settings.ReadBufferSize3;
+
+
+                port4.Parity = ParseParity(settings.Parity4);
+                port4.DataBits = settings.DataBits4;
+                port4.StopBits = ParseStopBits(settings.StopBits4);
+
+                if (settings.CustomBuffer4)
+                    port4.ReadBufferSize = settings.ReadBufferSize4;
+            }
+            finally
+            {
+                _loadingSettings = false;
             }
 
-
-            // =========================
-            // VARIABILI
-            // =========================
-
-            time_log = settings.time_button;
-            is_locked = settings.locked_button;
-
-
-            if (!is_locked)
+            // If the file contains duplicate ports among enabled TCP modes, fix them automatically.
+            for (int logicalPort = 1; logicalPort <= 4; logicalPort++)
             {
-                toolTip1.SetToolTip(button12, "AutoScrolling off");
-                button12.Image = Properties.Resources.Unlock;
-                textBox2.ScrollBars = RichTextBoxScrollBars.Both;
-                //               textBox2.Enabled = true;
-
+                if (_connectionModes[logicalPort - 1] == ConnectionMode.Tcp)
+                    EnsureUniqueTcpPort(logicalPort);
             }
-            else
-            {
-                button12.Image = Properties.Resources.Lock;
-                toolTip1.SetToolTip(button12, "AutoScrolling on");
-                textBox2.ScrollBars = RichTextBoxScrollBars.None;
-                //               textBox2.Enabled = false;
-            }
-            textBox2.SelectionStart = textBox2.Text.Length;
-            textBox2.SelectionLength = 0;
-            textBox2.ScrollToCaret();
-
-
-            if (!time_log)
-            {
-                button15.Image = Properties.Resources.Time_16x_cross2;
-                toolTip1.SetToolTip(button15, "Timestamps off");
-            }
-            else
-            {
-                button15.Image = Properties.Resources.Time_color_16x;
-                toolTip1.SetToolTip(button15, "Timestamps on");
-            }
-
-            port1.Parity = ParseParity(settings.Parity1);
-            port1.DataBits = settings.DataBits1;
-            port1.StopBits = ParseStopBits(settings.StopBits1);
-
-            if (settings.CustomBuffer1)
-                port1.ReadBufferSize = settings.ReadBufferSize1;
-
-
-            port2.Parity = ParseParity(settings.Parity2);
-            port2.DataBits = settings.DataBits2;
-            port2.StopBits = ParseStopBits(settings.StopBits2);
-
-            if (settings.CustomBuffer2)
-                port2.ReadBufferSize = settings.ReadBufferSize2;
-
-
-            port3.Parity = ParseParity(settings.Parity3);
-            port3.DataBits = settings.DataBits3;
-            port3.StopBits = ParseStopBits(settings.StopBits3);
-
-            if (settings.CustomBuffer3)
-                port3.ReadBufferSize = settings.ReadBufferSize3;
-
-
-            port4.Parity = ParseParity(settings.Parity4);
-            port4.DataBits = settings.DataBits4;
-            port4.StopBits = ParseStopBits(settings.StopBits4);
-
-            if (settings.CustomBuffer4)
-                port4.ReadBufferSize = settings.ReadBufferSize4;
-
         }
         private Parity ParseParity(string value)
         {
@@ -1851,10 +2266,26 @@ namespace SerialPortMacros
                 // BAUD RATE
                 // =========================
 
-                settings.BaudRate1 = textBox3.Text;
-                settings.BaudRate2 = textBox5.Text;
-                settings.BaudRate3 = textBox4.Text;
-                settings.BaudRate4 = textBox6.Text;
+                TextBox[] valueBoxes = { textBox3, textBox5, textBox4, textBox6 };
+                for (int i = 0; i < 4; i++)
+                {
+                    if (_connectionModes[i] == ConnectionMode.Serial)
+                        _baudRates[i] = valueBoxes[i].Text;
+                    else if (int.TryParse(valueBoxes[i].Text, out int tcpPort) && tcpPort >= 1 && tcpPort <= 65535)
+                        _tcpLocalPorts[i] = tcpPort;
+                }
+                settings.BaudRate1 = _baudRates[0];
+                settings.BaudRate2 = _baudRates[1];
+                settings.BaudRate3 = _baudRates[2];
+                settings.BaudRate4 = _baudRates[3];
+                settings.UseTcp1 = checkBox13.Checked;
+                settings.UseTcp2 = checkBox12.Checked;
+                settings.UseTcp3 = checkBox11.Checked;
+                settings.UseTcp4 = checkBox14.Checked;
+                settings.TcpPort1 = _tcpLocalPorts[0];
+                settings.TcpPort2 = _tcpLocalPorts[1];
+                settings.TcpPort3 = _tcpLocalPorts[2];
+                settings.TcpPort4 = _tcpLocalPorts[3];
 
 
                 // =========================
@@ -1875,7 +2306,7 @@ namespace SerialPortMacros
 
 
                 // =========================
-                // VARIABILI
+                // VARIABLES
                 // =========================
 
                 settings.time_button = time_log;
@@ -1913,7 +2344,7 @@ namespace SerialPortMacros
 
 
                 // =========================
-                // SERIALIZZAZIONE
+                // SERIALIZATION
                 // =========================
 
                 string json = JsonSerializer.Serialize(
@@ -1928,8 +2359,8 @@ namespace SerialPortMacros
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"Errore nel salvataggio delle impostazioni:\n\n{ex.Message}",
-                    "Errore",
+                    $"Error saving settings:\n\n{ex.Message}",
+                    "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
@@ -1937,6 +2368,15 @@ namespace SerialPortMacros
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            _uiTimer?.Stop();
+            port_timeout?.Stop();
+            _watchdogCts?.Cancel();
+
+            for (int port = 1; port <= 4; port++)
+                StopTcpPort(port);
+
+            try { _writer1?.Flush(); _writer2?.Flush(); _writer3?.Flush(); _writer4?.Flush(); _writer5?.Flush(); } catch { }
+
             SaveSettings();
         }
 
@@ -1960,7 +2400,7 @@ namespace SerialPortMacros
             string[] files =
                 (string[])e.Data.GetData(DataFormats.FileDrop);
 
-            // Accettiamo un solo file
+            // Accept only a single file
             if (files.Length != 1)
                 return;
 
@@ -1978,10 +2418,380 @@ namespace SerialPortMacros
             var form = new Form6(this, settings.log_message1, settings.log_message2, settings.log_check);
             form.Show();
         }
-        public void Set_logging_messages(string mes1, string mes2, bool check) {
+        public void Set_logging_messages(string mes1, string mes2, bool check)
+        {
             settings.log_message1 = mes1;
             settings.log_message2 = mes2;
             settings.log_check = check;
+        }
+
+
+        //TCP update
+
+
+        private void SetPortMode(int logicalPort, ConnectionMode mode)
+        {
+            int index = logicalPort - 1;
+
+            if (index < 0 || index >= 4)
+                throw new ArgumentOutOfRangeException(nameof(logicalPort));
+
+            if (_connectionModes[index] == mode)
+                return;
+
+            StopTcpPort(logicalPort);
+            _connectionModes[index] = mode;
+
+            if (mode == ConnectionMode.Tcp)
+                StartTcpPort(logicalPort);
+        }
+
+        private void StartTcpPort(int logicalPort)
+        {
+            int index = logicalPort - 1;
+
+            try
+            {
+                var listener = new TcpListener(
+                    IPAddress.Any,
+                    _tcpLocalPorts[index]);
+
+                listener.Start();
+
+                var cts = new CancellationTokenSource();
+
+                _tcpListeners[index] = listener;
+                _tcpCts[index] = cts;
+
+                _ = Task.Run(() =>
+                    TcpAcceptLoopAsync(logicalPort, listener, cts.Token));
+
+                aggiungi_a_textbox2(
+                    $"TCP listening on port {_tcpLocalPorts[index]}",
+                    "System",
+                    Color.DarkGreen);
+            }
+            catch (Exception ex)
+            {
+                // Keep TCP mode selected so the user can fix
+                // the entered port and retry without having to re-check the checkbox.
+                aggiungi_a_textbox2(
+                    $"Error starting TCP on port {logicalPort}: {ex.Message}",
+                    "Error",
+                    Color.Red);
+            }
+        }
+
+        private void StopTcpPort(int logicalPort)
+        {
+            int index = logicalPort - 1;
+
+            try { _tcpCts[index]?.Cancel(); } catch { }
+            try { _tcpListeners[index]?.Stop(); } catch { }
+            try { _tcpClients[index]?.Close(); } catch { }
+
+            _tcpCts[index]?.Dispose();
+
+            _tcpCts[index] = null;
+            _tcpListeners[index] = null;
+            _tcpClients[index] = null;
+            _tcpStreams[index] = null;
+            _tcpBuffers[index].Clear();
+        }
+
+        private async Task TcpAcceptLoopAsync(
+            int logicalPort,
+            TcpListener listener,
+            CancellationToken token)
+        {
+            int index = logicalPort - 1;
+
+            while (!token.IsCancellationRequested)
+            {
+                TcpClient? client = null;
+
+                try
+                {
+                    client = await listener.AcceptTcpClientAsync();
+
+                    if (token.IsCancellationRequested)
+                    {
+                        client.Close();
+                        break;
+                    }
+
+                    // No Nagle delay and send with a timeout: a write
+                    // from the UI thread cannot block the interface for long.
+                    client.NoDelay = true;
+                    client.SendTimeout = 1000;
+                    try { client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true); } catch { }
+
+                    _tcpClients[index] = client;
+                    _tcpStreams[index] = client.GetStream();
+                    _tcpBuffers[index].Clear();
+
+                    if (!IsDisposed && IsHandleCreated)
+                    {
+                        BeginInvoke(new Action(() =>
+                            aggiungi_a_textbox2(
+                                $"ESP connected to TCP port {logicalPort}",
+                                "System",
+                                Color.DarkGreen)));
+                    }
+
+                    await TcpReceiveLoopAsync(logicalPort, client, token);
+                }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
+                catch (SocketException) when (token.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    if (!token.IsCancellationRequested &&
+                        !IsDisposed && IsHandleCreated)
+                    {
+                        BeginInvoke(new Action(() =>
+                            aggiungi_a_textbox2(
+                                $"TCP error on port {logicalPort}: {ex.Message}",
+                                "Error",
+                                Color.Red)));
+                    }
+                }
+                finally
+                {
+                    if (ReferenceEquals(_tcpClients[index], client))
+                    {
+                        _tcpStreams[index] = null;
+                        _tcpClients[index] = null;
+                        _tcpBuffers[index].Clear();
+                    }
+
+                    try { client?.Close(); } catch { }
+                }
+            }
+        }
+
+        private async Task TcpReceiveLoopAsync(
+            int logicalPort,
+            TcpClient client,
+            CancellationToken token)
+        {
+            int index = logicalPort - 1;
+            NetworkStream stream = client.GetStream();
+            byte[] buffer = new byte[1024];
+
+            while (!token.IsCancellationRequested && client.Connected)
+            {
+                int bytesRead = await stream.ReadAsync(
+                    buffer, 0, buffer.Length, token);
+
+                if (bytesRead == 0)
+                    break;
+
+                // The serial code uses ASCII: keep the same format.
+                string received = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+                var batch = new List<string>();
+
+                foreach (char c in received)
+                {
+                    if (c == '\r' || c == '\n')
+                    {
+                        if (_tcpBuffers[index].Length == 0)
+                            continue;
+
+                        string message = _tcpBuffers[index].ToString().Trim();
+                        _tcpBuffers[index].Clear();
+
+                        if (message.Length > 0)
+                            batch.Add(message);
+                    }
+                    else
+                    {
+                        _tcpBuffers[index].Append(c);
+
+                        // Prevent a protocol error from filling memory.
+                        if (_tcpBuffers[index].Length > 30000)
+                            _tcpBuffers[index].Clear();
+                    }
+                }
+
+                ProcessTcpMessages(logicalPort, batch);
+            }
+        }
+
+
+
+        private void ProcessTcpMessages(int logicalPort, List<string> messages)
+        {
+            // Called from the TCP receive task: no UI access here.
+            // The port name (which requires reading the controls) is resolved
+            // on the UI thread in ProcessRx (PortName = null).
+            Color color = logicalPort switch
+            {
+                1 => Color.Red,
+                2 => Color.Blue,
+                3 => Color.Orange,
+                4 => Color.Green,
+                _ => Color.Black
+            };
+
+            EnqueueBatch(messages, null, logicalPort, color);
+        }
+
+
+
+        private void SendToLogicalPort(
+            int logicalPort,
+            bool serialIsOpen,
+            bool selected,
+            SerialPort serialPort,
+            string data)
+        {
+            if (!selected)
+                return;
+
+            int index = logicalPort - 1;
+
+            if (_connectionModes[index] == ConnectionMode.Serial)
+            {
+                if (!serialIsOpen)
+                    return;
+
+                try
+                {
+                    serialPort.Write(data);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Serial send on port {logicalPort}: {ex.Message}");
+                }
+
+                return;
+            }
+
+            NetworkStream? stream = _tcpStreams[index];
+
+            if (stream == null || _tcpClients[index]?.Connected != true)
+                return;
+
+            try
+            {
+                byte[] bytes = Encoding.ASCII.GetBytes(data);
+
+                lock (_tcpSendLocks[index])
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"TCP send on port {logicalPort}: {ex.Message}");
+            }
+        }
+
+        private void checkBox13_CheckedChanged(object sender, EventArgs e)
+        {
+            AggiornaModalitaDaCheckBox(1, checkBox13.Checked, label1, textBox3, comboBox2);
+            if (!_loadingSettings) SaveSettings();
+        }
+
+        private void checkBox12_CheckedChanged(object sender, EventArgs e)
+        {
+            AggiornaModalitaDaCheckBox(2, checkBox12.Checked, label2, textBox5, comboBox1);
+            if (!_loadingSettings) SaveSettings();
+        }
+
+        private void checkBox11_CheckedChanged(object sender, EventArgs e)
+        {
+            AggiornaModalitaDaCheckBox(3, checkBox11.Checked, label3, textBox4, comboBox3);
+            if (!_loadingSettings) SaveSettings();
+        }
+
+        private void checkBox14_CheckedChanged(object sender, EventArgs e)
+        {
+            AggiornaModalitaDaCheckBox(4, checkBox14.Checked, label4, textBox6, comboBox4);
+            if (!_loadingSettings) SaveSettings();
+        }
+
+        private void AggiornaModalitaDaCheckBox(int logicalPort, bool usaTcp, Label label, TextBox portOrBaudBox, ComboBox serialPortCombo)
+        {
+            CambiaModalitaPorta(logicalPort, usaTcp);
+            serialPortCombo.Enabled = !usaTcp;
+            label.Text = usaTcp ? "port" : "baud";
+            portOrBaudBox.Enabled = true;
+        }
+
+
+
+        // Nuova interfaccia
+        private void button21_Click(object sender, EventArgs e)
+        {
+            var form = new Form7(this, true);
+            form.Show();
+        }
+
+
+        // Apri interfaccia in modalità normale
+        private void button22_Click(object sender, EventArgs e)
+        {
+            string interfacesPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "interfaces"
+            );
+
+            Directory.CreateDirectory(interfacesPath);
+
+            using OpenFileDialog dialog = new OpenFileDialog
+            {
+                InitialDirectory = interfacesPath,
+                Filter = "Interfacce SPM (*.spm)|*.spm",
+                Title = "Apri interfaccia",
+                CheckFileExists = true,
+                Multiselect = false
+            };
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                var form = new Form7(this, false);
+                form.LoadDocument(dialog.FileName);
+                form.Show();
+            }
+        }
+
+
+        // Apri interfaccia in modalità editor
+        private void button23_Click(object sender, EventArgs e)
+        {
+            string interfacesPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "interfaces"
+            );
+
+            Directory.CreateDirectory(interfacesPath);
+
+            using OpenFileDialog dialog = new OpenFileDialog
+            {
+                InitialDirectory = interfacesPath,
+                Filter = "Interfacce SPM (*.spm)|*.spm",
+                Title = "Apri interfaccia da modificare",
+                CheckFileExists = true,
+                Multiselect = false
+            };
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                var form = new Form7(this, true);
+                form.LoadDocument(dialog.FileName);
+                form.Show();
+            }
         }
     }
 
@@ -2005,6 +2815,7 @@ namespace SerialPortMacros
         public string keypress;
         public string path;
         public bool active;
+        public int lineEndingIndex { get; set; } = 1; // Default a 1 (NL)
     }
 
     public class Textbox_entry
@@ -2044,6 +2855,15 @@ namespace SerialPortMacros
         public string BaudRate3 { get; set; } = "9600";
         public string BaudRate4 { get; set; } = "9600";
 
+        public bool UseTcp1 { get; set; } = false;
+        public bool UseTcp2 { get; set; } = false;
+        public bool UseTcp3 { get; set; } = false;
+        public bool UseTcp4 { get; set; } = false;
+        public int TcpPort1 { get; set; } = 5001;
+        public int TcpPort2 { get; set; } = 5002;
+        public int TcpPort3 { get; set; } = 5003;
+        public int TcpPort4 { get; set; } = 5004;
+
         public int graph_num1 { get; set; } = 1;
         public int graph_num2 { get; set; } = 1;
         public int graph_num3 { get; set; } = 1;
@@ -2052,7 +2872,7 @@ namespace SerialPortMacros
         public int line_end_index { get; set; } = 0;
 
 
-        //log messages
+        // log messages
         public string log_message1 { get; set; } = "";
         public string log_message2 { get; set; } = "";
 

@@ -62,6 +62,7 @@
             button3 = new Button();
             textBox5 = new TextBox();
             toolTip1 = new ToolTip(components);
+            comboBox2 = new ComboBox();
             SuspendLayout();
             // 
             // checkedListBox1
@@ -351,11 +352,20 @@
             textBox5.TabIndex = 31;
             toolTip1.SetToolTip(textBox5, "New file name");
             // 
+            // comboBox2
+            // 
+            comboBox2.FormattingEnabled = true;
+            comboBox2.Location = new Point(302, 197);
+            comboBox2.Name = "comboBox2";
+            comboBox2.Size = new Size(151, 28);
+            comboBox2.TabIndex = 32;
+            // 
             // Form3
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(comboBox2);
             Controls.Add(textBox5);
             Controls.Add(button3);
             Controls.Add(button2);
@@ -433,5 +443,6 @@
         private Button button3;
         private TextBox textBox5;
         private ToolTip toolTip1;
+        private ComboBox comboBox2;
     }
 }

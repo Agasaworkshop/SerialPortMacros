@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-using System.Drawing.Text;
+using System.IO;
 using System.Linq;
-using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -15,26 +14,43 @@ namespace SerialPortMacros
     public partial class Form3 : Form
     {
         public Form1 form1;
+        private bool _isLoading = false;
+
         public Form3(Form1 form)
         {
             form1 = form;
             InitializeComponent();
+
+            // 1. Popola i ComboBox SUBITO nel costruttore, prima di associare il DataSource
+            comboBox2.Items.Clear();
+            comboBox2.Items.Add("None");
+            comboBox2.Items.Add("NL");
+            comboBox2.Items.Add("CR");
+            comboBox2.Items.Add("Both");
+
+            string[] effectlist = { "Keypress", "Write back" };
+            comboBox1.Items.Clear();
+            comboBox1.Items.AddRange(effectlist);
+            comboBox1.SelectedIndexChanged += comboBox1_SelectedIndexChanged;
+
+            // 2. Ora è sicuro associare il DataSource (che scatenerà gli eventi trovando i comboBox già pronti)
             checkedListBox1.DataSource = form1.scripts;
             checkedListBox1.DisplayMember = "name";
         }
+
         private void Form3_Load(object sender, EventArgs e)
         {
-            string[] effectlist = { "Keypress", "Write back" };
-            comboBox1.Items.AddRange(effectlist);
             findactivescripts();
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             displayscript();
+            _isLoading = false; // Fine caricamento iniziale
         }
 
         private void checkedListBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
             displayscript();
         }
+
         private void CheckedListBox1_ItemCheck(object sender, ItemCheckEventArgs e)
         {
             if (e.Index < 0 || e.Index >= checkedListBox1.Items.Count)
@@ -47,15 +63,19 @@ namespace SerialPortMacros
             c_script.active = (e.NewValue == CheckState.Checked);
 
             var lines = File.ReadAllLines(c_script.path);
-
             if (lines.Length > 0)
             {
-                lines[lines.Length - 1] = c_script.active.ToString();
-                File.WriteAllLines(c_script.path,
-                    lines.Where(l => !string.IsNullOrWhiteSpace(l)));
+                if (c_script.trigger == 1 && lines.Length > 7)
+                {
+                    lines[7] = c_script.active.ToString();
+                }
+                else if (c_script.trigger == 2 && lines.Length > 11)
+                {
+                    lines[11] = c_script.active.ToString();
+                }
+                File.WriteAllLines(c_script.path, lines.Where(l => !string.IsNullOrWhiteSpace(l)));
             }
         }
-
 
         private void button2_Click(object sender, EventArgs e)
         {
@@ -67,61 +87,72 @@ namespace SerialPortMacros
             try
             {
                 Applychanges();
+                MessageBox.Show("Modifiche salvate con successo!", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Errore nel salvataggio: {ex.Message}", "Errore", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
+
         private void Applychanges()
         {
-            string[] newfile = new string[12];
             Script c_script = (Script)checkedListBox1.SelectedItem;
+            if (c_script == null) return;
+
             int index = checkedListBox1.SelectedIndex;
-            bool active = false;
-            if (checkedListBox1.GetItemCheckState(index) == CheckState.Checked)
-            {
-                active = true;
-            }
-            newfile[0] = textBox2.Text;
+            bool active = checkedListBox1.GetItemCheckState(index) == CheckState.Checked;
+
             c_script.key = textBox2.Text;
-            newfile[2] = checkBox1.Checked.ToString();
             c_script.p1 = checkBox1.Checked;
-            newfile[3] = checkBox2.Checked.ToString();
             c_script.p2 = checkBox2.Checked;
-            newfile[4] = checkBox3.Checked.ToString();
             c_script.p3 = checkBox3.Checked;
-            newfile[5] = checkBox4.Checked.ToString();
             c_script.p4 = checkBox4.Checked;
+            c_script.active = active;
+
+            List<string> lines = new List<string>
+            {
+                c_script.key,
+                c_script.trigger.ToString(),
+                c_script.p1.ToString(),
+                c_script.p2.ToString(),
+                c_script.p3.ToString(),
+                c_script.p4.ToString()
+            };
+
             if (comboBox1.Text == "Keypress")
             {
-                newfile[1] = "1";
                 c_script.trigger = 1;
-                newfile[6] = textBox4.Text;
+                lines[1] = "1";
                 c_script.keypress = textBox4.Text;
-                newfile[7] = active.ToString();
-                c_script.active = active;
+                lines.Add(c_script.keypress);
+                lines.Add(c_script.active.ToString());
             }
             else if (comboBox1.Text == "Write back")
             {
-                newfile[1] = "2";
                 c_script.trigger = 2;
-                newfile[6] = textBox3.Text;
+                lines[1] = "2";
                 c_script.reply = textBox3.Text;
-                newfile[7] = checkBox8.Checked.ToString();
+                lines.Add(c_script.reply);
+
                 c_script.p1_w = checkBox8.Checked;
-                newfile[8] = checkBox7.Checked.ToString();
+                lines.Add(c_script.p1_w.ToString());
                 c_script.p2_w = checkBox7.Checked;
-                newfile[9] = checkBox6.Checked.ToString();
+                lines.Add(c_script.p2_w.ToString());
                 c_script.p3_w = checkBox6.Checked;
-                newfile[10] = checkBox5.Checked.ToString();
+                lines.Add(c_script.p3_w.ToString());
                 c_script.p4_w = checkBox5.Checked;
-                newfile[11] = active.ToString();
-                c_script.active = active;
+                lines.Add(c_script.p4_w.ToString());
+
+                lines.Add(c_script.active.ToString());
+
+                c_script.lineEndingIndex = comboBox2.SelectedIndex >= 0 ? comboBox2.SelectedIndex : 1;
+                lines.Add(c_script.lineEndingIndex.ToString());
             }
-            if (c_script != null)
-            {
-                newfile = newfile.Where(str => !string.IsNullOrWhiteSpace(str)).ToArray();
-                File.WriteAllLines(c_script.path, newfile);
-            }
+
+            File.WriteAllLines(c_script.path, lines);
         }
+
         void findactivescripts()
         {
             int num = (form1.scripts.Length);
@@ -140,35 +171,53 @@ namespace SerialPortMacros
         {
             if (textBox5.Text != "")
             {
-                FileStream FOUT;
-                string filePath = $"./scripts/{textBox5.Text}";
+                string filePath = Path.Combine("./scripts", textBox5.Text);
                 try
                 {
-                    using (FOUT = File.Create(filePath)) ;
+                    string[] newfile = new string[]
+                    {
+                        "test",
+                        "1",
+                        "false",
+                        "false",
+                        "false",
+                        "false",
+                        "%100%!LMB",
+                        "false"
+                    };
+                    File.WriteAllLines(filePath, newfile);
                 }
                 catch (IOException ex)
                 {
                     Console.WriteLine("An error occurred while creating the file: " + ex.Message);
                 }
-                string[] newfile = new string[12];
-                newfile[0] = "test";
-                newfile[1] = "1";
-                newfile[2] = "false";
-                newfile[3] = "false";
-                newfile[4] = "false";
-                newfile[5] = "false";
-                newfile[6] = "%100%!LMB";
-                newfile[7] = "false";
-                newfile = newfile.Where(str => !string.IsNullOrWhiteSpace(str)).ToArray();
-                File.WriteAllLines(filePath, newfile);
                 textBox5.Text = "";
             }
             form1.ScanScripts();
             checkedListBox1.DataSource = form1.scripts;
             checkedListBox1.DisplayMember = "name";
         }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_isLoading) return;
+
+            if (comboBox1.Text == "Keypress")
+            {
+                comboBox2.Enabled = false;
+                comboBox2.SelectedIndex = -1;
+            }
+            else if (comboBox1.Text == "Write back")
+            {
+                comboBox2.Enabled = true;
+                if (comboBox2.SelectedIndex == -1)
+                    comboBox2.SelectedIndex = 1; // Default a NL
+            }
+        }
+
         public void displayscript()
         {
+            _isLoading = true;
             textBox4.Text = "";
             comboBox1.Text = "";
             textBox3.Text = "";
@@ -176,6 +225,8 @@ namespace SerialPortMacros
             checkBox7.Checked = false;
             checkBox6.Checked = false;
             checkBox5.Checked = false;
+            comboBox2.SelectedIndex = -1;
+            comboBox2.Enabled = false;
 
             Script c_script = (Script)checkedListBox1.SelectedItem;
             if (c_script != null)
@@ -186,12 +237,14 @@ namespace SerialPortMacros
                 checkBox2.Checked = c_script.p2;
                 checkBox3.Checked = c_script.p3;
                 checkBox4.Checked = c_script.p4;
+
                 if (c_script.trigger == 1)
                 {
                     comboBox1.Text = "Keypress";
                     textBox4.Text = c_script.keypress;
+                    comboBox2.Enabled = false;
+                    comboBox2.SelectedIndex = -1;
                 }
-
                 else if (c_script.trigger == 2)
                 {
                     comboBox1.Text = "Write back";
@@ -200,9 +253,19 @@ namespace SerialPortMacros
                     checkBox7.Checked = c_script.p2_w;
                     checkBox6.Checked = c_script.p3_w;
                     checkBox5.Checked = c_script.p4_w;
+                    comboBox2.Enabled = true;
+
+                    if (c_script.lineEndingIndex >= 0 && c_script.lineEndingIndex < comboBox2.Items.Count)
+                    {
+                        comboBox2.SelectedIndex = c_script.lineEndingIndex;
+                    }
+                    else
+                    {
+                        comboBox2.SelectedIndex = 1; // Default a NL
+                    }
                 }
             }
+            _isLoading = false;
         }
     }
 }
-

@@ -1,6 +1,4 @@
-﻿using ScottPlot;
-using ScottPlot.AxisLimitManagers;
-using ScottPlot.Colormaps;
+using ScottPlot;
 using ScottPlot.Plottables;
 using ScottPlot.WinForms;
 using SerialPortMacros;
@@ -11,49 +9,49 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace SerialPortMacros
 {
     public partial class Form4 : Form
     {
+        // Clock condiviso da TUTTI i grafici (singoli e merged).
+        // I punti vengono marcati con questo orologio nel momento in cui il dato
+        // arriva dalla porta, non quando il thread UI riesce a elaborarlo:
+        // e' questo che elimina l'effetto "a pezzi" (punti raggruppati).
+        private static readonly Stopwatch _clock = Stopwatch.StartNew();
+        public static double NowSeconds => _clock.Elapsed.TotalSeconds;
+
         private System.Windows.Forms.Timer timerPlot;
-        private Stopwatch sw = new Stopwatch();
         private double timeWindow = 10;
         private bool legend_on = true;
 
         public bool isMaster = false;
 
-
         public Form4 MasterForm { get; set; } = null;
 
-
-        private ConcurrentQueue<(double t, double y)> mainQueue = new ConcurrentQueue<(double t, double y)>();
-        private DataLogger logger_main;
-
+        private readonly ConcurrentQueue<(double t, double y)> mainQueue = new ConcurrentQueue<(double t, double y)>();
+        private PlotSeries mainSeries;
 
         public Dictionary<Form4, child_form> children = new Dictionary<Form4, child_form>();
 
         public bool merging = false;
         public Form1 mainform;
-        public bool is_visible = true;
+
+        // Se false il form non accoda dati propri (nascosto da merge o chiuso).
+        public volatile bool is_visible = true;
 
         public bool playing = true;
-
+        private bool _forceRefresh = true;
 
         public Form4(Form1 form1, bool masterFlag = false)
         {
             InitializeComponent();
             isMaster = masterFlag;
             mainform = form1;
-
         }
-
-
 
         private void Form4_Load(object sender, EventArgs e)
         {
-
             if (isMaster)
             {
                 button2.Visible = true;
@@ -64,15 +62,9 @@ namespace SerialPortMacros
                 button3.Visible = false;
             }
 
-            formsPlot1.Plot.Axes.ContinuouslyAutoscale = true;
+            // I limiti degli assi sono gestiti manualmente a ogni frame.
+            formsPlot1.Plot.Axes.ContinuouslyAutoscale = false;
             formsPlot1.Plot.Legend.IsVisible = true;
-
-            timerPlot = new System.Windows.Forms.Timer();
-            timerPlot.Interval = 50;
-            timerPlot.Tick += TimerPlot_Tick;
-
-            sw.Start();
-            timerPlot.Start();
 
             if (isMaster)
             {
@@ -81,109 +73,109 @@ namespace SerialPortMacros
             }
             else
             {
-                logger_main = formsPlot1.Plot.Add.DataLogger();
-                logger_main.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Blue);
+                mainSeries = new PlotSeries(formsPlot1.Plot, ScottPlot.Color.FromColor(System.Drawing.Color.Blue));
             }
+
+            timerPlot = new System.Windows.Forms.Timer();
+            timerPlot.Interval = 33; // ~30 fps
+            timerPlot.Tick += TimerPlot_Tick;
+            timerPlot.Start();
         }
 
-
-
-        public void AddDataPoint(double value)
+        /// <summary>
+        /// Thread-safe: puo' essere chiamato da qualunque thread.
+        /// t = Form4.NowSeconds preso al momento della ricezione.
+        /// </summary>
+        public void AddDataPoint(double value, double t)
         {
-            double now = sw.Elapsed.TotalSeconds;
+            if (!isMaster && is_visible)
+                mainQueue.Enqueue((t, value));
 
-            if (!isMaster)
-            {
-                if (this.Visible)
-                    mainQueue.Enqueue((now, value));
-            }
-            MasterForm?.AddChildData(this, value);
+            MasterForm?.AddChildData(this, value, t);
         }
 
+        public void AddDataPoint(double value) => AddDataPoint(value, NowSeconds);
 
-        public void AddChildData(Form4 child, double y)
+        public void AddChildData(Form4 child, double y, double t)
         {
-            double t = sw.Elapsed.TotalSeconds;
-
             if (!isMaster) return;
 
-            if (!children.TryGetValue(child, out var childEntry))
-                throw new Exception("Il master riceve dati da un figlio non registrato!");
+            if (children.TryGetValue(child, out var childEntry))
+                childEntry.childQueue.Enqueue((t, y));
+        }
 
-            childEntry.childQueue.Enqueue((t, y));
+        private static bool Drain(ConcurrentQueue<(double t, double y)> queue, PlotSeries series)
+        {
+            if (series == null) return false;
+
+            bool any = false;
+            int guard = 200000;
+            while (guard-- > 0 && queue.TryDequeue(out var p))
+            {
+                series.Add(p.t, p.y);
+                any = true;
+            }
+            return any;
         }
 
         private void TimerPlot_Tick(object sender, EventArgs e)
         {
-            // Se in pausa, congela completamente il grafico
+            if (IsDisposed || !IsHandleCreated)
+                return;
+
+            double now = NowSeconds;
+            bool updated = false;
+
+            // I dati vengono sempre svuotati dalle code (anche in pausa) per
+            // evitare crescita illimitata; in pausa semplicemente non si ridisegna.
+            if (isMaster)
+            {
+                foreach (var childEntry in children.Values)
+                    updated |= Drain(childEntry.childQueue, childEntry.series);
+            }
+            else
+            {
+                updated = Drain(mainQueue, mainSeries);
+            }
+
             if (!playing)
                 return;
 
-            bool updated = false;
-            double now = sw.Elapsed.TotalSeconds;
+            if (!updated && !_forceRefresh)
+                return;
+
+            _forceRefresh = false;
+
+            double xMin = now - timeWindow;
+            double yMin = double.PositiveInfinity;
+            double yMax = double.NegativeInfinity;
 
             if (isMaster)
             {
                 foreach (var childEntry in children.Values)
                 {
-                    while (childEntry.childQueue.TryDequeue(out var p))
-                    {
-                        try
-                        {
-                            childEntry.logger.Add(p.t, p.y);
-                        }
-                        catch
-                        {
-                        }
-
-                        updated = true;
-                    }
+                    childEntry.series.TrimBefore(xMin);
+                    childEntry.series.ExpandRange(ref yMin, ref yMax);
                 }
             }
-            else
+            else if (mainSeries != null)
             {
-                while (mainQueue.TryDequeue(out var p))
-                {
-                    try
-                    {
-                        logger_main.Add(p.t, p.y);
-                    }
-                    catch
-                    {
-                    }
-
-                    updated = true;
-                }
+                mainSeries.TrimBefore(xMin);
+                mainSeries.ExpandRange(ref yMin, ref yMax);
             }
 
-            if (updated)
+            var plot = formsPlot1.Plot;
+            plot.Axes.SetLimitsX(xMin, now);
+
+            if (yMin <= yMax)
             {
-                double xMax = now;
-                double xMin = now - timeWindow;
-
-                formsPlot1.Plot.Axes.ContinuouslyAutoscale = false;
-
-                if (isMaster)
-                {
-                    foreach (var childEntry in children.Values)
-                    {
-                        childEntry.logger.Data.Coordinates.RemoveAll(
-                            c => c.X < now - timeWindow
-                        );
-                    }
-                }
-                else
-                {
-                    logger_main.Data.Coordinates.RemoveAll(
-                        c => c.X < now - timeWindow
-                    );
-                }
-
-                formsPlot1.Plot.Axes.SetLimitsX(xMin, xMax);
-                formsPlot1.Refresh();
+                double span = yMax - yMin;
+                double pad = span > 1e-12 ? span * 0.08 : Math.Max(Math.Abs(yMax) * 0.05, 1.0);
+                plot.Axes.SetLimitsY(yMin - pad, yMax + pad);
             }
+
+            formsPlot1.Refresh();
         }
-
 
         private void button1_Click(object sender, EventArgs e) // unisci
         {
@@ -244,17 +236,29 @@ namespace SerialPortMacros
                 toolTip1.SetToolTip(button3, "Hide");
             }
 
+            _forceRefresh = true;
         }
 
         private void Form4_FormClosing(object sender, FormClosingEventArgs e)
         {
+            // Smetti di accettare dati: evita code che crescono all'infinito.
+            is_visible = false;
+
+            try { timerPlot?.Stop(); } catch { }
+
             if (!isMaster) return;
 
             foreach (var childEntry in children.Values)
             {
                 try
                 {
-                    childEntry.child?.Show();
+                    if (childEntry.child != null)
+                    {
+                        // Il figlio non deve piu' inoltrare dati a un master chiuso.
+                        childEntry.child.MasterForm = null;
+                        childEntry.child.is_visible = true;
+                        childEntry.child.Show();
+                    }
                 }
                 catch
                 {
@@ -265,6 +269,7 @@ namespace SerialPortMacros
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
         {
             timeWindow = (double)numericUpDown1.Value;
+            _forceRefresh = true;
         }
 
         private void button4_Click(object sender, EventArgs e)
@@ -280,11 +285,70 @@ namespace SerialPortMacros
             {
                 // PLAY
                 playing = true;
+                _forceRefresh = true;
                 button4.Image = Properties.Resources.Pause;
                 toolTip1.SetToolTip(button4, "Pause");
             }
         }
     }
+
+    /// <summary>
+    /// Serie temporale: due liste X/Y collegate a uno scatter-line di ScottPlot.
+    /// Tutto avviene sul thread UI (il timer del grafico), quindi nessun lock.
+    /// </summary>
+    public class PlotSeries
+    {
+        public readonly List<double> Xs = new List<double>(4096);
+        public readonly List<double> Ys = new List<double>(4096);
+        public readonly Scatter Line;
+
+        public PlotSeries(Plot plot, ScottPlot.Color color)
+        {
+            Line = plot.Add.ScatterLine(Xs, Ys);
+            Line.Color = color;
+            Line.LineWidth = 1.5f;
+        }
+
+        public void Add(double x, double y)
+        {
+            Xs.Add(x);
+            Ys.Add(y);
+        }
+
+        // Rimuove in un colpo solo tutti i punti piu' vecchi di xMin.
+        public void TrimBefore(double xMin)
+        {
+            int n = Xs.Count;
+            if (n == 0 || Xs[0] >= xMin) return;
+
+            int lo = 0, hi = n;
+            while (lo < hi)
+            {
+                int mid = (lo + hi) >> 1;
+                if (Xs[mid] < xMin) lo = mid + 1; else hi = mid;
+            }
+
+            // Mantiene un punto appena fuori finestra: la linea arriva fino al bordo sinistro.
+            int remove = Math.Max(0, lo - 1);
+            if (remove > 0)
+            {
+                Xs.RemoveRange(0, remove);
+                Ys.RemoveRange(0, remove);
+            }
+        }
+
+        public void ExpandRange(ref double yMin, ref double yMax)
+        {
+            for (int i = 0; i < Ys.Count; i++)
+            {
+                double y = Ys[i];
+                if (double.IsNaN(y) || double.IsInfinity(y)) continue;
+                if (y < yMin) yMin = y;
+                if (y > yMax) yMax = y;
+            }
+        }
+    }
+
     public class CircularPlotBuffer
     {
         public readonly double[] Xs;
@@ -346,7 +410,7 @@ namespace SerialPortMacros
         public ConcurrentQueue<(double t, double y)> childQueue = new ConcurrentQueue<(double t, double y)>();
         public System.Drawing.Color color;
         public Form4 child;
-        public DataLogger logger;
+        public PlotSeries series;
         public LegendItem legendItem;
 
         public child_form(Form4 in_child, System.Drawing.Color clr, ScottPlot.WinForms.FormsPlot formsPlot)
@@ -354,12 +418,9 @@ namespace SerialPortMacros
             child = in_child;
             color = clr;
 
-            // Crea il logger direttamente
-            logger = formsPlot.Plot.Add.DataLogger();
             var spColor = ScottPlot.Color.FromColor(color);
-            logger.Color = spColor;
+            series = new PlotSeries(formsPlot.Plot, spColor);
 
-            // Crea il LegendItem
             legendItem = new LegendItem()
             {
                 LineColor = spColor,
