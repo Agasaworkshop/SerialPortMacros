@@ -264,6 +264,7 @@
             Controls.Add(label2);
             Controls.Add(label1);
             Controls.Add(comboBox1);
+            MaximumSize = new Size(400, 450);
             MinimumSize = new Size(400, 450);
             Name = "Form8";
             Text = "Form8";
