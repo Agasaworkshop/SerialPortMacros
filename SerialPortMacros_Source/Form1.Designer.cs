@@ -88,6 +88,8 @@
             button21 = new Button();
             button22 = new Button();
             button23 = new Button();
+            button24 = new Button();
+            button25 = new Button();
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown3).BeginInit();
@@ -97,11 +99,11 @@
             // button1
             // 
             button1.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            button1.Location = new Point(694, 360);
+            button1.Image = Properties.Resources.Play;
+            button1.Location = new Point(759, 325);
             button1.Name = "button1";
-            button1.Size = new Size(94, 29);
+            button1.Size = new Size(29, 29);
             button1.TabIndex = 0;
-            button1.Text = "Start";
             button1.UseVisualStyleBackColor = true;
             button1.Click += button1_Click;
             // 
@@ -110,7 +112,7 @@
             button2.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             button2.Location = new Point(694, 325);
             button2.Name = "button2";
-            button2.Size = new Size(94, 29);
+            button2.Size = new Size(66, 29);
             button2.TabIndex = 1;
             button2.Text = "Macros";
             button2.UseVisualStyleBackColor = true;
@@ -749,11 +751,35 @@
             button23.UseVisualStyleBackColor = true;
             button23.Click += button23_Click;
             // 
+            // button24
+            // 
+            button24.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            button24.Image = Properties.Resources.Play;
+            button24.Location = new Point(759, 358);
+            button24.Name = "button24";
+            button24.Size = new Size(29, 29);
+            button24.TabIndex = 53;
+            button24.UseVisualStyleBackColor = true;
+            button24.Click += button24_Click;
+            // 
+            // button25
+            // 
+            button25.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            button25.Location = new Point(617, 358);
+            button25.Name = "button25";
+            button25.Size = new Size(141, 29);
+            button25.TabIndex = 54;
+            button25.Text = "Select a sequence";
+            button25.UseVisualStyleBackColor = true;
+            button25.Click += button25_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 487);
+            Controls.Add(button25);
+            Controls.Add(button24);
             Controls.Add(button23);
             Controls.Add(button22);
             Controls.Add(button21);
@@ -886,5 +912,7 @@
         private Button button21;
         private Button button22;
         private Button button23;
+        private Button button24;
+        private Button button25;
     }
 }

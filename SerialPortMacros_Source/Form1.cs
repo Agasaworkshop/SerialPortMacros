@@ -177,15 +177,15 @@ namespace SerialPortMacros
 
         private void button1_Click(object sender, EventArgs e)
         {
-            if (button1.Text == "Start")
+            if (!is_running)
             {
-                button1.Text = "Stop";
+                button1.Image = Properties.Resources.Pause;
                 is_running = true;
                 ScanScripts();
             }
             else
             {
-                button1.Text = "Start";
+                button1.Image = Properties.Resources.Play;
                 is_running = false;
             }
         }
@@ -641,10 +641,10 @@ namespace SerialPortMacros
 
                     string dataToSend = trimmedMsg + lineEnding;
 
-                    if (targetPorts[0]) SendToLogicalPort(1, opn_p1, checkBox1.Checked, port1, dataToSend);
-                    if (targetPorts[1]) SendToLogicalPort(2, opn_p2, checkBox2.Checked, port2, dataToSend);
-                    if (targetPorts[2]) SendToLogicalPort(3, opn_p3, checkBox3.Checked, port3, dataToSend);
-                    if (targetPorts[3]) SendToLogicalPort(4, opn_p4, checkBox4.Checked, port4, dataToSend);
+                    if (targetPorts[0]) SendToLogicalPort(1, opn_p1, true, port1, dataToSend);
+                    if (targetPorts[1]) SendToLogicalPort(2, opn_p2, true, port2, dataToSend);
+                    if (targetPorts[2]) SendToLogicalPort(3, opn_p3, true, port3, dataToSend);
+                    if (targetPorts[3]) SendToLogicalPort(4, opn_p4, true, port4, dataToSend);
 
                     aggiungi_a_textbox2(trimmedMsg, "Macro/Form7", Color.Purple);
                     LogUserInput(trimmedMsg);
@@ -2797,6 +2797,244 @@ namespace SerialPortMacros
             form.LoadDocument(filePath);
             form.Show();
         }
+
+        string current_sequence;
+
+        private bool sequence_running = false;
+        private bool sequence_paused = false;
+
+        private readonly ManualResetEventSlim sequencePauseEvent =
+            new ManualResetEventSlim(true);
+
+        private async void button24_Click(object sender, EventArgs e)
+        {
+            // Se la sequenza è già in esecuzione
+            if (sequence_running)
+            {
+                if (!sequence_paused)
+                {
+                    // PAUSE
+                    sequence_paused = true;
+                    sequencePauseEvent.Reset();
+                    button24.Image = Properties.Resources.Play;
+                }
+                else
+                {
+                    // RESUME
+                    sequence_paused = false;
+                    sequencePauseEvent.Set();
+                    button24.Image = Properties.Resources.Pause;
+                }
+
+                return;
+            }
+
+            // Se non è stata selezionata nessuna sequenza
+            if (string.IsNullOrEmpty(current_sequence) ||
+                !File.Exists(current_sequence))
+            {
+                MessageBox.Show("Please select a sequence");
+                return;
+            }
+
+            // START
+            sequence_running = true;
+            sequence_paused = false;
+            sequencePauseEvent.Set();
+
+            button24.Image = Properties.Resources.Pause;
+
+            try
+            {
+                await Task.Run(() => ExecuteSequence(current_sequence));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message);
+            }
+            finally
+            {
+                sequence_running = false;
+                sequence_paused = false;
+                sequencePauseEvent.Set();
+
+                button24.Image = Properties.Resources.Play;
+            }
+        }
+
+
+        private void button25_Click(object sender, EventArgs e)
+        {
+            string sequencesPath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "sequences"
+            );
+
+            // Se non esiste, la crea
+            if (!Directory.Exists(sequencesPath))
+                Directory.CreateDirectory(sequencesPath);
+
+            // Dialog per selezionare il file
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.InitialDirectory = sequencesPath;
+                openFileDialog.Title = "Select a sequence";
+                openFileDialog.Filter = "All files (*.*)|*.*";
+                openFileDialog.CheckFileExists = true;
+                openFileDialog.Multiselect = false;
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    // Assegna il nome del file al testo del bottone
+                    button25.Text = Path.GetFileName(openFileDialog.FileName);
+                    current_sequence = openFileDialog.FileName;
+                }
+            }
+        }
+
+        private void ExecuteSequence(string filePath)
+        {
+            string[] lines = File.ReadAllLines(filePath);
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                // Aspetta se la sequenza è in pausa
+                sequencePauseEvent.Wait();
+
+                string line = lines[i].Trim();
+
+                // Salta righe vuote
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                // WAIT COMMAND
+                Match waitMatch = Regex.Match(
+                    line,
+                    @"^\{wait\((\d+)\)\}$",
+                    RegexOptions.IgnoreCase
+                );
+
+                if (waitMatch.Success)
+                {
+                    int milliseconds = int.Parse(waitMatch.Groups[1].Value);
+
+                    SequenceDelay(milliseconds);
+
+                    continue;
+                }
+
+                // NORMAL COMMAND
+                Match commandMatch = Regex.Match(
+                    line,
+                    @"^\{([^}]+)\}(.*?)\s*\{(NLCR|NL|CR|N)\}\s*$",
+                    RegexOptions.IgnoreCase
+                );
+
+                if (!commandMatch.Success)
+                {
+                    Debug.WriteLine($"Invalid sequence line {i + 1}: {line}");
+                    continue;
+                }
+
+                // Estrae le porte
+                string portsString = commandMatch.Groups[1].Value;
+
+                // Estrae il messaggio
+                string message = commandMatch.Groups[2].Value.TrimEnd();
+
+                // Estrae il terminatore
+                string terminator = commandMatch.Groups[3].Value.ToUpper();
+
+                // Converte il terminatore
+                switch (terminator)
+                {
+                    case "NL":
+                        message += "\n";
+                        break;
+
+                    case "CR":
+                        message += "\r";
+                        break;
+
+                    case "NLCR":
+                        message += "\r\n";
+                        break;
+
+                    case "N":
+                        break;
+                }
+
+                // Converte le porte in array di interi
+                int[] ports = portsString
+                    .Split(',')
+                    .Select(p => int.Parse(p.Trim()))
+                    .ToArray();
+
+                // Invio alle porte selezionate
+                sequencePauseEvent.Wait();
+
+                SendSequenceToPorts(ports, message);
+            }
+        }
+
+        private void SequenceDelay(int milliseconds)
+        {
+            int remaining = milliseconds;
+
+            while (remaining > 0)
+            {
+                // Se in pausa, aspetta il resume
+                sequencePauseEvent.Wait();
+
+                // Misura solo il tempo effettivamente trascorso
+                Stopwatch sw = Stopwatch.StartNew();
+
+                Thread.Sleep(Math.Min(remaining, 10));
+
+                sw.Stop();
+
+                remaining -= (int)sw.ElapsedMilliseconds;
+            }
+        }
+
+        private void SendSequenceToPorts(int[] ports, string message)
+        {
+            bool[] targetPorts = new bool[4];
+
+            foreach (int port in ports)
+            {
+                if (port >= 1 && port <= 4)
+                    targetPorts[port - 1] = true;
+            }
+
+            if (targetPorts[0])
+                SendToLogicalPort(1, opn_p1, true, port1, message);
+
+            if (targetPorts[1])
+                SendToLogicalPort(2, opn_p2, true, port2, message);
+
+            if (targetPorts[2])
+                SendToLogicalPort(3, opn_p3, true, port3, message);
+
+            if (targetPorts[3])
+                SendToLogicalPort(4, opn_p4, true, port4, message);
+
+            // Aggiornamento GUI sul thread principale
+            if (textBox2.InvokeRequired)
+            {
+                textBox2.BeginInvoke(new Action(() =>
+                {
+                    aggiungi_a_textbox2(message, "Sequence", Color.Purple);
+                    LogUserInput(message);
+                }));
+            }
+            else
+            {
+                aggiungi_a_textbox2(message, "Sequence", Color.Purple);
+                LogUserInput(message);
+            }
+        }
+
     }
 
 
