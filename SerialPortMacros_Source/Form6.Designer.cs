@@ -111,6 +111,8 @@
             Controls.Add(textBox1);
             Controls.Add(label2);
             Controls.Add(label1);
+            MaximumSize = new Size(372, 222);
+            MinimumSize = new Size(372, 222);
             Name = "Form6";
             Text = "Log options";
             Load += Form6_Load;

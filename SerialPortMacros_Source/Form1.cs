@@ -15,7 +15,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-
+using System.Windows.Forms.Design;
 
 namespace SerialPortMacros
 {
@@ -2760,9 +2760,7 @@ namespace SerialPortMacros
 
             if (dialog.ShowDialog() == DialogResult.OK)
             {
-                var form = new Form7(this, false);
-                form.LoadDocument(dialog.FileName);
-                form.Show();
+                OpenInterface(dialog.FileName, false);
             }
         }
 
@@ -2788,10 +2786,16 @@ namespace SerialPortMacros
 
             if (dialog.ShowDialog() == DialogResult.OK)
             {
-                var form = new Form7(this, true);
-                form.LoadDocument(dialog.FileName);
-                form.Show();
+                OpenInterface(dialog.FileName, true);
             }
+        }
+
+        public void OpenInterface(string filePath, bool isedit)
+        {
+            var form = new Form7(this, isedit);
+            form.Text = Path.GetFileNameWithoutExtension(filePath);
+            form.LoadDocument(filePath);
+            form.Show();
         }
     }
 

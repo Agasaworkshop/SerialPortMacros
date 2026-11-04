@@ -17,7 +17,7 @@ namespace SerialPortMacros
         public string message2;
         public Form1 mainform;
 
-        public Form6(Form1 form1, string initial_message, string final_message,bool check)
+        public Form6(Form1 form1, string initial_message, string final_message, bool check)
         {
             message1 = initial_message;
             message2 = final_message;
