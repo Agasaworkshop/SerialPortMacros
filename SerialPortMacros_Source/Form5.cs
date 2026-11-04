@@ -320,17 +320,27 @@ namespace SerialPortMacros
 
                 // Per ora implementiamo il filtro come
                 // cascata di sezioni biquad.
-                int stages = order / 2;
+                if (order < 1)
+                    order = 1;
 
-                double[] output =
-                    (double[])input.Clone();
+                // Coefficiente "a" calcolato in modo che la cascata di 'order' sezioni
+                // del primo ordine abbia esattamente -3 dB alla frequenza 'cutoff'
+                double omega = 2.0 * Math.PI * cutoff / sampleRate;
+                double r = Math.Pow(0.5, 1.0 / order);
+                double u = (1.0 / r - 1.0) / (2.0 * (1.0 - Math.Cos(omega)));
+                double a = ((2.0 * u + 1.0) - Math.Sqrt(4.0 * u + 1.0)) / (2.0 * u);
 
-                for (int stage = 0; stage < stages; stage++)
+                double[] output = (double[])input.Clone();
+
+                for (int s = 0; s < order; s++)
                 {
-                    output = ApplyLowPassBiquad(
-                        output,
-                        sampleRate,
-                        cutoff);
+                    double y = output[0];   // parte a regime sul primo campione
+
+                    for (int i = 0; i < output.Length; i++)
+                    {
+                        y = a * y + (1.0 - a) * output[i];
+                        output[i] = y;
+                    }
                 }
 
                 return output;
@@ -340,9 +350,9 @@ namespace SerialPortMacros
             private static double[] ApplyLowPassBiquad(
                 double[] input,
                 double sampleRate,
-                double cutoff)
+                double cutoff,
+                double Q)
             {
-                double Q = 1.0 / Math.Sqrt(2.0);
 
                 double omega =
                     2.0 * Math.PI * cutoff / sampleRate;
@@ -381,11 +391,11 @@ namespace SerialPortMacros
                 double[] output =
                     new double[input.Length];
 
-                double x1 = 0;
-                double x2 = 0;
+                double x1 = input[0];
+                double x2 = input[0];
 
-                double y1 = 0;
-                double y2 = 0;
+                double y1 = input[0];
+                double y2 = input[0];
 
                 for (int i = 0; i < input.Length; i++)
                 {
