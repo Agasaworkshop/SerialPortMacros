@@ -3024,14 +3024,14 @@ namespace SerialPortMacros
             {
                 textBox2.BeginInvoke(new Action(() =>
                 {
-                    aggiungi_a_textbox2(message, "Sequence", Color.Purple);
-                    LogUserInput(message);
+                    aggiungi_a_textbox2(message.TrimEnd('\r', '\n'), "Sequence", Color.Purple);
+                    LogUserInput(message.TrimEnd('\r', '\n'));
                 }));
             }
             else
             {
-                aggiungi_a_textbox2(message, "Sequence", Color.Purple);
-                LogUserInput(message);
+                aggiungi_a_textbox2(message.TrimEnd('\r', '\n'), "Sequence", Color.Purple);
+                LogUserInput(message.TrimEnd('\r', '\n'));
             }
         }
 

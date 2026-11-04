@@ -722,7 +722,7 @@
             // 
             button21.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             button21.Image = Properties.Resources.AddModule;
-            button21.Location = new Point(661, 323);
+            button21.Location = new Point(661, 325);
             button21.Name = "button21";
             button21.Size = new Size(30, 26);
             button21.TabIndex = 48;
@@ -733,7 +733,7 @@
             // 
             button22.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             button22.Image = Properties.Resources.Module;
-            button22.Location = new Point(627, 323);
+            button22.Location = new Point(627, 324);
             button22.Name = "button22";
             button22.Size = new Size(28, 26);
             button22.TabIndex = 49;
@@ -744,7 +744,7 @@
             // 
             button23.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             button23.Image = Properties.Resources.EditModule1;
-            button23.Location = new Point(594, 323);
+            button23.Location = new Point(594, 324);
             button23.Name = "button23";
             button23.Size = new Size(27, 26);
             button23.TabIndex = 50;
