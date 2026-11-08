@@ -58,7 +58,6 @@
             label14 = new Label();
             textBox4 = new TextBox();
             button1 = new Button();
-            button2 = new Button();
             button3 = new Button();
             textBox5 = new TextBox();
             toolTip1 = new ToolTip(components);
@@ -318,19 +317,9 @@
             button1.Name = "button1";
             button1.Size = new Size(94, 29);
             button1.TabIndex = 28;
-            button1.Text = "Apply";
+            button1.Text = "Close";
             button1.UseVisualStyleBackColor = true;
             button1.Click += button1_Click;
-            // 
-            // button2
-            // 
-            button2.Location = new Point(584, 409);
-            button2.Name = "button2";
-            button2.Size = new Size(94, 29);
-            button2.TabIndex = 29;
-            button2.Text = "Close";
-            button2.UseVisualStyleBackColor = true;
-            button2.Click += button2_Click;
             // 
             // button3
             // 
@@ -350,6 +339,7 @@
             textBox5.PlaceholderText = "script.txt";
             textBox5.Size = new Size(125, 27);
             textBox5.TabIndex = 31;
+            textBox5.Text = "script.txt";
             toolTip1.SetToolTip(textBox5, "New file name");
             // 
             // comboBox2
@@ -368,7 +358,6 @@
             Controls.Add(comboBox2);
             Controls.Add(textBox5);
             Controls.Add(button3);
-            Controls.Add(button2);
             Controls.Add(button1);
             Controls.Add(textBox4);
             Controls.Add(label14);
@@ -439,7 +428,6 @@
         private Label label14;
         private TextBox textBox4;
         private Button button1;
-        private Button button2;
         private Button button3;
         private TextBox textBox5;
         private ToolTip toolTip1;
