@@ -1,0 +1,3 @@
+# Never convert line endings: files are stored exactly as they are (CRLF), whatever the
+# local core.autocrlf setting is, so commits only show real changes.
+* -text
