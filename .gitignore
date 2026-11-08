@@ -1,0 +1,9 @@
+# Build output
+bin/
+obj/
+.vs/
+publish/
+
+# Local files
+*.user
+_backup*.zip

@@ -1,78 +1,110 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.IO.Ports;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.IO.Ports;
+using SerialPortMacros.Core;
+using SerialPortMacros.Decoding;
 
 namespace SerialPortMacros
 {
+    /// <summary>Port settings: serial parameters and received data format.</summary>
     public partial class Form2 : Form
     {
-        public SerialPort port;
-        public Form2(SerialPort ref_port)
+        private readonly SerialPort _port;
+        private readonly bool _tcpMode;
+
+        /// <summary>Chosen data format (valid after DialogResult.OK).</summary>
+        public PortDataFormat DataFormat { get; private set; }
+
+        public Form2(SerialPort port, PortDataFormat format, bool tcpMode)
         {
             InitializeComponent();
-            port = ref_port;
+            _port = port;
+            _tcpMode = tcpMode;
+            DataFormat = format.Clone();
         }
+
         private void Form2_Load(object sender, EventArgs e)
         {
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            Paritybox.Items.Add("Odd");
-            Paritybox.Items.Add("Even");
-            Paritybox.Items.Add("None");
-            stopbitsbox.Items.Add("None");
-            stopbitsbox.Items.Add("One");
-            stopbitsbox.Items.Add("OnePointFive");
-            stopbitsbox.Items.Add("Two");
+            FormBorderStyle = FormBorderStyle.FixedSingle;
 
+            Paritybox.Items.AddRange(SerialPortHelpers.ParityNames);
+            stopbitsbox.Items.AddRange(SerialPortHelpers.StopBitsNames);
+
+            Paritybox.Text = SerialPortHelpers.ToText(_port.Parity);
+            databitsbox.Text = _port.DataBits.ToString();
+            stopbitsbox.Text = SerialPortHelpers.ToText(_port.StopBits);
+            if (_port.ReadBufferSize != 4096)
+            {
+                textBox1.Text = _port.ReadBufferSize.ToString();
+                checkBox1.Checked = true;
+            }
+
+            // Serial parameters have no effect in TCP mode.
+            Paritybox.Enabled = databitsbox.Enabled = stopbitsbox.Enabled =
+                textBox1.Enabled = checkBox1.Enabled = !_tcpMode;
+
+            dataModeBox.Items.AddRange(new object[] { "Text", "Binary" });
+            dataModeBox.SelectedIndex = DataFormat.Mode == DataMode.Binary ? 1 : 0;
+            UpdateBinaryButton();
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            this.Close();
+            DialogResult = DialogResult.Cancel;
+            Close();
         }
+
         private void button2_Click(object sender, EventArgs e)
         {
-            Setparity();
-            port.DataBits = int.Parse(databitsbox.Text);
-            SetStopBits();
-            SetCustomBuffer();
-            this.Close();
-        }
-        private void Setparity()
-        {
-            if (Paritybox.Text == "Odd")
-                port.Parity = Parity.Odd;
-            else if (Paritybox.Text == "Even")
-                port.Parity = Parity.Even;
-            else if (Paritybox.Text == "None")
-                port.Parity = Parity.None;
-            return;
-        }
-        private void SetStopBits()
-        {
-            if (stopbitsbox.Text == "None")
-                port.StopBits = StopBits.None;
-            else if (stopbitsbox.Text == "One")
-                port.StopBits = StopBits.One;
-            else if (stopbitsbox.Text == "OnePointFive")
-                port.StopBits = StopBits.OnePointFive;
-            else if (stopbitsbox.Text == "Two")
-                port.StopBits = StopBits.Two;
-            return;
-        }
-        private void SetCustomBuffer()
-        {
-            if (checkBox1.Checked && textBox1.Text != "")
+            if (!_tcpMode)
             {
-                port.ReadBufferSize = int.Parse(textBox1.Text);
+                try
+                {
+                    _port.Parity = SerialPortHelpers.ParseParity(Paritybox.Text);
+                    if (int.TryParse(databitsbox.Text, out int dataBits))
+                        _port.DataBits = dataBits;
+                    _port.StopBits = SerialPortHelpers.ParseStopBits(stopbitsbox.Text);
+                    if (checkBox1.Checked && int.TryParse(textBox1.Text, out int size) && size > 0)
+                        _port.ReadBufferSize = size;
+                }
+                catch (Exception ex)
+                {
+                    // Some parameters cannot be changed while the port is open.
+                    MessageBox.Show(ex.Message, "Serial settings", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
             }
+
+            DataFormat.Mode = dataModeBox.SelectedIndex == 1 ? DataMode.Binary : DataMode.Text;
+
+            if (DataFormat.Mode == DataMode.Binary)
+            {
+                try
+                {
+                    BinaryFrameFormat.Parse(DataFormat);
+                }
+                catch (FormatException ex)
+                {
+                    MessageBox.Show("Binary format not valid:\n" + ex.Message + "\n\nConfigure it with the \"...\" button.",
+                        "Binary format", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+
+        private void dataModeBox_SelectedIndexChanged(object? sender, EventArgs e) => UpdateBinaryButton();
+
+        private void UpdateBinaryButton()
+        {
+            binaryButton.Enabled = dataModeBox.SelectedIndex == 1;
+        }
+
+        private void binaryButton_Click(object? sender, EventArgs e)
+        {
+            using var form = new BinaryFormatForm(DataFormat);
+            if (form.ShowDialog(this) == DialogResult.OK)
+                DataFormat = form.Result;
         }
     }
 }

@@ -149,7 +149,7 @@
             button3.TabIndex = 5;
             toolTip1.SetToolTip(button3, "Connect");
             button3.UseVisualStyleBackColor = false;
-            button3.Click += button3_Click;
+            button3.Click += ConnectButton_Click;
             // 
             // button4
             // 
@@ -162,7 +162,7 @@
             button4.TabIndex = 7;
             toolTip1.SetToolTip(button4, "Connect");
             button4.UseVisualStyleBackColor = true;
-            button4.Click += button4_Click;
+            button4.Click += ConnectButton_Click;
             // 
             // textBox4
             // 
@@ -191,7 +191,7 @@
             button5.TabIndex = 7;
             toolTip1.SetToolTip(button5, "Connect");
             button5.UseVisualStyleBackColor = true;
-            button5.Click += button5_Click;
+            button5.Click += ConnectButton_Click;
             // 
             // button6
             // 
@@ -204,7 +204,7 @@
             button6.TabIndex = 9;
             toolTip1.SetToolTip(button6, "Connect");
             button6.UseVisualStyleBackColor = true;
-            button6.Click += button6_Click;
+            button6.Click += ConnectButton_Click;
             // 
             // textBox6
             // 
@@ -223,8 +223,8 @@
             comboBox2.Name = "comboBox2";
             comboBox2.Size = new Size(71, 28);
             comboBox2.TabIndex = 11;
-            comboBox2.SelectedIndexChanged += comboBox2_SelectedIndexChanged;
-            comboBox2.Click += comboBox2_Click;
+            comboBox2.SelectedIndexChanged += PortCombo_SelectedIndexChanged;
+            comboBox2.Click += PortCombo_Click;
             // 
             // comboBox1
             // 
@@ -235,8 +235,8 @@
             comboBox1.Name = "comboBox1";
             comboBox1.Size = new Size(71, 28);
             comboBox1.TabIndex = 12;
-            comboBox1.SelectedIndexChanged += comboBox1_SelectedIndexChanged;
-            comboBox1.Click += comboBox1_Click;
+            comboBox1.SelectedIndexChanged += PortCombo_SelectedIndexChanged;
+            comboBox1.Click += PortCombo_Click;
             // 
             // comboBox3
             // 
@@ -247,8 +247,8 @@
             comboBox3.Name = "comboBox3";
             comboBox3.Size = new Size(71, 28);
             comboBox3.TabIndex = 13;
-            comboBox3.SelectedIndexChanged += comboBox3_SelectedIndexChanged;
-            comboBox3.Click += comboBox3_Click;
+            comboBox3.SelectedIndexChanged += PortCombo_SelectedIndexChanged;
+            comboBox3.Click += PortCombo_Click;
             // 
             // comboBox4
             // 
@@ -259,8 +259,8 @@
             comboBox4.Name = "comboBox4";
             comboBox4.Size = new Size(71, 28);
             comboBox4.TabIndex = 14;
-            comboBox4.SelectedIndexChanged += comboBox4_SelectedIndexChanged;
-            comboBox4.Click += comboBox4_Click;
+            comboBox4.SelectedIndexChanged += PortCombo_SelectedIndexChanged;
+            comboBox4.Click += PortCombo_Click;
             // 
             // label1
             // 
@@ -313,7 +313,7 @@
             button8.TabIndex = 20;
             toolTip1.SetToolTip(button8, "Settings");
             button8.UseVisualStyleBackColor = false;
-            button8.Click += button8_Click;
+            button8.Click += PortSettingsButton_Click;
             // 
             // button9
             // 
@@ -325,7 +325,7 @@
             button9.TabIndex = 21;
             toolTip1.SetToolTip(button9, "Settings");
             button9.UseVisualStyleBackColor = true;
-            button9.Click += button9_Click;
+            button9.Click += PortSettingsButton_Click;
             // 
             // button10
             // 
@@ -337,7 +337,7 @@
             button10.TabIndex = 22;
             toolTip1.SetToolTip(button10, "Settings");
             button10.UseVisualStyleBackColor = true;
-            button10.Click += button10_Click;
+            button10.Click += PortSettingsButton_Click;
             // 
             // button11
             // 
@@ -349,7 +349,7 @@
             button11.TabIndex = 23;
             toolTip1.SetToolTip(button11, "Settings");
             button11.UseVisualStyleBackColor = true;
-            button11.Click += button11_Click;
+            button11.Click += PortSettingsButton_Click;
             // 
             // checkBox1
             // 
@@ -443,7 +443,6 @@
             checkBox5.TabIndex = 31;
             checkBox5.Text = "log";
             checkBox5.UseVisualStyleBackColor = true;
-            checkBox5.CheckedChanged += checkBox5_CheckedChanged;
             // 
             // checkBox6
             // 
@@ -455,7 +454,6 @@
             checkBox6.TabIndex = 32;
             checkBox6.Text = "log";
             checkBox6.UseVisualStyleBackColor = true;
-            checkBox6.CheckedChanged += checkBox6_CheckedChanged;
             // 
             // checkBox7
             // 
@@ -467,7 +465,6 @@
             checkBox7.TabIndex = 33;
             checkBox7.Text = "log";
             checkBox7.UseVisualStyleBackColor = true;
-            checkBox7.CheckedChanged += checkBox7_CheckedChanged;
             // 
             // checkBox8
             // 
@@ -479,7 +476,6 @@
             checkBox8.TabIndex = 34;
             checkBox8.Text = "log";
             checkBox8.UseVisualStyleBackColor = true;
-            checkBox8.CheckedChanged += checkBox8_CheckedChanged;
             // 
             // button14
             // 
@@ -537,7 +533,7 @@
             button16.TabIndex = 39;
             toolTip1.SetToolTip(button16, "Open Graphs");
             button16.UseVisualStyleBackColor = true;
-            button16.Click += button16_Click;
+            button16.Click += GraphButton_Click;
             // 
             // numericUpDown2
             // 
@@ -561,7 +557,7 @@
             button17.TabIndex = 39;
             toolTip1.SetToolTip(button17, "Open Graphs");
             button17.UseVisualStyleBackColor = true;
-            button17.Click += button17_Click;
+            button17.Click += GraphButton_Click;
             // 
             // numericUpDown3
             // 
@@ -585,7 +581,7 @@
             button18.TabIndex = 39;
             toolTip1.SetToolTip(button18, "Open Graphs");
             button18.UseVisualStyleBackColor = true;
-            button18.Click += button18_Click;
+            button18.Click += GraphButton_Click;
             // 
             // numericUpDown4
             // 
@@ -609,7 +605,7 @@
             button19.TabIndex = 39;
             toolTip1.SetToolTip(button19, "Open Graphs");
             button19.UseVisualStyleBackColor = true;
-            button19.Click += button19_Click;
+            button19.Click += GraphButton_Click;
             // 
             // button7
             // 
@@ -680,7 +676,7 @@
             checkBox11.TabIndex = 47;
             checkBox11.Text = "wifi";
             checkBox11.UseVisualStyleBackColor = true;
-            checkBox11.CheckedChanged += checkBox11_CheckedChanged;
+            checkBox11.CheckedChanged += TcpCheckBox_CheckedChanged;
             // 
             // checkBox12
             // 
@@ -692,7 +688,7 @@
             checkBox12.TabIndex = 47;
             checkBox12.Text = "wifi";
             checkBox12.UseVisualStyleBackColor = true;
-            checkBox12.CheckedChanged += checkBox12_CheckedChanged;
+            checkBox12.CheckedChanged += TcpCheckBox_CheckedChanged;
             // 
             // checkBox13
             // 
@@ -704,7 +700,7 @@
             checkBox13.TabIndex = 47;
             checkBox13.Text = "wifi";
             checkBox13.UseVisualStyleBackColor = true;
-            checkBox13.CheckedChanged += checkBox13_CheckedChanged;
+            checkBox13.CheckedChanged += TcpCheckBox_CheckedChanged;
             // 
             // checkBox14
             // 
@@ -716,7 +712,7 @@
             checkBox14.TabIndex = 47;
             checkBox14.Text = "wifi";
             checkBox14.UseVisualStyleBackColor = true;
-            checkBox14.CheckedChanged += checkBox14_CheckedChanged;
+            checkBox14.CheckedChanged += TcpCheckBox_CheckedChanged;
             // 
             // button21
             // 

@@ -4,6 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>icon_open.ico</ApplicationIcon>
@@ -14,7 +15,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Examples (ESP32 sketches, custom macro sources) are not part of the program. -->
+    <Compile Remove="Examples\**" />
+    <None Include="Examples\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="H.InputSimulator" Version="1.4.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
     <PackageReference Include="ScottPlot" Version="5.1.57" />
     <PackageReference Include="ScottPlot.WinForms" Version="5.1.57" />
     <PackageReference Include="System.IO.Ports" Version="7.0.0" />
@@ -22,6 +30,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Partial files of Form1: code only, do not open them in the designer (it would create duplicate .resx files). -->
+    <Compile Update="Form1.Display.cs;Form1.Logging.cs;Form1.Ports.cs;Form1.Settings.cs;Form1.Tools.cs">
+      <SubType>Code</SubType>
+      <DependentUpon>Form1.cs</DependentUpon>
+    </Compile>
+    <!-- Partial files of Form7: code only, do not open them in the designer. -->
+    <Compile Update="Form7.Editor.cs;Form7.Runtime.cs">
+      <SubType>Code</SubType>
+      <DependentUpon>Form7.cs</DependentUpon>
+    </Compile>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
