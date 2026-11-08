@@ -58,20 +58,20 @@ public sealed class MacroEngine
         {
             if (s.LoadError != null)
             {
-                errors.Add($"{s.name}: {s.LoadError}");
+                errors.Add($"{s.Name}: {s.LoadError}");
                 continue;
             }
-            if (s.trigger != Script.TriggerCustom || !s.active)
+            if (s.Effect != MacroEffect.Custom || !s.Active)
                 continue;
 
             try
             {
-                s.CustomInstance = CustomMacroLoader.CreateInstance(s.customFile);
+                s.CustomInstance = CustomMacroLoader.CreateInstance(s.CustomFile);
             }
             catch (Exception ex)
             {
                 s.LoadError = ex.Message;
-                errors.Add($"{s.name}: {ex.Message}");
+                errors.Add($"{s.Name}: {ex.Message}");
             }
         }
 
@@ -93,21 +93,21 @@ public sealed class MacroEngine
 
         foreach (var s in _scripts)
         {
-            if (!s.active || !s.ListensTo(m.Port) || !s.Matches(m.Text))
+            if (!s.Active || !s.ListensTo(m.Port) || !s.Matches(m.Text))
                 continue;
 
-            switch (s.trigger)
+            switch (s.Effect)
             {
-                case Script.TriggerKeypress:
-                    KeyPressAction.Run(s.keypress, m.Text);
+                case MacroEffect.Keypress:
+                    KeyPressAction.Run(s.KeyPress, m.Text);
                     break;
 
-                case Script.TriggerReply:
-                    _hub.Show(s.reply, s.name, ReplyColor);
-                    _hub.SendTo(s.ReplyTargets, s.reply + s.LineEnding);
+                case MacroEffect.Reply:
+                    _hub.Show(s.Reply, s.Name, ReplyColor);
+                    _hub.SendTo(s.ReplyTargets, s.Reply + s.LineEnding);
                     break;
 
-                case Script.TriggerCustom:
+                case MacroEffect.Custom:
                     RunCustom(s, m, numbers);
                     break;
             }
@@ -140,7 +140,7 @@ public sealed class MacroEngine
         if (outputs == null) return;
 
         foreach (var o in outputs)
-            Emit(s.name, o, m.Port);
+            Emit(s.Name, o, m.Port);
     }
 
     private void Emit(string user, MacroOutput o, int sourcePort)
@@ -175,7 +175,7 @@ public sealed class MacroEngine
         long now = Environment.TickCount64;
         if (now - s.LastErrorTick < 2000) return;
         s.LastErrorTick = now;
-        _hub?.Show($"{ex.GetType().Name}: {ex.Message}", $"{s.name} (error)", ErrorColor);
+        _hub?.Show($"{ex.GetType().Name}: {ex.Message}", $"{s.Name} (error)", ErrorColor);
     }
 
     private void StartCustom(Script[] scripts)

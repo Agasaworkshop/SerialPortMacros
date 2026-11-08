@@ -12,11 +12,11 @@ namespace SerialPortMacros
         // Button: visual feedback (darkened image) while pressed, line sent on release.
         private void Button_MouseDown(object? sender, System.Windows.Forms.MouseEventArgs e)
         {
-            if (sender is PictureBox picture && picture.Tag is InterfaceElement element && picture.Image != null)
+            if (sender is PictureBox picture && picture.Tag is InterfaceElement && picture.Image != null)
             {
                 try
                 {
-                    picture.Image = DarkenImage(picture.Image);
+                    SetPictureImage(picture, _images.GetPressed(picture.Image));
                 }
                 catch (Exception ex)
                 {
@@ -29,38 +29,12 @@ namespace SerialPortMacros
         {
             if (sender is PictureBox picture && picture.Tag is InterfaceElement element)
             {
-                string imagePath = Path.Combine(ModulePath, element.ModuleName, element.ImageName);
-                try
-                {
-                    if (File.Exists(imagePath))
-                    {
-                        using (Image loadedImage = Image.FromFile(imagePath))
-                        {
-                            picture.Image = new Bitmap(loadedImage);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error loading the button image {imagePath}: {ex.Message}");
-                }
+                Image? normal = _images.Get(ImagePath(element, element.ImageName));
+                if (normal != null)
+                    SetPictureImage(picture, normal);
+
                 ExecuteButtonAction(element);
             }
-        }
-
-        private Image DarkenImage(Image img)
-        {
-            Bitmap bmp = new Bitmap(img);
-            for (int x = 0; x < bmp.Width; x++)
-            {
-                for (int y = 0; y < bmp.Height; y++)
-                {
-                    Color c = bmp.GetPixel(x, y);
-                    Color dimmed = Color.FromArgb(c.A, Math.Max(0, c.R - 60), Math.Max(0, c.G - 60), Math.Max(0, c.B - 60));
-                    bmp.SetPixel(x, y, dimmed);
-                }
-            }
-            return bmp;
         }
 
         private void ExecuteButtonAction(InterfaceElement element)
@@ -84,7 +58,7 @@ namespace SerialPortMacros
             }
 
             // Pass the element's custom line ending too
-            _form1.SendCustomMacroLine(element.TargetPorts, formattedMessage, element.CustomLineEnding);
+            _ = _form1.SendInterfaceMessageAsync(element.TargetPorts, formattedMessage, element.CustomLineEnding);
         }
 
         // ------------------------------------------------------------------
@@ -106,25 +80,12 @@ namespace SerialPortMacros
                 string targetImg = element.IsToggled ? element.SecondImageName : element.ImageName;
                 if (string.IsNullOrEmpty(targetImg)) targetImg = element.ImageName;
 
-                string imagePath = Path.Combine(ModulePath, element.ModuleName, targetImg);
-                try
-                {
-                    if (File.Exists(imagePath))
-                    {
-                        picture.Image?.Dispose();
-                        using (Image loadedImage = Image.FromFile(imagePath))
-                        {
-                            picture.Image = new Bitmap(loadedImage);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error loading the toggle image {imagePath}: {ex.Message}");
-                }
+                Image? image = _images.Get(ImagePath(element, targetImg));
+                if (image != null)
+                    SetPictureImage(picture, image);
 
                 string msgToSend = element.IsToggled ? element.StringFormatTemplate : element.MessageOnToOff;
-                _form1.SendCustomMacroLine(element.TargetPorts, msgToSend);
+                _ = _form1.SendInterfaceMessageAsync(element.TargetPorts, msgToSend);
             }
         }
 
@@ -147,22 +108,11 @@ namespace SerialPortMacros
                         string targetImg = conditionMet ? element.SecondImageName : element.ImageName;
                         if (string.IsNullOrEmpty(targetImg)) targetImg = element.ImageName;
 
-                        string imagePath = Path.Combine(ModulePath, element.ModuleName, targetImg);
-                        try
-                        {
-                            if (File.Exists(imagePath))
-                            {
-                                using (Image loadedImage = Image.FromFile(imagePath))
-                                {
-                                    if (picture.Image != null) picture.Image.Dispose();
-                                    picture.Image = new Bitmap(loadedImage);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Error loading the LED image {imagePath}: {ex.Message}");
-                        }
+                        // Cached image: when the state does not change this is the same
+                        // object already shown, and SetPictureImage does nothing.
+                        Image? image = _images.Get(ImagePath(element, targetImg));
+                        if (image != null)
+                            SetPictureImage(picture, image);
                     }
                 }
                 else if (control is Label lbl && lbl.Tag is InterfaceElement elOutput)
@@ -215,7 +165,7 @@ namespace SerialPortMacros
             // Comparison operators
             string[] ops = { ">=", "<=", "==", ">", "<" };
             string foundOp = "";
-            string[] parts = null;
+            string[]? parts = null;
 
             foreach (var op in ops)
             {
@@ -256,6 +206,10 @@ namespace SerialPortMacros
             return true;
         }
 
+        /// <summary>{1P1} = first number received on logical port 1.</summary>
+        private static readonly System.Text.RegularExpressions.Regex PortNumberRegex =
+            new(@"\{([1-4])P([0-9]+)\}", System.Text.RegularExpressions.RegexOptions.Compiled);
+
         private string FormatMessageWithVariablesAndSerial(string template)
         {
             if (_form1 == null) return template;
@@ -274,8 +228,7 @@ namespace SerialPortMacros
             }
 
             // 3. Replace the {1P1} syntax (logical port 1, first number -> index 0)
-            var regex = new System.Text.RegularExpressions.Regex(@"\{([1-4])P([0-9]+)\}");
-            result = regex.Replace(result, match =>
+            result = PortNumberRegex.Replace(result, match =>
             {
                 int portIdx = int.Parse(match.Groups[1].Value);
                 int numIdx = int.Parse(match.Groups[2].Value) - 1; // 1-based (1P1 = first number = index 0)

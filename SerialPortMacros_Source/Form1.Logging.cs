@@ -138,7 +138,7 @@ namespace SerialPortMacros
             new Form6(this, _settings.LogStartMessage, _settings.LogStopMessage, _settings.LogWaitForEnd).Show();
         }
 
-        public void Set_logging_messages(string startMessage, string stopMessage, bool waitForEnd)
+        public void SetLoggingMessages(string startMessage, string stopMessage, bool waitForEnd)
         {
             _settings.LogStartMessage = startMessage;
             _settings.LogStopMessage = stopMessage;

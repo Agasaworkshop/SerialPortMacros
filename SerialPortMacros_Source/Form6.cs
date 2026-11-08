@@ -6,32 +6,28 @@
     /// </summary>
     public partial class Form6 : Form
     {
-        public string message1;
-        public string message2;
-        public Form1 mainform;
+        private readonly Form1 _mainForm;
 
-        public Form6(Form1 form1, string initial_message, string final_message, bool check)
+        public Form6(Form1 mainForm, string startMessage, string stopMessage, bool waitForEnd)
         {
-            message1 = initial_message;
-            message2 = final_message;
             InitializeComponent();
-            textBox1.Text = message1;
-            textBox2.Text = message2;
-            checkBox1.Checked = check;
-            mainform = form1;
+            _mainForm = mainForm;
+            textBox1.Text = startMessage;
+            textBox2.Text = stopMessage;
+            checkBox1.Checked = waitForEnd;
         }
 
         // OK
         private void button1_Click(object sender, EventArgs e)
         {
-            mainform.Set_logging_messages(textBox1.Text, textBox2.Text, checkBox1.Checked);
-            this.Close();
+            _mainForm.SetLoggingMessages(textBox1.Text, textBox2.Text, checkBox1.Checked);
+            Close();
         }
 
         // Cancel
         private void button2_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
         private void Form6_Load(object sender, EventArgs e)

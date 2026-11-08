@@ -120,7 +120,6 @@
             checkBox1.TabIndex = 0;
             checkBox1.Text = "Port1";
             checkBox1.UseVisualStyleBackColor = true;
-            checkBox1.MouseCaptureChanged += PortCheckBox_CheckedChanged;
             // 
             // checkBox2
             // 

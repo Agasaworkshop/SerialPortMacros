@@ -29,8 +29,8 @@ namespace SerialPortMacros
         // Macros window
         private void button2_Click(object sender, EventArgs e)
         {
-            ScanScripts();
-            using (var form = new Form3(this))
+            // Form3 edits its own copy of the macro files; the engine reloads them afterwards.
+            using (var form = new Form3())
                 form.ShowDialog(this);
             ScanScripts();               // apply the changes made in the window right away
         }
@@ -59,7 +59,7 @@ namespace SerialPortMacros
         // ------------------------------------------------------------------
 
         private Form4? _mergingForm;
-        public bool looking_for_merge;
+        private bool _lookingForMerge;
 
         private void GraphButton_Click(object? sender, EventArgs e)
         {
@@ -94,24 +94,24 @@ namespace SerialPortMacros
             _graphs.Publish();
         }
 
-        public void merge_graphs1(string name, Form4 currentForm)
+        public void MergeGraph(Form4 currentForm)
         {
-            if (!looking_for_merge)
+            if (!_lookingForMerge)
             {
                 _mergingForm = currentForm;
-                looking_for_merge = true;
+                _lookingForMerge = true;
             }
             else
             {
                 if (_mergingForm != null)
                     CreateParasiticForm(_mergingForm, currentForm);
-                looking_for_merge = false;
+                _lookingForMerge = false;
             }
         }
 
-        public void undo_merge()
+        public void CancelMerge()
         {
-            looking_for_merge = false;
+            _lookingForMerge = false;
             _mergingForm = null;
         }
 
@@ -122,8 +122,8 @@ namespace SerialPortMacros
 
             void Collect(Form4 f)
             {
-                if (f.isMaster)
-                    slaves.AddRange(f.children.Values.Where(c => c.child != null).Select(c => c.child));
+                if (f.IsMaster)
+                    slaves.AddRange(f.Children.Values.Where(c => c.Child != null).Select(c => c.Child));
                 else
                     slaves.Add(f);
             }
@@ -140,18 +140,18 @@ namespace SerialPortMacros
             for (int i = 0; i < slaves.Count; i++)
             {
                 var s = slaves[i];
-                master.children.Add(s, new child_form(s, ColorUtils.Distinct(i, slaves.Count), master.formsPlot1));
+                master.Children.Add(s, new MergedChild(s, ColorUtils.Distinct(i, slaves.Count), master.formsPlot1));
             }
 
-            if (f1.isMaster) f1.Close();
-            if (f2.isMaster) f2.Close();
+            if (f1.IsMaster) f1.Close();
+            if (f2.IsMaster) f2.Close();
 
             foreach (var s in slaves)
             {
                 s.MasterForm = master;
-                s.reset_merge();
+                s.ResetMerge();
                 s.Visible = false;
-                s.is_visible = false;
+                s.AcceptsData = false;
             }
 
             master.Show();

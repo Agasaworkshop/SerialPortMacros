@@ -13,7 +13,13 @@ namespace SerialPortMacros
             if (e.KeyCode == Keys.R)
             {
                 _rotationAngle = (_rotationAngle + 90) % 360;
-                _draggedPicture.Image?.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                if (_draggedPicture.Image != null)
+                {
+                    // Rotate a copy: the current image may be shared by other elements.
+                    var rotated = new Bitmap(_draggedPicture.Image);
+                    rotated.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                    SetPictureImage(_draggedPicture, rotated);
+                }
                 _draggedPicture.Refresh();
                 e.Handled = true;
                 e.SuppressKeyPress = true;
@@ -297,28 +303,6 @@ namespace SerialPortMacros
         // ------------------------------------------------------------------
         // Snapping
         // ------------------------------------------------------------------
-
-        private int FindSnapDelta(IEnumerable<int> movingCoordinates, IEnumerable<int> targetCoordinates, int threshold = 7)
-        {
-            int bestDelta = 0;
-            int bestDistance = threshold + 1;
-
-            foreach (int moving in movingCoordinates)
-            {
-                foreach (int target in targetCoordinates)
-                {
-                    int delta = target - moving;
-                    int distance = Math.Abs(delta);
-                    if (distance < bestDistance)
-                    {
-                        bestDistance = distance;
-                        bestDelta = delta;
-                    }
-                }
-            }
-
-            return bestDistance <= threshold ? bestDelta : 0;
-        }
 
         private IEnumerable<PictureBox> GetOtherEditorObjects()
         {

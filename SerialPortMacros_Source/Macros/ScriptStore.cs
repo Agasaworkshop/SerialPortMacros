@@ -29,7 +29,7 @@ public static class ScriptStore
             catch (Exception ex)
             {
                 // An unreadable file must not prevent loading the others.
-                result.Add(new Script { name = Path.GetFileName(path), path = path, LoadError = ex.Message });
+                result.Add(new Script { Name = Path.GetFileName(path), FilePath = path, LoadError = ex.Message });
             }
         }
 
@@ -39,38 +39,38 @@ public static class ScriptStore
     public static Script Load(string path)
     {
         string[] lines = File.ReadAllLines(path);
-        var s = new Script { name = Path.GetFileName(path), path = path };
+        var s = new Script { Name = Path.GetFileName(path), FilePath = path };
 
         string L(int i) => i < lines.Length ? lines[i].Trim() : "";
         bool B(int i) => bool.TryParse(L(i), out bool b) && b;
 
-        if (lines.Length > 0) s.key = lines[0];
-        int.TryParse(L(1), out s.trigger);
-        s.p1 = B(2);
-        s.p2 = B(3);
-        s.p3 = B(4);
-        s.p4 = B(5);
+        if (lines.Length > 0) s.Key = lines[0];
+        s.Effect = int.TryParse(L(1), out int effect) ? (MacroEffect)effect : MacroEffect.None;
+        s.ListenPort1 = B(2);
+        s.ListenPort2 = B(3);
+        s.ListenPort3 = B(4);
+        s.ListenPort4 = B(5);
 
-        switch (s.trigger)
+        switch (s.Effect)
         {
-            case Script.TriggerKeypress:
-                s.keypress = lines.Length > 6 ? lines[6] : "";
-                s.active = B(7);
+            case MacroEffect.Keypress:
+                s.KeyPress = lines.Length > 6 ? lines[6] : "";
+                s.Active = B(7);
                 break;
 
-            case Script.TriggerReply:
-                s.reply = lines.Length > 6 ? lines[6] : "";
-                s.p1_w = B(7);
-                s.p2_w = B(8);
-                s.p3_w = B(9);
-                s.p4_w = B(10);
-                s.active = B(11);
-                s.lineEndingIndex = int.TryParse(L(12), out int le) ? le : 1; // old files: NL
+            case MacroEffect.Reply:
+                s.Reply = lines.Length > 6 ? lines[6] : "";
+                s.ReplyPort1 = B(7);
+                s.ReplyPort2 = B(8);
+                s.ReplyPort3 = B(9);
+                s.ReplyPort4 = B(10);
+                s.Active = B(11);
+                s.LineEndingIndex = int.TryParse(L(12), out int le) ? le : 1; // old files: NL
                 break;
 
-            case Script.TriggerCustom:
-                s.customFile = L(6);
-                s.active = B(7);
+            case MacroEffect.Custom:
+                s.CustomFile = L(6);
+                s.Active = B(7);
                 break;
         }
 
@@ -81,38 +81,38 @@ public static class ScriptStore
     {
         var lines = new List<string>
         {
-            s.key ?? "",
-            s.trigger.ToString(),
-            s.p1.ToString(),
-            s.p2.ToString(),
-            s.p3.ToString(),
-            s.p4.ToString()
+            s.Key ?? "",
+            ((int)s.Effect).ToString(),   // stored as a number (1, 2, 3)
+            s.ListenPort1.ToString(),
+            s.ListenPort2.ToString(),
+            s.ListenPort3.ToString(),
+            s.ListenPort4.ToString()
         };
 
-        switch (s.trigger)
+        switch (s.Effect)
         {
-            case Script.TriggerKeypress:
-                lines.Add(s.keypress ?? "");
-                lines.Add(s.active.ToString());
+            case MacroEffect.Keypress:
+                lines.Add(s.KeyPress ?? "");
+                lines.Add(s.Active.ToString());
                 break;
 
-            case Script.TriggerReply:
-                lines.Add(s.reply ?? "");
-                lines.Add(s.p1_w.ToString());
-                lines.Add(s.p2_w.ToString());
-                lines.Add(s.p3_w.ToString());
-                lines.Add(s.p4_w.ToString());
-                lines.Add(s.active.ToString());
-                lines.Add(s.lineEndingIndex.ToString());
+            case MacroEffect.Reply:
+                lines.Add(s.Reply ?? "");
+                lines.Add(s.ReplyPort1.ToString());
+                lines.Add(s.ReplyPort2.ToString());
+                lines.Add(s.ReplyPort3.ToString());
+                lines.Add(s.ReplyPort4.ToString());
+                lines.Add(s.Active.ToString());
+                lines.Add(s.LineEndingIndex.ToString());
                 break;
 
-            case Script.TriggerCustom:
-                lines.Add(s.customFile ?? "");
-                lines.Add(s.active.ToString());
+            case MacroEffect.Custom:
+                lines.Add(s.CustomFile ?? "");
+                lines.Add(s.Active.ToString());
                 break;
         }
 
-        File.WriteAllLines(s.path, lines);
+        File.WriteAllLines(s.FilePath, lines);
     }
 
     /// <summary>Creates a new example macro file. Returns false if it already exists.</summary>
@@ -123,10 +123,10 @@ public static class ScriptStore
 
         Save(new Script
         {
-            path = path,
-            key = "test",
-            trigger = Script.TriggerKeypress,
-            keypress = "%100%!LMB"
+            FilePath = path,
+            Key = "test",
+            Effect = MacroEffect.Keypress,
+            KeyPress = "%100%!LMB"
         });
         return true;
     }

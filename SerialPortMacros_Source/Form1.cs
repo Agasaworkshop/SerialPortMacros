@@ -73,9 +73,6 @@ namespace SerialPortMacros
         public ConcurrentDictionary<string, string> LatestSerialValues => _live.LatestText;
         public ConcurrentDictionary<int, List<double>> LatestPortNumbers => _live.LatestNumbers;
 
-        /// <summary>Currently loaded macros (Form3 edits them directly).</summary>
-        public Script[] scripts => _macros.Scripts;
-
         public PortHub Hub => _hub;
 
         // ------------------------------------------------------------------

@@ -2,43 +2,53 @@ using SerialPortMacros.Core;
 
 namespace SerialPortMacros
 {
+    /// <summary>What a macro does when it is triggered. The value is stored in the macro file.</summary>
+    public enum MacroEffect
+    {
+        None = 0,
+        Keypress = 1,
+        Reply = 2,
+        Custom = 3
+    }
+
     /// <summary>
     /// A macro saved in the "scripts" folder. The file format is described in
-    /// <see cref="Macros.ScriptStore"/>. Field names are the original ones
-    /// (also used by Form3).
+    /// <see cref="Macros.ScriptStore"/>.
     /// </summary>
     public class Script
     {
-        public const int TriggerKeypress = 1;
-        public const int TriggerReply = 2;
-        public const int TriggerCustom = 3;
+        /// <summary>File name, shown in the macro list.</summary>
+        public string Name { get; set; } = "";
 
-        public string name { get; set; } = "";
-        public string key = "";
-        public int trigger;
+        /// <summary>Full path of the macro file.</summary>
+        public string FilePath { get; set; } = "";
 
-        // Ports that trigger the macro
-        public bool p1;
-        public bool p2;
-        public bool p3;
-        public bool p4;
+        public bool Active { get; set; }
+
+        /// <summary>Text that triggers the macro ("*" = any message, "===" = lines starting with ===).</summary>
+        public string Key { get; set; } = "";
+
+        public MacroEffect Effect { get; set; }
+
+        // Ports whose messages trigger the macro
+        public bool ListenPort1 { get; set; }
+        public bool ListenPort2 { get; set; }
+        public bool ListenPort3 { get; set; }
+        public bool ListenPort4 { get; set; }
 
         // Write back
-        public string reply = "";
-        public bool p1_w;
-        public bool p2_w;
-        public bool p3_w;
-        public bool p4_w;
-        public int lineEndingIndex { get; set; } = 1; // default NL
+        public string Reply { get; set; } = "";
+        public bool ReplyPort1 { get; set; }
+        public bool ReplyPort2 { get; set; }
+        public bool ReplyPort3 { get; set; }
+        public bool ReplyPort4 { get; set; }
+        public int LineEndingIndex { get; set; } = 1; // default NL
 
         // Keypress
-        public string keypress = "";
+        public string KeyPress { get; set; } = "";
 
         /// <summary>Custom code: .cs or .dll file in the custom_macros folder, optional ":ClassName".</summary>
-        public string customFile = "";
-
-        public string path = "";
-        public bool active;
+        public string CustomFile { get; set; } = "";
 
         // ---- Runtime state (not saved) ----
 
@@ -50,23 +60,23 @@ namespace SerialPortMacros
 
         public bool ListensTo(int logicalPort) => logicalPort switch
         {
-            1 => p1,
-            2 => p2,
-            3 => p3,
-            4 => p4,
+            1 => ListenPort1,
+            2 => ListenPort2,
+            3 => ListenPort3,
+            4 => ListenPort4,
             _ => false
         };
 
-        public bool[] ReplyTargets => new[] { p1_w, p2_w, p3_w, p4_w };
+        public bool[] ReplyTargets => new[] { ReplyPort1, ReplyPort2, ReplyPort3, ReplyPort4 };
 
         public bool Matches(string data)
         {
-            string k = key ?? "";
+            string k = Key ?? "";
             return k == "*" || (k == "===" && data.StartsWith("===")) || data.Contains(k);
         }
 
-        public string LineEnding => LineEndings.FromIndex(lineEndingIndex, "\n");
+        public string LineEnding => LineEndings.FromIndex(LineEndingIndex, "\n");
 
-        public override string ToString() => name;
+        public override string ToString() => Name;
     }
 }

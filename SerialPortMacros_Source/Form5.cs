@@ -11,7 +11,7 @@ namespace SerialPortMacros
     {
         private readonly LogParser parser;
         private readonly string logPath;
-        public bool plot_ready = false;
+        private bool _plotReady;
 
         public Log(string logPath)
         {
@@ -42,7 +42,7 @@ namespace SerialPortMacros
                 AddElement($"Element{i + 1}");
 
             InitializeXAxisSelector();
-            plot_ready = true;
+            _plotReady = true;
         }
 
         // ------------------------------------------------------------------
@@ -274,7 +274,7 @@ namespace SerialPortMacros
         private void button1_Click(object sender, EventArgs e)
         {
             RefreshPlot();
-            plot_ready = true;
+            _plotReady = true;
         }
 
         private void numericUpDown1_Leave(object sender, EventArgs e)
@@ -284,12 +284,12 @@ namespace SerialPortMacros
 
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
         {
-            plot_ready = false;
+            _plotReady = false;
         }
 
         private void dataGridView1_CurrentCellDirtyStateChanged(object sender, EventArgs e)
         {
-            if (!plot_ready)
+            if (!_plotReady)
                 return;
 
             // Commit check box clicks immediately so CellValueChanged fires.
@@ -299,7 +299,7 @@ namespace SerialPortMacros
 
         private void dataGridView1_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
-            if (!plot_ready)
+            if (!_plotReady)
                 return;
 
             if (e.RowIndex < 0)

@@ -29,23 +29,26 @@ namespace SerialPortMacros
         private Size _resizeStartSize;
         private bool _wasShiftDown = false;
         private System.Windows.Forms.Timer? _refreshTimer;
-        private bool new_interface;
+        private readonly bool _isNewInterface;
         private bool _wasControlDown;
 
         private readonly List<int> _verticalSnapGuides = new List<int>();
         private readonly List<int> _horizontalSnapGuides = new List<int>();
 
+        /// <summary>Module images, read from disk once and shared by the elements.</summary>
+        private readonly ModuleImageCache _images = new();
+
         // ------------------------------------------------------------------
         // Lifecycle and document
         // ------------------------------------------------------------------
 
-        public Form7(Form1? form1, bool isEditMode, bool is_new = false)
+        public Form7(Form1? form1, bool isEditMode, bool isNew = false)
         {
             InitializeComponent();
             _form1 = form1;
             panel1.Paint += Panel1_Paint;
 
-            new_interface = is_new;
+            _isNewInterface = isNew;
 
             panel1.MouseDown += (s, ev) => { this.ActiveControl = null; };
 
@@ -79,7 +82,27 @@ namespace SerialPortMacros
                 _refreshTimer.Tick += RefreshTimer_Tick;
                 _refreshTimer.Start();
             }
+
+            Disposed += (_, _) => _images.Dispose();
         }
+
+        /// <summary>
+        /// Replaces a picture's image. The old image is disposed only if the picture
+        /// owned it (shared images from the cache are never disposed here).
+        /// </summary>
+        private void SetPictureImage(PictureBox picture, Image? image)
+        {
+            Image? old = picture.Image;
+            if (ReferenceEquals(old, image))
+                return;
+
+            picture.Image = image;
+            if (old != null && !_images.Owns(old))
+                old.Dispose();
+        }
+
+        private string ImagePath(InterfaceElement element, string imageName) =>
+            Path.Combine(ModulePath, element.ModuleName, imageName);
 
         private void Form7_Load(object sender, EventArgs e)
         {
@@ -151,7 +174,7 @@ namespace SerialPortMacros
             string interfacesPath = Path.Combine(AppContext.BaseDirectory, "interfaces");
             Directory.CreateDirectory(interfacesPath);
 
-            if (new_interface)
+            if (_isNewInterface)
             {
                 using SaveFileDialog dialog = new SaveFileDialog();
                 dialog.InitialDirectory = interfacesPath;
@@ -181,10 +204,7 @@ namespace SerialPortMacros
             foreach (Control control in panel1.Controls)
             {
                 if (control is PictureBox picture)
-                {
-                    picture.Image?.Dispose();
-                    picture.Image = null;
-                }
+                    SetPictureImage(picture, null);
                 control.Dispose();
             }
             panel1.Controls.Clear();
@@ -204,26 +224,7 @@ namespace SerialPortMacros
 
             if (!isLabel)
             {
-                string imagePath = Path.Combine(
-                    ModulePath,
-                    element.ModuleName,
-                    element.ImageName);
-
-                try
-                {
-                    if (File.Exists(imagePath))
-                    {
-                        using (Image loadedImage = Image.FromFile(imagePath))
-                        {
-                            imgToUse = new Bitmap(loadedImage);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine(
-                        $"Cannot load image {imagePath}: {ex.Message}");
-                }
+                imgToUse = _images.Get(ImagePath(element, element.ImageName));
 
                 // Initialize the aspect ratio if it is not set yet.
                 if (imgToUse != null && element.ImageAspectRatio <= 0)
@@ -266,6 +267,17 @@ namespace SerialPortMacros
                 }
             }
 
+            // Image rotation. Shared cache images must not be modified: rotate a copy.
+            int rotations = (element.Rotation / 90) % 4;
+            if (rotations > 0 && imgToUse != null)
+            {
+                if (_images.Owns(imgToUse))
+                    imgToUse = new Bitmap(imgToUse);
+
+                for (int i = 0; i < rotations; i++)
+                    imgToUse.RotateFlip(RotateFlipType.Rotate90FlipNone);
+            }
+
             // -----------------------------------------
             // MAIN PICTUREBOX
             // -----------------------------------------
@@ -290,18 +302,6 @@ namespace SerialPortMacros
 
                 Image = imgToUse
             };
-
-            // Image rotation.
-            if (element.Rotation != 0)
-            {
-                int rotations = (element.Rotation / 90) % 4;
-
-                for (int i = 0; i < rotations; i++)
-                {
-                    picture.Image?.RotateFlip(
-                        RotateFlipType.Rotate90FlipNone);
-                }
-            }
 
             panel1.Controls.Add(picture);
 

@@ -1,27 +1,33 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using SerialPortMacros.Core;
 using SerialPortMacros.Macros;
 
 namespace SerialPortMacros
 {
-    /// <summary>Macro list and editor.</summary>
+    /// <summary>
+    /// Macro list and editor.
+    ///
+    /// The window edits its own copy of the macros, read from the files: the objects used
+    /// by the macro engine (on the processing thread) are never modified here. Changes are
+    /// saved to the files, and Form1 reloads them into the engine when this window closes.
+    /// </summary>
     public partial class Form3 : Form
     {
-        private const string EffectKeypress = "Keypress";
-        private const string EffectReply = "Write back";
-        private const string EffectCustom = "Custom code";
+        private const string EffectNameKeypress = "Keypress";
+        private const string EffectNameReply = "Write back";
+        private const string EffectNameCustom = "Custom code";
 
-        public Form1 form1;
+        private Script[] _scripts = Array.Empty<Script>();
+        private Script? _currentScript;
+        private int _lastIndex;
         private bool _isLoading;
+
         // While the list is loading, selection and check marks change on their own:
         // nothing must be saved in that phase (wrong states would be written to the files).
         private bool _initializing = true;
-        private int last_index;
-        private Script? c_script;
 
-        public Form3(Form1 form)
+        public Form3()
         {
-            form1 = form;
             InitializeComponent();
 
             // Fill the ComboBoxes before binding the DataSource (which raises events).
@@ -29,16 +35,18 @@ namespace SerialPortMacros
             comboBox2.Items.AddRange(LineEndings.ShortNames);
 
             comboBox1.Items.Clear();
-            comboBox1.Items.AddRange(new object[] { EffectKeypress, EffectReply, EffectCustom });
+            comboBox1.Items.AddRange(new object[] { EffectNameKeypress, EffectNameReply, EffectNameCustom });
             comboBox1.SelectedIndexChanged += comboBox1_SelectedIndexChanged;
 
-            BindList();
+            LoadScripts();
         }
 
-        private void BindList()
+        /// <summary>Reads the macro files and binds them to the list.</summary>
+        private void LoadScripts()
         {
-            checkedListBox1.DataSource = form1.scripts;
-            checkedListBox1.DisplayMember = "name";
+            _scripts = ScriptStore.LoadAll();
+            checkedListBox1.DataSource = _scripts;
+            checkedListBox1.DisplayMember = nameof(Script.Name);
         }
 
         private void Form3_Load(object sender, EventArgs e)
@@ -51,33 +59,102 @@ namespace SerialPortMacros
         private void FinishLoading()
         {
             _initializing = true;
-            findactivescripts();
-            last_index = checkedListBox1.SelectedIndex;
-            c_script = checkedListBox1.SelectedItem as Script;
-            displayscript();
+            ApplySavedCheckStates();
+            _lastIndex = checkedListBox1.SelectedIndex;
+            _currentScript = checkedListBox1.SelectedItem as Script;
+            DisplaySelectedScript();
             _initializing = false;
         }
 
+        private void ApplySavedCheckStates()
+        {
+            for (int i = 0; i < _scripts.Length; i++)
+                checkedListBox1.SetItemCheckState(i, _scripts[i].Active ? CheckState.Checked : CheckState.Unchecked);
+        }
+
+        // ------------------------------------------------------------------
+        // List events
+        // ------------------------------------------------------------------
+
         private void checkedListBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!_initializing && last_index >= 0 && last_index < checkedListBox1.Items.Count)
-                Applychanges(checkedListBox1.GetItemCheckState(last_index) == CheckState.Checked);
+            if (!_initializing && _lastIndex >= 0 && _lastIndex < checkedListBox1.Items.Count)
+                ApplyChanges(checkedListBox1.GetItemCheckState(_lastIndex) == CheckState.Checked);
 
-            last_index = checkedListBox1.SelectedIndex;
-            c_script = checkedListBox1.SelectedItem as Script;
-            displayscript();
+            _lastIndex = checkedListBox1.SelectedIndex;
+            _currentScript = checkedListBox1.SelectedItem as Script;
+            DisplaySelectedScript();
         }
 
         private void CheckedListBox1_ItemCheck(object sender, ItemCheckEventArgs e)
         {
             if (_initializing || e.Index < 0 || e.Index >= checkedListBox1.Items.Count)
                 return;
-            if (checkedListBox1.Items[e.Index] is not Script s || string.IsNullOrEmpty(s.path))
+            if (checkedListBox1.Items[e.Index] is not Script s || string.IsNullOrEmpty(s.FilePath))
                 return;
 
-            s.active = e.NewValue == CheckState.Checked;
+            s.Active = e.NewValue == CheckState.Checked;
             TrySave(s);
         }
+
+        // ------------------------------------------------------------------
+        // Saving
+        // ------------------------------------------------------------------
+
+        /// <summary>Copies the editor fields into the selected macro and saves it.</summary>
+        private void ApplyChanges(bool active)
+        {
+            if (_currentScript == null || string.IsNullOrEmpty(_currentScript.FilePath)) return;
+
+            var s = _currentScript;
+            s.Key = textBox2.Text;
+            s.ListenPort1 = checkBox1.Checked;
+            s.ListenPort2 = checkBox2.Checked;
+            s.ListenPort3 = checkBox3.Checked;
+            s.ListenPort4 = checkBox4.Checked;
+            s.Active = active;
+
+            switch (comboBox1.Text)
+            {
+                case EffectNameKeypress:
+                    s.Effect = MacroEffect.Keypress;
+                    s.KeyPress = textBox4.Text;
+                    break;
+
+                case EffectNameReply:
+                    s.Effect = MacroEffect.Reply;
+                    s.Reply = textBox3.Text;
+                    s.ReplyPort1 = checkBox8.Checked;
+                    s.ReplyPort2 = checkBox7.Checked;
+                    s.ReplyPort3 = checkBox6.Checked;
+                    s.ReplyPort4 = checkBox5.Checked;
+                    s.LineEndingIndex = comboBox2.SelectedIndex >= 0 ? comboBox2.SelectedIndex : 1;
+                    break;
+
+                case EffectNameCustom:
+                    s.Effect = MacroEffect.Custom;
+                    s.CustomFile = textBox4.Text.Trim();
+                    break;
+            }
+
+            TrySave(s);
+        }
+
+        private static void TrySave(Script s)
+        {
+            try
+            {
+                ScriptStore.Save(s);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Cannot save {s.Name}: {ex.Message}");
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // Buttons
+        // ------------------------------------------------------------------
 
         private void button2_Click(object sender, EventArgs e)
         {
@@ -89,63 +166,8 @@ namespace SerialPortMacros
         {
             int index = checkedListBox1.SelectedIndex;
             if (index >= 0)
-                Applychanges(checkedListBox1.GetItemCheckState(index) == CheckState.Checked);
+                ApplyChanges(checkedListBox1.GetItemCheckState(index) == CheckState.Checked);
             Close();
-        }
-
-        private void Applychanges(bool active)
-        {
-            if (c_script == null || string.IsNullOrEmpty(c_script.path)) return;
-
-            c_script.key = textBox2.Text;
-            c_script.p1 = checkBox1.Checked;
-            c_script.p2 = checkBox2.Checked;
-            c_script.p3 = checkBox3.Checked;
-            c_script.p4 = checkBox4.Checked;
-            c_script.active = active;
-
-            switch (comboBox1.Text)
-            {
-                case EffectKeypress:
-                    c_script.trigger = Script.TriggerKeypress;
-                    c_script.keypress = textBox4.Text;
-                    break;
-
-                case EffectReply:
-                    c_script.trigger = Script.TriggerReply;
-                    c_script.reply = textBox3.Text;
-                    c_script.p1_w = checkBox8.Checked;
-                    c_script.p2_w = checkBox7.Checked;
-                    c_script.p3_w = checkBox6.Checked;
-                    c_script.p4_w = checkBox5.Checked;
-                    c_script.lineEndingIndex = comboBox2.SelectedIndex >= 0 ? comboBox2.SelectedIndex : 1;
-                    break;
-
-                case EffectCustom:
-                    c_script.trigger = Script.TriggerCustom;
-                    c_script.customFile = textBox4.Text.Trim();
-                    break;
-            }
-
-            TrySave(c_script);
-        }
-
-        private static void TrySave(Script s)
-        {
-            try
-            {
-                ScriptStore.Save(s);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Cannot save {s.name}: {ex.Message}");
-            }
-        }
-
-        void findactivescripts()
-        {
-            for (int i = 0; i < form1.scripts.Length; i++)
-                checkedListBox1.SetItemCheckState(i, form1.scripts[i].active ? CheckState.Checked : CheckState.Unchecked);
         }
 
         // New macro file
@@ -154,7 +176,7 @@ namespace SerialPortMacros
             // Save the selected macro's changes before reloading the list from the files.
             int selected = checkedListBox1.SelectedIndex;
             if (selected >= 0)
-                Applychanges(checkedListBox1.GetItemCheckState(selected) == CheckState.Checked);
+                ApplyChanges(checkedListBox1.GetItemCheckState(selected) == CheckState.Checked);
 
             if (textBox5.Text != "")
             {
@@ -171,8 +193,7 @@ namespace SerialPortMacros
             }
 
             _initializing = true;
-            form1.ScanScripts();
-            BindList();
+            LoadScripts();
             FinishLoading();
         }
 
@@ -182,7 +203,7 @@ namespace SerialPortMacros
             string spec = textBox4.Text.Trim();
             if (spec.Length == 0)
             {
-                spec = (c_script != null ? Path.GetFileNameWithoutExtension(c_script.name) : "MyMacro") + ".cs";
+                spec = (_currentScript != null ? Path.GetFileNameWithoutExtension(_currentScript.Name) : "MyMacro") + ".cs";
                 textBox4.Text = spec;
             }
 
@@ -257,20 +278,24 @@ namespace SerialPortMacros
             return full.StartsWith(folder, StringComparison.OrdinalIgnoreCase) ? full[folder.Length..] : full;
         }
 
+        // ------------------------------------------------------------------
+        // Editor fields
+        // ------------------------------------------------------------------
+
         private void comboBox1_SelectedIndexChanged(object? sender, EventArgs e)
         {
             UpdateEffectControls();
             if (_isLoading) return;
 
-            if (comboBox1.Text == EffectReply && comboBox2.SelectedIndex == -1)
+            if (comboBox1.Text == EffectNameReply && comboBox2.SelectedIndex == -1)
                 comboBox2.SelectedIndex = 1; // default NL
-            if (comboBox1.Text != EffectReply)
+            if (comboBox1.Text != EffectNameReply)
                 comboBox2.SelectedIndex = -1;
         }
 
         private void UpdateEffectControls()
         {
-            bool custom = comboBox1.Text == EffectCustom;
+            bool custom = comboBox1.Text == EffectNameCustom;
             label14.Text = custom ? "Code file" : "Keypress";
             toolTip1.SetToolTip(textBox4, custom
                 ? "File .cs or .dll in the custom_macros folder (optional \":ClassName\")"
@@ -280,13 +305,14 @@ namespace SerialPortMacros
 
             // The "Reply" row (text, destination ports, line ending) applies only to "Write back":
             // a custom macro chooses by itself which port to write to.
-            bool reply = comboBox1.Text == EffectReply;
+            bool reply = comboBox1.Text == EffectNameReply;
             comboBox2.Enabled = reply;
             textBox3.Enabled = reply;
             checkBox5.Enabled = checkBox6.Enabled = checkBox7.Enabled = checkBox8.Enabled = reply;
         }
 
-        public void displayscript()
+        /// <summary>Shows the selected macro in the editor fields.</summary>
+        private void DisplaySelectedScript()
         {
             _isLoading = true;
             textBox4.Text = "";
@@ -297,35 +323,35 @@ namespace SerialPortMacros
 
             if (checkedListBox1.SelectedItem is Script s)
             {
-                textBox1.Text = s.name;
-                textBox2.Text = s.key;
-                checkBox1.Checked = s.p1;
-                checkBox2.Checked = s.p2;
-                checkBox3.Checked = s.p3;
-                checkBox4.Checked = s.p4;
+                textBox1.Text = s.Name;
+                textBox2.Text = s.Key;
+                checkBox1.Checked = s.ListenPort1;
+                checkBox2.Checked = s.ListenPort2;
+                checkBox3.Checked = s.ListenPort3;
+                checkBox4.Checked = s.ListenPort4;
 
-                switch (s.trigger)
+                switch (s.Effect)
                 {
-                    case Script.TriggerKeypress:
-                        comboBox1.Text = EffectKeypress;
-                        textBox4.Text = s.keypress;
+                    case MacroEffect.Keypress:
+                        comboBox1.Text = EffectNameKeypress;
+                        textBox4.Text = s.KeyPress;
                         break;
 
-                    case Script.TriggerReply:
-                        comboBox1.Text = EffectReply;
-                        textBox3.Text = s.reply;
-                        checkBox8.Checked = s.p1_w;
-                        checkBox7.Checked = s.p2_w;
-                        checkBox6.Checked = s.p3_w;
-                        checkBox5.Checked = s.p4_w;
-                        comboBox2.SelectedIndex = s.lineEndingIndex >= 0 && s.lineEndingIndex < comboBox2.Items.Count
-                            ? s.lineEndingIndex
+                    case MacroEffect.Reply:
+                        comboBox1.Text = EffectNameReply;
+                        textBox3.Text = s.Reply;
+                        checkBox8.Checked = s.ReplyPort1;
+                        checkBox7.Checked = s.ReplyPort2;
+                        checkBox6.Checked = s.ReplyPort3;
+                        checkBox5.Checked = s.ReplyPort4;
+                        comboBox2.SelectedIndex = s.LineEndingIndex >= 0 && s.LineEndingIndex < comboBox2.Items.Count
+                            ? s.LineEndingIndex
                             : 1;
                         break;
 
-                    case Script.TriggerCustom:
-                        comboBox1.Text = EffectCustom;
-                        textBox4.Text = s.customFile;
+                    case MacroEffect.Custom:
+                        comboBox1.Text = EffectNameCustom;
+                        textBox4.Text = s.CustomFile;
                         break;
                 }
             }

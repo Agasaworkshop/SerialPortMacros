@@ -280,11 +280,15 @@ namespace SerialPortMacros
             _log.WriteSent(text);
         }
 
+        /// <summary>Keeps the multi-line messages of the interfaces in order.</summary>
+        private readonly SemaphoreSlim _interfaceSendLock = new(1, 1);
+
         /// <summary>
         /// Sending from the interfaces (Form7). <paramref name="targetPorts"/> has 4 elements;
-        /// the message may contain several lines separated by "\n".
+        /// the message may contain several lines separated by "\n", sent 50 ms apart.
+        /// The pause is awaited, so the UI stays responsive; messages are sent one at a time.
         /// </summary>
-        public void SendCustomMacroLine(bool[] targetPorts, string message, string customLineEnding = "")
+        public async Task SendInterfaceMessageAsync(bool[] targetPorts, string message, string customLineEnding = "")
         {
             bool hasTarget = targetPorts != null && targetPorts.Length >= 4 && targetPorts.Take(4).Any(t => t);
 
@@ -299,16 +303,24 @@ namespace SerialPortMacros
             string lineEnding = LineEndings.FromName(customLineEnding) ?? SelectedLineEnding;
             string[] parts = message.Split(new[] { "\n", "\\n" }, StringSplitOptions.RemoveEmptyEntries);
 
-            foreach (string part in parts)
+            await _interfaceSendLock.WaitAsync();
+            try
             {
-                string trimmed = part.Trim();
-                if (trimmed.Length == 0) continue;
+                foreach (string part in parts)
+                {
+                    string trimmed = part.Trim();
+                    if (trimmed.Length == 0) continue;
 
-                _hub.SendTo(targetPorts!, trimmed + lineEnding);
-                ShowLine(trimmed, "Macro/Form7", Color.Purple);
-                _log.WriteSent(trimmed);
+                    _hub.SendTo(targetPorts!, trimmed + lineEnding);
+                    ShowLine(trimmed, "Macro/Form7", Color.Purple);
+                    _log.WriteSent(trimmed);
 
-                if (parts.Length > 1) Thread.Sleep(50);
+                    if (parts.Length > 1) await Task.Delay(50);
+                }
+            }
+            finally
+            {
+                _interfaceSendLock.Release();
             }
         }
     }
