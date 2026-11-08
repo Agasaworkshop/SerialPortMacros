@@ -3,9 +3,9 @@ using SerialPortMacros.Core;
 namespace SerialPortMacros
 {
     /// <summary>
-    /// Una macro salvata nella cartella "scripts". Il formato del file è descritto in
-    /// <see cref="Macros.ScriptStore"/>. I nomi dei campi sono quelli originali
-    /// (usati anche da Form3).
+    /// A macro saved in the "scripts" folder. The file format is described in
+    /// <see cref="Macros.ScriptStore"/>. Field names are the original ones
+    /// (also used by Form3).
     /// </summary>
     public class Script
     {
@@ -17,7 +17,7 @@ namespace SerialPortMacros
         public string key = "";
         public int trigger;
 
-        // Porte che attivano la macro
+        // Ports that trigger the macro
         public bool p1;
         public bool p2;
         public bool p3;
@@ -34,15 +34,15 @@ namespace SerialPortMacros
         // Keypress
         public string keypress = "";
 
-        /// <summary>Custom code: file .cs o .dll nella cartella custom_macros, opzionale ":NomeClasse".</summary>
+        /// <summary>Custom code: .cs or .dll file in the custom_macros folder, optional ":ClassName".</summary>
         public string customFile = "";
 
         public string path = "";
         public bool active;
 
-        // ---- Stato a runtime (non salvato) ----
+        // ---- Runtime state (not saved) ----
 
-        /// <summary>Istanza caricata per le macro custom (null se non caricata o in errore).</summary>
+        /// <summary>Loaded instance for custom macros (null if not loaded or failed).</summary>
         internal Macros.ICustomMacro? CustomInstance;
         internal string? LoadError;
         internal bool Started;

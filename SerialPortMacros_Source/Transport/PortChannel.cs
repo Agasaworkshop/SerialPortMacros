@@ -13,15 +13,15 @@ public enum ConnectionMode
 }
 
 /// <summary>
-/// Una porta logica (1..4): seriale oppure server TCP, con il proprio decoder.
-/// Riceve byte sul thread del driver, li decodifica e passa i messaggi alla pipeline.
-/// Non tocca mai la UI.
+/// One logical port (1..4): serial or TCP server, with its own decoder.
+/// Receives bytes on the driver thread, decodes them and hands the messages to the
+/// pipeline. Never touches the UI.
 /// </summary>
 public sealed class PortChannel
 {
     private readonly DataPipeline _pipeline;
     private readonly object _serialSendLock = new();
-    private readonly List<DecodedFrame> _frames = new();   // usato solo dal thread di ricezione
+    private readonly List<DecodedFrame> _frames = new();   // used only by the receive thread
     private byte[] _serialBuffer = new byte[4096];
     private volatile IStreamDecoder _decoder = new TextLineDecoder();
     private volatile bool _serialOpen;
@@ -41,7 +41,7 @@ public sealed class PortChannel
         Tcp.Status += (text, isError) => StatusMessage?.Invoke(text, isError);
     }
 
-    /// <summary>Numero della porta logica (1..4).</summary>
+    /// <summary>Logical port number (1..4).</summary>
     public int Number { get; }
 
     public SerialPort Serial { get; } = new();
@@ -52,15 +52,15 @@ public sealed class PortChannel
     public bool SerialOpen => _serialOpen;
     public bool IsActive => _serialOpen || Tcp.IsListening;
 
-    /// <summary>Formato dati attivo (testo o binario).</summary>
+    /// <summary>Active data format (text or binary).</summary>
     public PortDataFormat DataFormat { get; private set; } = new();
 
-    /// <summary>Messaggi di stato (es. connessione TCP); sollevato da thread di rete.</summary>
+    /// <summary>Status messages (e.g. TCP connection); raised from network threads.</summary>
     public event Action<string, bool>? StatusMessage;
 
     /// <summary>
-    /// Nome usato per testo, log e grafici quando la porta è in TCP
-    /// (aggiornato dalla UI: il nome della COM selezionata oppure "TCPn").
+    /// Name used for text, logs and graphs when the port is in TCP mode
+    /// (updated by the UI: the selected COM name or "TCPn").
     /// </summary>
     public string TcpDisplayName
     {
@@ -68,7 +68,7 @@ public sealed class PortChannel
         set => _tcpName = string.IsNullOrWhiteSpace(value) ? $"TCP{Number}" : value.Trim();
     }
 
-    /// <summary>Applica un nuovo formato dati. Lancia <see cref="FormatException"/> se non valido.</summary>
+    /// <summary>Applies a new data format. Throws <see cref="FormatException"/> if invalid.</summary>
     public void SetDataFormat(PortDataFormat format)
     {
         var decoder = format.CreateDecoder();
@@ -77,7 +77,7 @@ public sealed class PortChannel
     }
 
     // ------------------------------------------------------------------
-    // Seriale
+    // Serial
     // ------------------------------------------------------------------
 
     public bool OpenSerial(string portName, int baud, out string? error)
@@ -134,8 +134,8 @@ public sealed class PortChannel
 
     private void Decode(ReadOnlySpan<byte> data, string source)
     {
-        // Normalmente arriva un solo flusso alla volta (seriale O TCP); il lock
-        // protegge il decoder nel breve momento di passaggio da una modalità all'altra.
+        // Normally only one stream is active (serial OR TCP); the lock protects the
+        // decoder during the short moment when switching from one mode to the other.
         lock (_frames)
         {
             _frames.Clear();
@@ -145,7 +145,7 @@ public sealed class PortChannel
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Decoder porta {Number}: {ex.Message}");
+                Debug.WriteLine($"Decoder, port {Number}: {ex.Message}");
                 _decoder.Reset();
                 return;
             }
@@ -154,7 +154,7 @@ public sealed class PortChannel
     }
 
     // ------------------------------------------------------------------
-    // Invio (thread-safe)
+    // Sending (thread-safe)
     // ------------------------------------------------------------------
 
     public bool Send(string text) => Send(Encoding.ASCII.GetBytes(text));
@@ -175,7 +175,7 @@ public sealed class PortChannel
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Invio porta {Number}: {ex.Message}");
+            Debug.WriteLine($"Send, port {Number}: {ex.Message}");
             return false;
         }
     }

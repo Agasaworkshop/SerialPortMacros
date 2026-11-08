@@ -6,17 +6,17 @@ using SerialPortMacros.Macros;
 namespace SerialPortMacros.Core;
 
 /// <summary>
-/// Pipeline di ricezione.
+/// Receive pipeline.
 ///
-///   thread seriale / TCP  ──Enqueue──►  coda  ──►  thread di processing (priorità alta)
-///                                                   1. valori live (Form7, macro)
-///                                                   2. log su file
-///                                                   3. macro
-///                                                   4. grafici
-///                                                   5. DisplayBuffer  ──►  UI (timer, decimata)
+///   serial / TCP thread  ──Enqueue──►  queue  ──►  processing thread (above-normal priority)
+///                                                   1. live values (Form7, macros)
+///                                                   2. log files
+///                                                   3. DisplayBuffer  ──►  UI (timer, decimated)
+///                                                   4. macros
+///                                                   5. graphs
 ///
-/// Il processing non dipende mai dalla UI: se l'interfaccia rallenta, log e macro
-/// continuano a ricevere ogni singolo messaggio; è solo il testo a video a essere decimato.
+/// Processing never depends on the UI: if the window slows down, logging and macros
+/// still receive every single message; only the on-screen text is decimated.
 /// </summary>
 public sealed class DataPipeline : IDisposable
 {
@@ -30,14 +30,14 @@ public sealed class DataPipeline : IDisposable
     private readonly GraphRouter _graphs;
     private readonly MacroEngine _macros;
 
-    // Ultimo arrivo per porta logica (indici 1..4), usato per distribuire i timestamp.
+    // Last arrival time per logical port (indices 1..4), used to spread timestamps.
     private readonly double[] _lastRxClock = new double[AppSettings.PortCount + 1];
     private readonly object _enqueueLock = new();
 
     private long _lastMessageTick;
     private long _processed;
 
-    /// <summary>Timestamp nel testo a video.</summary>
+    /// <summary>Show timestamps in the on-screen text.</summary>
     public volatile bool TimeStamps = true;
 
     public DataPipeline(LogManager log, DisplayBuffer display, LiveData live, GraphRouter graphs, MacroEngine macros)
@@ -58,16 +58,16 @@ public sealed class DataPipeline : IDisposable
 
     public void Start() => _thread.Start();
 
-    /// <summary>Environment.TickCount64 dell'ultimo messaggio ricevuto.</summary>
+    /// <summary>Environment.TickCount64 of the last received message.</summary>
     public long LastMessageTick => Interlocked.Read(ref _lastMessageTick);
 
     public long ProcessedCount => Interlocked.Read(ref _processed);
     public int PendingCount => _queue.Count;
 
     /// <summary>
-    /// Accoda i frame arrivati nello stesso pacchetto (una singola lettura seriale/TCP).
-    /// Se avessero tutti lo stesso timestamp il grafico mostrerebbe "gradini": vengono
-    /// quindi distribuiti uniformemente fra l'arrivo del pacchetto precedente e quello attuale.
+    /// Queues the frames that arrived in the same packet (a single serial/TCP read).
+    /// If they all had the same timestamp the plots would show "steps", so they are
+    /// spread evenly between the arrival of the previous packet and the current one.
     /// Thread-safe.
     /// </summary>
     public void EnqueueBatch(List<DecodedFrame> frames, string source, int logicalPort)
@@ -84,14 +84,14 @@ public sealed class DataPipeline : IDisposable
         lock (_enqueueLock)
         {
             double prev = _lastRxClock[logicalPort];
-            // Dopo un silenzio non si sa quando le righe sono state generate: limita l'intervallo.
+            // After a silence it is unknown when the lines were produced: limit the interval.
             span = n > 1 ? Math.Min(Math.Max(now - prev, 0.0), 0.25) : 0.0;
             _lastRxClock[logicalPort] = now;
         }
 
         for (int i = 0; i < n; i++)
         {
-            double back = span * (n - 1 - i) / n; // l'ultima riga ha esattamente l'ora di arrivo
+            double back = span * (n - 1 - i) / n; // the last line gets exactly the arrival time
             var f = frames[i];
             _queue.Add(new RxMessage(f.Text, source, logicalPort, wallNow.AddSeconds(-back), now - back, f.Values));
         }
@@ -109,7 +109,7 @@ public sealed class DataPipeline : IDisposable
                 if (_queue.TryTake(out RxMessage m, 100, token))
                 {
                     Process(m);
-                    // Svuota tutto quello che è già in coda prima di tornare ad attendere.
+                    // Drain everything already queued before waiting again.
                     while (_queue.TryTake(out m))
                         Process(m);
                 }
@@ -142,8 +142,8 @@ public sealed class DataPipeline : IDisposable
             if (_log.IsActive)
                 _log.WriteReceived(m.Port, m.Source, m.Text, m.Wall);
 
-            // Solo un accodamento (nessun lavoro UI): va prima delle macro così la
-            // riga ricevuta appare a video prima delle eventuali risposte.
+            // Only an enqueue (no UI work). Done before the macros so the received
+            // line appears on screen before any reply it triggers.
             _display.Add(FormatLine(m.Text, m.Source, m.Wall), ColorUtils.PortColor(m.Port));
 
             _macros.Process(m, numbers);

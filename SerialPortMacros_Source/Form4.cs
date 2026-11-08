@@ -1,46 +1,42 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using ScottPlot;
 using ScottPlot.Plottables;
-using ScottPlot.WinForms;
-using SerialPortMacros;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
-using System.Windows.Forms;
 
 namespace SerialPortMacros
 {
+    /// <summary>
+    /// Real-time graph of one value (or, as "master", of several merged graphs).
+    /// Data arrives from any thread through <see cref="AddDataPoint(double, double)"/>
+    /// and is drawn by a ~30 fps UI timer.
+    /// </summary>
     public partial class Form4 : Form
     {
-        // Clock condiviso da TUTTI i grafici (singoli e merged).
-        // I punti vengono marcati con questo orologio nel momento in cui il dato
-        // arriva dalla porta, non quando il thread UI riesce a elaborarlo:
-        // e' questo che elimina l'effetto "a pezzi" (punti raggruppati).
-        private static readonly Stopwatch _clock = Stopwatch.StartNew();
-        public static double NowSeconds => _clock.Elapsed.TotalSeconds;
+        // Clock shared by ALL graphs (single and merged).
+        // Points are stamped with this clock when the data arrives from the port,
+        // not when the UI thread gets around to processing it: this is what removes
+        // the "chunky" look (points bunched together).
+        private static readonly Stopwatch Clock = Stopwatch.StartNew();
+        public static double NowSeconds => Clock.Elapsed.TotalSeconds;
 
-        private System.Windows.Forms.Timer timerPlot;
-        private double timeWindow = 10;
-        private bool legend_on = true;
-
+        // ---- State used by Form1 (merge handling) ----
         public bool isMaster = false;
-
-        public Form4 MasterForm { get; set; } = null;
-
-        private readonly ConcurrentQueue<(double t, double y)> mainQueue = new ConcurrentQueue<(double t, double y)>();
-        private PlotSeries mainSeries;
-
+        public Form4? MasterForm { get; set; }
         public Dictionary<Form4, child_form> children = new Dictionary<Form4, child_form>();
-
         public bool merging = false;
         public Form1 mainform;
 
-        // Se false il form non accoda dati propri (nascosto da merge o chiuso).
+        /// <summary>If false the form does not queue its own data (hidden by a merge, or closed).</summary>
         public volatile bool is_visible = true;
 
         public bool playing = true;
+
+        // ---- Private state ----
+        private readonly ConcurrentQueue<(double t, double y)> _queue = new ConcurrentQueue<(double t, double y)>();
+        private PlotSeries? _series;
+        private System.Windows.Forms.Timer? _plotTimer;
+        private double _timeWindow = 10;
+        private bool _legendVisible = true;
         private bool _forceRefresh = true;
 
         public Form4(Form1 form1, bool masterFlag = false)
@@ -62,7 +58,7 @@ namespace SerialPortMacros
                 button3.Visible = false;
             }
 
-            // I limiti degli assi sono gestiti manualmente a ogni frame.
+            // Axis limits are set manually on every frame.
             formsPlot1.Plot.Axes.ContinuouslyAutoscale = false;
             formsPlot1.Plot.Legend.IsVisible = true;
 
@@ -73,23 +69,27 @@ namespace SerialPortMacros
             }
             else
             {
-                mainSeries = new PlotSeries(formsPlot1.Plot, ScottPlot.Color.FromColor(System.Drawing.Color.Blue));
+                _series = new PlotSeries(formsPlot1.Plot, ScottPlot.Color.FromColor(System.Drawing.Color.Blue));
             }
 
-            timerPlot = new System.Windows.Forms.Timer();
-            timerPlot.Interval = 33; // ~30 fps
-            timerPlot.Tick += TimerPlot_Tick;
-            timerPlot.Start();
+            _plotTimer = new System.Windows.Forms.Timer();
+            _plotTimer.Interval = 33; // ~30 fps
+            _plotTimer.Tick += PlotTimer_Tick;
+            _plotTimer.Start();
         }
 
+        // ------------------------------------------------------------------
+        // Data input (thread-safe)
+        // ------------------------------------------------------------------
+
         /// <summary>
-        /// Thread-safe: puo' essere chiamato da qualunque thread.
-        /// t = Form4.NowSeconds preso al momento della ricezione.
+        /// Thread-safe: can be called from any thread.
+        /// <paramref name="t"/> = <see cref="NowSeconds"/> taken when the data was received.
         /// </summary>
         public void AddDataPoint(double value, double t)
         {
             if (!isMaster && is_visible)
-                mainQueue.Enqueue((t, value));
+                _queue.Enqueue((t, value));
 
             MasterForm?.AddChildData(this, value, t);
         }
@@ -104,7 +104,11 @@ namespace SerialPortMacros
                 childEntry.childQueue.Enqueue((t, y));
         }
 
-        private static bool Drain(ConcurrentQueue<(double t, double y)> queue, PlotSeries series)
+        // ------------------------------------------------------------------
+        // Drawing
+        // ------------------------------------------------------------------
+
+        private static bool Drain(ConcurrentQueue<(double t, double y)> queue, PlotSeries? series)
         {
             if (series == null) return false;
 
@@ -118,7 +122,7 @@ namespace SerialPortMacros
             return any;
         }
 
-        private void TimerPlot_Tick(object sender, EventArgs e)
+        private void PlotTimer_Tick(object? sender, EventArgs e)
         {
             if (IsDisposed || !IsHandleCreated)
                 return;
@@ -126,8 +130,8 @@ namespace SerialPortMacros
             double now = NowSeconds;
             bool updated = false;
 
-            // I dati vengono sempre svuotati dalle code (anche in pausa) per
-            // evitare crescita illimitata; in pausa semplicemente non si ridisegna.
+            // The queues are always drained (even while paused) so they cannot grow
+            // without limit; while paused the graph is simply not redrawn.
             if (isMaster)
             {
                 foreach (var childEntry in children.Values)
@@ -135,7 +139,7 @@ namespace SerialPortMacros
             }
             else
             {
-                updated = Drain(mainQueue, mainSeries);
+                updated = Drain(_queue, _series);
             }
 
             if (!playing)
@@ -146,7 +150,7 @@ namespace SerialPortMacros
 
             _forceRefresh = false;
 
-            double xMin = now - timeWindow;
+            double xMin = now - _timeWindow;
             double yMin = double.PositiveInfinity;
             double yMax = double.NegativeInfinity;
 
@@ -158,10 +162,10 @@ namespace SerialPortMacros
                     childEntry.series.ExpandRange(ref yMin, ref yMax);
                 }
             }
-            else if (mainSeries != null)
+            else if (_series != null)
             {
-                mainSeries.TrimBefore(xMin);
-                mainSeries.ExpandRange(ref yMin, ref yMax);
+                _series.TrimBefore(xMin);
+                _series.ExpandRange(ref yMin, ref yMax);
             }
 
             var plot = formsPlot1.Plot;
@@ -177,7 +181,12 @@ namespace SerialPortMacros
             formsPlot1.Refresh();
         }
 
-        private void button1_Click(object sender, EventArgs e) // unisci
+        // ------------------------------------------------------------------
+        // Buttons
+        // ------------------------------------------------------------------
+
+        // Merge with another graph
+        private void button1_Click(object sender, EventArgs e)
         {
             if (!merging)
             {
@@ -193,6 +202,7 @@ namespace SerialPortMacros
             }
         }
 
+        // Master only: show the merged child graphs again
         private void button2_Click(object sender, EventArgs e)
         {
             if (!isMaster) return;
@@ -213,25 +223,20 @@ namespace SerialPortMacros
             }
         }
 
-        public void reset_merge()
-        {
-            merging = false;
-            button1.Image = Properties.Resources.SyncArrowStatusBar5_16x;
-        }
-
+        // Show / hide the legend
         private void button3_Click(object sender, EventArgs e)
         {
-            if (legend_on)
+            if (_legendVisible)
             {
                 button3.Image = Properties.Resources.Not_Visible_16x;
-                legend_on = false;
+                _legendVisible = false;
                 formsPlot1.Plot.Legend.IsVisible = false;
                 toolTip1.SetToolTip(button3, "Show");
             }
             else
             {
                 button3.Image = Properties.Resources.Visible_16x;
-                legend_on = true;
+                _legendVisible = true;
                 formsPlot1.Plot.Legend.IsVisible = true;
                 toolTip1.SetToolTip(button3, "Hide");
             }
@@ -239,12 +244,43 @@ namespace SerialPortMacros
             _forceRefresh = true;
         }
 
+        // Play / pause
+        private void button4_Click(object sender, EventArgs e)
+        {
+            if (playing)
+            {
+                playing = false;
+                button4.Image = Properties.Resources.Play;
+                toolTip1.SetToolTip(button4, "Play");
+            }
+            else
+            {
+                playing = true;
+                _forceRefresh = true;
+                button4.Image = Properties.Resources.Pause;
+                toolTip1.SetToolTip(button4, "Pause");
+            }
+        }
+
+        // Time window [s]
+        private void numericUpDown1_ValueChanged(object sender, EventArgs e)
+        {
+            _timeWindow = (double)numericUpDown1.Value;
+            _forceRefresh = true;
+        }
+
+        public void reset_merge()
+        {
+            merging = false;
+            button1.Image = Properties.Resources.SyncArrowStatusBar5_16x;
+        }
+
         private void Form4_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // Smetti di accettare dati: evita code che crescono all'infinito.
+            // Stop accepting data, so queues cannot grow forever.
             is_visible = false;
 
-            try { timerPlot?.Stop(); } catch { }
+            try { _plotTimer?.Stop(); } catch { }
 
             if (!isMaster) return;
 
@@ -254,7 +290,7 @@ namespace SerialPortMacros
                 {
                     if (childEntry.child != null)
                     {
-                        // Il figlio non deve piu' inoltrare dati a un master chiuso.
+                        // The child must no longer forward data to a closed master.
                         childEntry.child.MasterForm = null;
                         childEntry.child.is_visible = true;
                         childEntry.child.Show();
@@ -265,36 +301,11 @@ namespace SerialPortMacros
                 }
             }
         }
-
-        private void numericUpDown1_ValueChanged(object sender, EventArgs e)
-        {
-            timeWindow = (double)numericUpDown1.Value;
-            _forceRefresh = true;
-        }
-
-        private void button4_Click(object sender, EventArgs e)
-        {
-            if (playing)
-            {
-                // PAUSA
-                playing = false;
-                button4.Image = Properties.Resources.Play;
-                toolTip1.SetToolTip(button4, "Play");
-            }
-            else
-            {
-                // PLAY
-                playing = true;
-                _forceRefresh = true;
-                button4.Image = Properties.Resources.Pause;
-                toolTip1.SetToolTip(button4, "Pause");
-            }
-        }
     }
 
     /// <summary>
-    /// Serie temporale: due liste X/Y collegate a uno scatter-line di ScottPlot.
-    /// Tutto avviene sul thread UI (il timer del grafico), quindi nessun lock.
+    /// Time series: two X/Y lists bound to a ScottPlot scatter line.
+    /// Everything happens on the UI thread (the graph timer), so no locking is needed.
     /// </summary>
     public class PlotSeries
     {
@@ -315,7 +326,7 @@ namespace SerialPortMacros
             Ys.Add(y);
         }
 
-        // Rimuove in un colpo solo tutti i punti piu' vecchi di xMin.
+        /// <summary>Removes, in one go, every point older than <paramref name="xMin"/>.</summary>
         public void TrimBefore(double xMin)
         {
             int n = Xs.Count;
@@ -328,7 +339,7 @@ namespace SerialPortMacros
                 if (Xs[mid] < xMin) lo = mid + 1; else hi = mid;
             }
 
-            // Mantiene un punto appena fuori finestra: la linea arriva fino al bordo sinistro.
+            // Keep one point just outside the window so the line reaches the left edge.
             int remove = Math.Max(0, lo - 1);
             if (remove > 0)
             {
@@ -349,6 +360,7 @@ namespace SerialPortMacros
         }
     }
 
+    /// <summary>Fixed-size circular X/Y buffer (currently not used by the graphs).</summary>
     public class CircularPlotBuffer
     {
         public readonly double[] Xs;
@@ -378,6 +390,7 @@ namespace SerialPortMacros
 
         public int Count => filled ? Xs.Length : index;
         public int Start => filled ? index : 0;
+
         public void CopyOrdered(double[] xsDest, double[] ysDest)
         {
             int count = Count;
@@ -404,7 +417,7 @@ namespace SerialPortMacros
         }
     }
 
-
+    /// <summary>One child graph inside a merged ("master") graph.</summary>
     public class child_form
     {
         public ConcurrentQueue<(double t, double y)> childQueue = new ConcurrentQueue<(double t, double y)>();

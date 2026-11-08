@@ -4,7 +4,7 @@ using SerialPortMacros.Decoding;
 
 namespace SerialPortMacros.Core;
 
-/// <summary>Impostazioni di una singola porta logica.</summary>
+/// <summary>Settings of a single logical port.</summary>
 public sealed class PortSettings
 {
     public bool SendEnabled { get; set; }
@@ -20,14 +20,14 @@ public sealed class PortSettings
     public bool CustomBuffer { get; set; }
     public int ReadBufferSize { get; set; } = 4096;
 
-    /// <summary>Come interpretare i byte ricevuti (testo a righe o frame binario).</summary>
+    /// <summary>How received bytes are interpreted (text lines or binary frames).</summary>
     public PortDataFormat DataFormat { get; set; } = new PortDataFormat();
 }
 
 /// <summary>
-/// Impostazioni salvate in settings.json.
-/// Il vecchio formato (check1..check10, BaudRate1..4, ...) viene letto e migrato
-/// automaticamente in <see cref="Ports"/>; al salvataggio viene scritto solo il nuovo formato.
+/// Settings stored in settings.json.
+/// The legacy format (check1..check10, BaudRate1..4, ...) is read and migrated
+/// automatically into <see cref="Ports"/>; only the new format is written back.
 /// </summary>
 public sealed class AppSettings
 {
@@ -46,7 +46,7 @@ public sealed class AppSettings
     [JsonPropertyName("log_message2")] public string LogStopMessage { get; set; } = "";
     [JsonPropertyName("log_check")] public bool LogWaitForEnd { get; set; }
 
-    /// <summary>Numero massimo di righe tenute in attesa per la visualizzazione (decimazione).</summary>
+    /// <summary>Maximum number of lines waiting to be displayed (older ones are dropped).</summary>
     public int DisplayMaxPendingLines { get; set; } = 2000;
 
     private static PortSettings[] CreateDefaultPorts()
@@ -58,7 +58,7 @@ public sealed class AppSettings
     }
 
     // ------------------------------------------------------------------
-    // Caricamento / salvataggio
+    // Load / save
     // ------------------------------------------------------------------
 
     private static readonly JsonSerializerOptions WriteOptions = new()
@@ -83,7 +83,7 @@ public sealed class AppSettings
         File.WriteAllText(path, JsonSerializer.Serialize(this, WriteOptions));
     }
 
-    /// <summary>Migra il formato vecchio e corregge valori mancanti o non validi.</summary>
+    /// <summary>Migrates the legacy format and fixes missing or invalid values.</summary>
     public void Normalize()
     {
         bool legacy = Ports == null || Ports.Length != PortCount || check1.HasValue || BaudRate1 != null;
@@ -117,7 +117,7 @@ public sealed class AppSettings
     private void MigrateLegacy()
     {
         bool[] send = { check1 ?? false, check2 ?? false, check3 ?? false, check4 ?? false };
-        // Nel vecchio form: checkBox8 = log porta 1, 7 = porta 2, 6 = porta 3, 5 = porta 4.
+        // In the old form: checkBox8 = log port 1, 7 = port 2, 6 = port 3, 5 = port 4.
         bool[] log = { check8 ?? false, check7 ?? false, check6 ?? false, check5 ?? false };
         bool?[] tcp = { UseTcp1, UseTcp2, UseTcp3, UseTcp4 };
         int?[] tcpPort = { TcpPort1, TcpPort2, TcpPort3, TcpPort4 };
@@ -148,7 +148,7 @@ public sealed class AppSettings
         LogUserInput = check9 ?? LogUserInput;
         OpenLogsAfterStop = check10 ?? OpenLogsAfterStop;
 
-        // Azzera i campi vecchi: non verranno più scritti.
+        // Clear the legacy fields so they are not written again.
         check1 = check2 = check3 = check4 = check5 = check6 = check7 = check8 = check9 = check10 = null;
         UseTcp1 = UseTcp2 = UseTcp3 = UseTcp4 = null;
         TcpPort1 = TcpPort2 = TcpPort3 = TcpPort4 = null;
@@ -162,9 +162,9 @@ public sealed class AppSettings
     }
 
     // ------------------------------------------------------------------
-    // Campi del formato vecchio: solo lettura per la migrazione.
+    // Legacy format fields: only read, for the migration.
     // ------------------------------------------------------------------
-#pragma warning disable IDE1006 // nomi compatibili con il vecchio JSON
+#pragma warning disable IDE1006 // names must match the legacy JSON
     public bool? check1 { get; set; }
     public bool? check2 { get; set; }
     public bool? check3 { get; set; }

@@ -3,19 +3,19 @@ using SerialPortMacros.Macros;
 
 namespace SerialPortMacros
 {
-    // Macro, grafici, sequenze e interfacce.
+    // Macros, graphs, sequences and interfaces.
     public partial class Form1
     {
         // ------------------------------------------------------------------
-        // Macro
+        // Macros
         // ------------------------------------------------------------------
 
-        // Play / pausa delle macro
+        // Macro play / pause
         private void button1_Click(object sender, EventArgs e)
         {
             if (!_macros.Running)
             {
-                ScanScripts();           // ricarica (e ricompila) le macro prima di partire
+                ScanScripts();           // reload (and recompile) the macros before starting
                 _macros.Running = true;
                 button1.Image = Properties.Resources.Pause;
             }
@@ -26,21 +26,21 @@ namespace SerialPortMacros
             }
         }
 
-        // Finestra delle macro
+        // Macros window
         private void button2_Click(object sender, EventArgs e)
         {
             ScanScripts();
             using (var form = new Form3(this))
                 form.ShowDialog(this);
-            ScanScripts();               // applica subito le modifiche fatte nella finestra
+            ScanScripts();               // apply the changes made in the window right away
         }
 
-        /// <summary>Rilegge i file macro e carica le macro custom; gli errori vanno a video.</summary>
+        /// <summary>Re-reads the macro files and loads the custom macros; errors are shown on screen.</summary>
         public void ScanScripts()
         {
             List<string> errors;
             var previous = Cursor.Current;
-            Cursor.Current = Cursors.WaitCursor;   // la compilazione delle macro .cs può richiedere un secondo
+            Cursor.Current = Cursors.WaitCursor;   // compiling .cs macros can take a second
             try
             {
                 errors = _macros.SetScripts(ScriptStore.LoadAll());
@@ -55,7 +55,7 @@ namespace SerialPortMacros
         }
 
         // ------------------------------------------------------------------
-        // Grafici
+        // Graphs
         // ------------------------------------------------------------------
 
         private Form4? _mergingForm;
@@ -115,7 +115,7 @@ namespace SerialPortMacros
             _mergingForm = null;
         }
 
-        /// <summary>Crea un grafico "master" che mostra insieme le serie dei grafici uniti.</summary>
+        /// <summary>Creates a "master" graph showing the series of the merged graphs together.</summary>
         public void CreateParasiticForm(Form4 f1, Form4 f2)
         {
             var slaves = new List<Form4>();
@@ -158,26 +158,26 @@ namespace SerialPortMacros
         }
 
         // ------------------------------------------------------------------
-        // Interfacce (Form7)
+        // Interfaces (Form7)
         // ------------------------------------------------------------------
 
-        // Nuova interfaccia
+        // New interface
         private void button21_Click(object sender, EventArgs e)
         {
             new Form7(this, true, true).Show();
         }
 
-        // Apri interfaccia
+        // Open interface
         private void button22_Click(object sender, EventArgs e)
         {
-            string? file = PickFile(AppPaths.Interfaces, "Interfacce SPM (*.spm)|*.spm", "Apri interfaccia");
+            string? file = PickFile(AppPaths.Interfaces, "SPM interfaces (*.spm)|*.spm", "Open interface");
             if (file != null) OpenInterface(file, false);
         }
 
-        // Apri interfaccia in modalità editor
+        // Open interface in editor mode
         private void button23_Click(object sender, EventArgs e)
         {
-            string? file = PickFile(AppPaths.Interfaces, "Interfacce SPM (*.spm)|*.spm", "Apri interfaccia da modificare");
+            string? file = PickFile(AppPaths.Interfaces, "SPM interfaces (*.spm)|*.spm", "Open interface to edit");
             if (file != null) OpenInterface(file, true);
         }
 
@@ -202,12 +202,12 @@ namespace SerialPortMacros
         }
 
         // ------------------------------------------------------------------
-        // Sequenze
+        // Sequences
         // ------------------------------------------------------------------
 
         private string? _currentSequence;
 
-        // Play / pausa / riprendi
+        // Play / pause / resume
         private async void button24_Click(object sender, EventArgs e)
         {
             if (_sequence.IsRunning)
@@ -246,7 +246,7 @@ namespace SerialPortMacros
             }
         }
 
-        // Scelta del file di sequenza
+        // Sequence file selection
         private void button25_Click(object sender, EventArgs e)
         {
             string? file = PickFile(AppPaths.Sequences, "All files (*.*)|*.*", "Select a sequence");
@@ -256,7 +256,7 @@ namespace SerialPortMacros
             button25.Text = Path.GetFileName(file);
         }
 
-        /// <summary>Thread della sequenza: invio diretto, testo e log thread-safe.</summary>
+        /// <summary>Sequence thread: direct send, thread-safe text and log.</summary>
         private void OnSequenceCommand(int[] ports, string message)
         {
             foreach (int p in ports)

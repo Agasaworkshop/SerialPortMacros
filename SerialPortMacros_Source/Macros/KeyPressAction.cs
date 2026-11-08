@@ -4,18 +4,18 @@ using WindowsInput;
 namespace SerialPortMacros.Macros;
 
 /// <summary>
-/// Simulazione di tastiera/mouse per le macro "Keypress".
+/// Keyboard/mouse simulation for "Keypress" macros.
 ///
-///   a          preme il tasto 'a'          testo   scrive il testo
-///   *1B        codice virtual-key esadecimale (qui ESC)
-///   +a / -a    tasto giù / su
-///   %200%a     tiene premuto per 200 ms (con un testo: lo ripete per 200 ms)
-///   !LMB !RMB !MMB   click del mouse (anche con %ms%)
-///   ===        usa come comando il testo ricevuto dopo "==="
+///   a          presses the 'a' key         text    types the text
+///   *1B        hex virtual-key code (here ESC)
+///   +a / -a    key down / up
+///   %200%a     holds the key for 200 ms (with a text: repeats it for 200 ms)
+///   !LMB !RMB !MMB   mouse click (also with %ms%)
+///   ===        uses the text received after "===" as the command
 /// </summary>
 public static class KeyPressAction
 {
-    /// <summary>Esegue l'azione su un thread separato (può contenere attese).</summary>
+    /// <summary>Runs the action on a separate thread (it may contain waits).</summary>
     public static void Run(string spec, string data)
     {
         var thread = new Thread(() =>
@@ -29,58 +29,58 @@ public static class KeyPressAction
         thread.Start();
     }
 
-    public static void Execute(string car, string data)
+    public static void Execute(string spec, string data)
     {
         int time = 0;
         bool raw = false, press = false, release = false;
         char singleKey = '\0';
 
-        if (car == "===")
-            car = data.Length > 3 ? data.Substring(3) : "";
+        if (spec == "===")
+            spec = data.Length > 3 ? data.Substring(3) : "";
 
-        if (string.IsNullOrEmpty(car))
+        if (string.IsNullOrEmpty(spec))
             return;
 
         var sim = new InputSimulator();
         VirtualKeyCode key = default;
 
-        if (car[0] == '*')
+        if (spec[0] == '*')
         {
-            car = car.Substring(1);
+            spec = spec.Substring(1);
             raw = true;
         }
 
-        if (car.Length > 0 && car[0] == '%')
+        if (spec.Length > 0 && spec[0] == '%')
         {
             int i = 1;
-            while (i < car.Length && car[i] != '%')
+            while (i < spec.Length && spec[i] != '%')
             {
-                time = time * 10 + (car[i] - '0');
+                time = time * 10 + (spec[i] - '0');
                 i++;
             }
-            car = i + 1 <= car.Length ? car.Substring(i + 1) : "";
+            spec = i + 1 <= spec.Length ? spec.Substring(i + 1) : "";
         }
-        else if (car.Length > 0 && car[0] == '+')
+        else if (spec.Length > 0 && spec[0] == '+')
         {
             press = true;
-            car = car.Substring(1);
+            spec = spec.Substring(1);
         }
-        else if (car.Length > 0 && car[0] == '-')
+        else if (spec.Length > 0 && spec[0] == '-')
         {
             release = true;
-            car = car.Substring(1);
+            spec = spec.Substring(1);
         }
 
-        if (car.Length == 0)
+        if (spec.Length == 0)
             return;
 
-        if (car.Length == 1)
+        if (spec.Length == 1)
         {
-            singleKey = car[0];
-            key = (VirtualKeyCode)car[0];
+            singleKey = spec[0];
+            key = (VirtualKeyCode)spec[0];
         }
         if (raw)
-            key = (VirtualKeyCode)Convert.ToInt32(car, 16);
+            key = (VirtualKeyCode)Convert.ToInt32(spec, 16);
 
         if (singleKey != '\0' || raw)
         {
@@ -98,35 +98,35 @@ public static class KeyPressAction
 
         if (time == 0)
         {
-            if (car[0] != '!') sim.Keyboard.TextEntry(car);
-            else if (car == "!LMB") sim.Mouse.LeftButtonClick();
-            else if (car == "!RMB") sim.Mouse.RightButtonClick();
-            else if (car == "!MMB") sim.Mouse.MiddleButtonClick();
+            if (spec[0] != '!') sim.Keyboard.TextEntry(spec);
+            else if (spec == "!LMB") sim.Mouse.LeftButtonClick();
+            else if (spec == "!RMB") sim.Mouse.RightButtonClick();
+            else if (spec == "!MMB") sim.Mouse.MiddleButtonClick();
             return;
         }
 
-        if (car[0] != '!')
+        if (spec[0] != '!')
         {
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds < time)
             {
-                sim.Keyboard.TextEntry(car);
+                sim.Keyboard.TextEntry(spec);
                 Thread.Sleep(10);
             }
         }
-        else if (car == "!LMB")
+        else if (spec == "!LMB")
         {
             sim.Mouse.LeftButtonDown();
             Wait(time);
             sim.Mouse.LeftButtonUp();
         }
-        else if (car == "!RMB")
+        else if (spec == "!RMB")
         {
             sim.Mouse.RightButtonDown();
             Wait(time);
             sim.Mouse.RightButtonUp();
         }
-        else if (car == "!MMB")
+        else if (spec == "!MMB")
         {
             sim.Mouse.MiddleButtonDown();
             Wait(time);
@@ -134,7 +134,7 @@ public static class KeyPressAction
         }
     }
 
-    /// <summary>Attesa precisa (Thread.Sleep da solo ha risoluzione ~15 ms).</summary>
+    /// <summary>Precise wait (Thread.Sleep alone has ~15 ms resolution).</summary>
     public static void Wait(int milliseconds)
     {
         var sw = Stopwatch.StartNew();

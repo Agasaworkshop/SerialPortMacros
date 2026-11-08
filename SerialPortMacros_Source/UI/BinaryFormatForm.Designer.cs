@@ -55,7 +55,7 @@ namespace SerialPortMacros
             labelHelp.Name = "labelHelp";
             labelHelp.Size = new Size(616, 75);
             labelHelp.TabIndex = 0;
-            labelHelp.Text = "Campi in ordine di trasmissione: [nome:]tipo[[n]][*scala][+offset]\r\n  u5 = intero senza segno 5 bit   i13 = intero con segno 13 bit   b = 1 bit\r\n  f32 / f16 / f64 = float          x3 = 3 bit da ignorare\r\n  acc:i16[3] = 3 campi   temp:i16*0.01   p:u10*0.1-40\r\nEs.: a:u5 b:u13 c:f32 d:i6";
+            labelHelp.Text = "Fields in transmission order: [name:]type[[n]][*scale][+offset]\r\n  u5 = 5-bit unsigned int   i13 = 13-bit signed int   b = 1 bit\r\n  f32 / f16 / f64 = float     x3 = 3 bits to skip\r\n  acc:i16[3] = 3 fields   temp:i16*0.01   p:u10*0.1-40\r\nE.g.: a:u5 b:u13 c:f32 d:i6";
             //
             // labelFields
             //
@@ -93,7 +93,7 @@ namespace SerialPortMacros
             textHeader.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             textHeader.Location = new Point(122, 209);
             textHeader.Name = "textHeader";
-            textHeader.PlaceholderText = "es. AA 55 (vuoto = nessuno)";
+            textHeader.PlaceholderText = "e.g. AA 55 (empty = none)";
             textHeader.Size = new Size(506, 23);
             textHeader.TabIndex = 4;
             textHeader.TextChanged += Inputs_Changed;
@@ -112,7 +112,7 @@ namespace SerialPortMacros
             comboEndian.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             comboEndian.DropDownStyle = ComboBoxStyle.DropDownList;
             comboEndian.FormattingEnabled = true;
-            comboEndian.Items.AddRange(new object[] { "Little-endian / LSB first (ARM, AVR, ESP32: struct in memoria)", "Big-endian / MSB first (ordine di rete)" });
+            comboEndian.Items.AddRange(new object[] { "Little-endian / LSB first (ARM, AVR, ESP32: struct in memory)", "Big-endian / MSB first (network order)" });
             comboEndian.Location = new Point(122, 241);
             comboEndian.Name = "comboEndian";
             comboEndian.Size = new Size(506, 23);
@@ -161,7 +161,7 @@ namespace SerialPortMacros
             textTestInput.Font = new Font("Consolas", 9.5F, FontStyle.Regular, GraphicsUnit.Point);
             textTestInput.Location = new Point(122, 349);
             textTestInput.Name = "textTestInput";
-            textTestInput.PlaceholderText = "byte di prova in esadecimale, es. AA 55 03 10 27 ...";
+            textTestInput.PlaceholderText = "test bytes in hex, e.g. AA 55 03 10 27 ...";
             textTestInput.Size = new Size(506, 22);
             textTestInput.TabIndex = 11;
             textTestInput.TextChanged += Inputs_Changed;

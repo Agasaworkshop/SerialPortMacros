@@ -6,9 +6,9 @@ using System.Windows.Forms;
 
 namespace SerialPortMacros
 {
+    /// <summary>Configuration dialog of an interface element (opened by Form7).</summary>
     public partial class Form8 : Form
     {
-
         public string ModuleDirectory { get; set; } = "";
         private readonly string[] _moduleTypes =
         {
@@ -43,22 +43,37 @@ namespace SerialPortMacros
             checkBox3.CheckedChanged += PortCheckBox_CheckedChanged;
             checkBox4.CheckedChanged += PortCheckBox_CheckedChanged;
 
-            var browseButton = FindControl<Button>("btnSfogliaImmagine");
+            var browseButton = FindControl<Button>("btnBrowseImage");
             if (browseButton != null)
-                browseButton.Click += btnSfogliaImmagine_Click;
+                browseButton.Click += BrowseImageButton_Click;
 
-            var applyButton = FindControl<Button>("btnApplica");
+            var applyButton = FindControl<Button>("btnApply");
             if (applyButton != null)
             {
                 applyButton.DialogResult = DialogResult.None;
-                applyButton.Click += btnApplica_Click;
+                applyButton.Click += ApplyButton_Click;
             }
 
             if (comboBox1.Items.Count > 0 && comboBox1.SelectedIndex < 0)
                 comboBox1.SelectedIndex = 0;
 
+            // Filled here, not in Load: Form7 selects the element's saved line ending
+            // right after constructing this form, before it is shown.
+            InitializeLineEndingCombo();
+
             UpdateVisibleOptions();
             AcceptButton = applyButton;
+        }
+
+        private void InitializeLineEndingCombo()
+        {
+            lineEndingCombo.Items.Clear();
+            lineEndingCombo.Items.Add("Inherit from Form1");
+            lineEndingCombo.Items.Add("No line ending");
+            lineEndingCombo.Items.Add("New line (\\n)");
+            lineEndingCombo.Items.Add("Carriage return (\\r)");
+            lineEndingCombo.Items.Add("Both NL & CR (\\r\\n)");
+            lineEndingCombo.SelectedIndex = 0;
         }
 
         public Form8(ModuleConfiguration existingConfiguration) : this()
@@ -111,7 +126,7 @@ namespace SerialPortMacros
 
             textBox2.Enabled = isNumericOutput || isNumericInput || isToggle;
             textBox1.Enabled = isToggle || isLed;
-            textBox4.Enabled = isButton || isToggle || isLabel; // Abilitato anche per la Label (testo fisso)
+            textBox4.Enabled = isButton || isToggle || isLabel; // Also enabled for Label (fixed text)
             textBox3.Enabled = isToggle;
             textBox5.Enabled = isLed || isButton;
 
@@ -131,7 +146,7 @@ namespace SerialPortMacros
             SetLabelEnabled("lblLedCondition", isLed);
         }
 
-        private void btnSfogliaImmagine_Click(object sender, EventArgs e)
+        private void BrowseImageButton_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog dialog = new OpenFileDialog())
             {
@@ -170,7 +185,7 @@ namespace SerialPortMacros
             }
         }
 
-        private void btnApplica_Click(object sender, EventArgs e)
+        private void ApplyButton_Click(object sender, EventArgs e)
         {
             ModuleConfiguration newConfiguration;
             string validationError;
@@ -306,17 +321,6 @@ namespace SerialPortMacros
 
         private void Form8_Load(object sender, EventArgs e)
         {
-            var combo = FindControl<ComboBox>("lineEndingCombo");
-            if (combo != null)
-            {
-                combo.Items.Clear();
-                combo.Items.Add("Inherit from Form1");
-                combo.Items.Add("No line ending");
-                combo.Items.Add("New line (\\n)");
-                combo.Items.Add("Carriage return (\\r)");
-                combo.Items.Add("Both NL & CR (\\r\\n)");
-                combo.SelectedIndex = 0;
-            }
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -335,7 +339,7 @@ namespace SerialPortMacros
 
             if (result == DialogResult.Yes)
             {
-                // Non elimina la cartella dal disco, segnala solo di rimuovere l'elemento singolo
+                // Does not delete anything on disk: only tells Form7 to remove this element
                 DialogResult = DialogResult.Abort;
                 Close();
             }

@@ -1,10 +1,10 @@
 namespace SerialPortMacros.Core;
 
 /// <summary>
-/// Gestione thread-safe dei file di log di una sessione.
-/// Un file per ogni porta abilitata + un file "misto" quando le porte sono più di una.
-/// La scrittura è bufferizzata: <see cref="Flush"/> viene chiamato periodicamente
-/// dal thread di processing.
+/// Thread-safe handling of the log files of one session.
+/// One file per enabled port, plus a "mixed" file when more than one port is logged.
+/// Writes are buffered: <see cref="Flush"/> is called periodically by the
+/// processing thread.
 /// </summary>
 public sealed class LogManager
 {
@@ -13,10 +13,10 @@ public sealed class LogManager
     private StreamWriter? _mixedWriter;
     private volatile bool _active;
 
-    /// <summary>Aggiunge "HH:mm:ss.fff | " a ogni riga.</summary>
+    /// <summary>Prefixes every line with "HH:mm:ss.fff | ".</summary>
     public volatile bool TimeStamps = true;
 
-    /// <summary>Se true, anche i comandi inviati (utente, macro, sequenze) vengono loggati.</summary>
+    /// <summary>If true, sent commands (user, macros, sequences) are logged too.</summary>
     public volatile bool LogUserInput;
 
     public bool IsActive => _active;
@@ -25,7 +25,7 @@ public sealed class LogManager
     public string? MixedLogPath { get; private set; }
     public string? SessionDirectory { get; private set; }
 
-    /// <summary>Apre una nuova sessione di log. <paramref name="enabledPorts"/> ha 4 elementi.</summary>
+    /// <summary>Opens a new log session. <paramref name="enabledPorts"/> has 4 elements.</summary>
     public void Start(bool[] enabledPorts)
     {
         lock (_lock)
@@ -58,7 +58,7 @@ public sealed class LogManager
         }
     }
 
-    /// <summary>Chiude la sessione. Restituisce i percorsi dei log per porta (null se non usata).</summary>
+    /// <summary>Closes the session. Returns the per-port log paths (null for unused ports).</summary>
     public string?[] Stop()
     {
         lock (_lock)
@@ -69,7 +69,7 @@ public sealed class LogManager
         }
     }
 
-    /// <summary>Riga ricevuta dalla porta logica <paramref name="logicalPort"/> (1..4).</summary>
+    /// <summary>Line received from logical port <paramref name="logicalPort"/> (1..4).</summary>
     public void WriteReceived(int logicalPort, string source, string text, DateTime when)
     {
         if (!_active) return;
@@ -86,7 +86,7 @@ public sealed class LogManager
         }
     }
 
-    /// <summary>Comando inviato: scritto in tutti i log aperti (se abilitato).</summary>
+    /// <summary>Sent command: written to every open log (if enabled).</summary>
     public void WriteSent(string text)
     {
         if (!_active || !LogUserInput) return;

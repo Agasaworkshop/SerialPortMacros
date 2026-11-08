@@ -2,7 +2,7 @@ namespace SerialPortMacros.Core;
 
 public static class ColorUtils
 {
-    /// <summary>Colore del testo per ciascuna porta logica (1..4).</summary>
+    /// <summary>Text color of each logical port (1..4).</summary>
     public static Color PortColor(int logicalPort) => logicalPort switch
     {
         1 => Color.Red,
@@ -34,7 +34,7 @@ public static class ColorUtils
         };
     }
 
-    /// <summary>Colori ben distinguibili, distribuiti uniformemente sullo spettro.</summary>
+    /// <summary>Easily distinguishable colors, evenly spread over the hue spectrum.</summary>
     public static Color Distinct(int index, int total)
     {
         double hue = 360.0 / Math.Max(total, 1) * index;

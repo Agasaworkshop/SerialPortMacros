@@ -3,8 +3,8 @@ using SerialPortMacros.Transport;
 namespace SerialPortMacros.Core;
 
 /// <summary>
-/// Punto di accesso unico (thread-safe) alle 4 porte logiche e ai servizi condivisi:
-/// usato da Form1, dalle macro, dalle sequenze e dalle interfacce.
+/// Single thread-safe access point to the 4 logical ports and the shared services,
+/// used by Form1, macros, sequences and interfaces.
 /// </summary>
 public sealed class PortHub
 {
@@ -26,7 +26,7 @@ public sealed class PortHub
     public LiveData Live { get; }
     public PortChannel[] Channels { get; }
 
-    /// <summary>Porta logica 1..4.</summary>
+    /// <summary>Logical port 1..4.</summary>
     public PortChannel this[int logicalPort] => Channels[logicalPort - 1];
 
     public bool Send(int logicalPort, string text) =>
@@ -35,7 +35,7 @@ public sealed class PortHub
     public bool Send(int logicalPort, byte[] data) =>
         logicalPort is >= 1 and <= AppSettings.PortCount && this[logicalPort].Send(data);
 
-    /// <summary>Invia alle porte con targets[i] == true (indice 0 = porta 1).</summary>
+    /// <summary>Sends to every port with targets[i] == true (index 0 = port 1).</summary>
     public void SendTo(bool[] targets, string text)
     {
         for (int i = 0; i < Channels.Length && i < targets.Length; i++)
@@ -43,7 +43,7 @@ public sealed class PortHub
                 Channels[i].Send(text);
     }
 
-    /// <summary>Aggiunge una riga al testo a video (da qualunque thread).</summary>
+    /// <summary>Adds a line to the on-screen text (from any thread).</summary>
     public void Show(string text, string user, Color color) =>
         Display.Add(Pipeline.FormatLine(text, user, DateTime.Now), color);
 }

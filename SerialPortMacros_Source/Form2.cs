@@ -4,13 +4,13 @@ using SerialPortMacros.Decoding;
 
 namespace SerialPortMacros
 {
-    /// <summary>Impostazioni di una porta: parametri seriali e formato dei dati ricevuti.</summary>
+    /// <summary>Port settings: serial parameters and received data format.</summary>
     public partial class Form2 : Form
     {
         private readonly SerialPort _port;
         private readonly bool _tcpMode;
 
-        /// <summary>Formato dati scelto (valido dopo DialogResult.OK).</summary>
+        /// <summary>Chosen data format (valid after DialogResult.OK).</summary>
         public PortDataFormat DataFormat { get; private set; }
 
         public Form2(SerialPort port, PortDataFormat format, bool tcpMode)
@@ -37,7 +37,7 @@ namespace SerialPortMacros
                 checkBox1.Checked = true;
             }
 
-            // In modalità TCP i parametri seriali non hanno effetto.
+            // Serial parameters have no effect in TCP mode.
             Paritybox.Enabled = databitsbox.Enabled = stopbitsbox.Enabled =
                 textBox1.Enabled = checkBox1.Enabled = !_tcpMode;
 
@@ -67,7 +67,7 @@ namespace SerialPortMacros
                 }
                 catch (Exception ex)
                 {
-                    // Alcuni parametri non si possono cambiare a porta aperta.
+                    // Some parameters cannot be changed while the port is open.
                     MessageBox.Show(ex.Message, "Serial settings", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }

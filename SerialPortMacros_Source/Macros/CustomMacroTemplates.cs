@@ -2,25 +2,25 @@ using SerialPortMacros.Core;
 
 namespace SerialPortMacros.Macros;
 
-/// <summary>File di esempio creati nella cartella custom_macros.</summary>
+/// <summary>Example files created in the custom_macros folder.</summary>
 public static class CustomMacroTemplates
 {
-    public const string Simple = @"// Macro custom semplice: (porta, stringa) in ingresso -> (porta, stringa) in uscita.
-// Il file viene compilato automaticamente quando premi Play.
+    public const string Simple = @"// Simple custom macro: (port, string) in -> (port, string) out.
+// This file is compiled automatically when you press Play.
 //
-// Nella finestra Macros scegli ""Custom code"" e scrivi il nome di questo file.
-// La chiave e le porte della macro decidono quali messaggi arrivano qui
-// (chiave ""*"" = tutti i messaggi delle porte selezionate).
+// In the Macros window choose ""Custom code"" and enter the name of this file.
+// The macro key and ports decide which messages reach this code
+// (key ""*"" = every message from the selected ports).
 
 public class MyMacro : SimpleMacro
 {
     protected override void OnStart()
     {
-        Context.Print(""MyMacro avviata"");
+        Context.Print(""MyMacro started"");
     }
 
-    // port: porta di provenienza (1..4). Restituisci (porta di destinazione, messaggio)
-    // oppure null per non inviare nulla. Porta 0 = stessa porta, -1 = tutte.
+    // port: source port (1..4). Return (destination port, message)
+    // or null to send nothing. Port 0 = same port, -1 = all ports.
     public override (int Port, string Message)? OnMessage(int port, string message)
     {
         if (message.StartsWith(""PING""))
@@ -30,27 +30,27 @@ public class MyMacro : SimpleMacro
     }
 }";
 
-    public const string Full = @"// Macro custom completa (ICustomMacro).
+    public const string Full = @"// Full custom macro (ICustomMacro).
 //
-//  input.Port     porta di provenienza 1..4
-//  input.Message  la stringa ricevuta (per i frame binari: la traduzione in testo)
-//  input.Values   i numeri del messaggio (estratti dal testo o decodificati dal frame binario)
-//  input.Time     tempo in secondi (monotono, utile per calcolare dt)
+//  input.Port     source port 1..4
+//  input.Message  the received string (for binary frames: the values rendered as text)
+//  input.Values   the message numbers (parsed from the text or decoded from the binary frame)
+//  input.Time     time in seconds (monotonic, handy to compute dt)
 //
-//  Restituisci zero, uno o più MacroOutput:
-//    MacroOutput.Line(2, ""testo"")          riga + ""\n"" sulla porta 2
-//    MacroOutput.Raw(1, ""testo"")           testo così com'è
-//    MacroOutput.Bytes(1, new byte[]{..})  byte grezzi
-//    MacroOutput.Reply(""ok"")               riga sulla porta di provenienza
+//  Return zero, one or more MacroOutput:
+//    MacroOutput.Line(2, ""text"")           line + ""\n"" on port 2
+//    MacroOutput.Raw(1, ""text"")            text sent as is
+//    MacroOutput.Bytes(1, new byte[]{..})  raw bytes
+//    MacroOutput.Reply(""ok"")               line on the source port
 //
-//  Context (passato a Start):
-//    Context.Variables[""nome""]   variabili condivise con le interfacce (Form7)
-//    Context.Send(porta, testo)  invio da un tuo timer/thread
-//    Context.Print(testo)        scrive nella finestra principale
+//  Context (passed to Start):
+//    Context.Variables[""name""]   variables shared with the interfaces (Form7)
+//    Context.Send(port, text)    send from your own timer/thread
+//    Context.Print(text)         writes to the main window
 //
-//  Process viene chiamato sul thread di elaborazione, mai in parallelo con sé stesso:
-//  tienilo veloce. Lo stato dei campi resta fra un messaggio e l'altro
-//  (viene azzerato quando la macro viene ricaricata).
+//  Process runs on the processing thread, never in parallel with itself:
+//  keep it fast. Field values persist between messages
+//  (they are reset when the macro is reloaded).
 
 public class MyFullMacro : ICustomMacro
 {
@@ -74,7 +74,7 @@ public class MyFullMacro : ICustomMacro
         double value = input.Values[0];
         Context.Variables[""last_value""] = value;
 
-        // Esempio: rimanda il primo valore raddoppiato alla porta 2.
+        // Example: send the first value, doubled, to port 2.
         yield return MacroOutput.Line(2, (value * 2).ToString(CultureInfo.InvariantCulture));
     }
 
@@ -83,7 +83,7 @@ public class MyFullMacro : ICustomMacro
     }
 }";
 
-    /// <summary>Crea gli esempi se la cartella è vuota.</summary>
+    /// <summary>Creates the examples if the folder is empty.</summary>
     public static void EnsureExamples()
     {
         string dir = AppPaths.CustomMacros;
@@ -99,7 +99,7 @@ public class MyFullMacro : ICustomMacro
         }
     }
 
-    /// <summary>Crea un nuovo file da template (se non esiste) e ne restituisce il percorso.</summary>
+    /// <summary>Creates a new file from the template (if missing) and returns its path.</summary>
     public static string CreateIfMissing(string spec)
     {
         string path = CustomMacroLoader.ResolvePath(spec, out _);

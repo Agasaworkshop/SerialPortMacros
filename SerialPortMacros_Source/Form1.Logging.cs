@@ -3,7 +3,7 @@ using SerialPortMacros.Core;
 
 namespace SerialPortMacros
 {
-    // Sessioni di log su file.
+    // Log sessions to file.
     public partial class Form1
     {
         private bool _stopRequested;
@@ -38,7 +38,7 @@ namespace SerialPortMacros
             _stopRequested = true;
             button14.Text = "Waiting...";
 
-            // Il log resta attivo mentre il micro risponde (es. "mandami il log").
+            // Logging stays active while the micro answers (e.g. "send me the log").
             if (_settings.LogStopMessage != "")
                 SendUserCommand(_settings.LogStopMessage);
 
@@ -48,7 +48,7 @@ namespace SerialPortMacros
                 return;
             }
 
-            // Chiude quando non arrivano più dati da 1 secondo.
+            // Closes when no data has arrived for 1 second.
             _stopRequestTick = Environment.TickCount64;
             StartWatchdog();
         }
@@ -109,13 +109,13 @@ namespace SerialPortMacros
             }
         }
 
-        // Apre la cartella dei log
+        // Opens the logs folder
         private void button7_Click_1(object sender, EventArgs e)
         {
             Process.Start(new ProcessStartInfo { FileName = AppPaths.Logs, UseShellExecute = true });
         }
 
-        // Trascinamento di un file di log sull'etichetta: apre il visualizzatore.
+        // Dropping a log file on the label opens the viewer.
         private void label5_DragEnter(object sender, DragEventArgs e)
         {
             e.Effect = e.Data?.GetDataPresent(DataFormats.FileDrop) == true
@@ -132,7 +132,7 @@ namespace SerialPortMacros
                 new Log(files[0]).Show();
         }
 
-        // Messaggi di inizio/fine log
+        // Log start/stop messages
         private void button20_Click(object sender, EventArgs e)
         {
             new Form6(this, _settings.LogStartMessage, _settings.LogStopMessage, _settings.LogWaitForEnd).Show();

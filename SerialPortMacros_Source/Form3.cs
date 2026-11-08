@@ -4,7 +4,7 @@ using SerialPortMacros.Macros;
 
 namespace SerialPortMacros
 {
-    /// <summary>Elenco e modifica delle macro.</summary>
+    /// <summary>Macro list and editor.</summary>
     public partial class Form3 : Form
     {
         private const string EffectKeypress = "Keypress";
@@ -13,8 +13,8 @@ namespace SerialPortMacros
 
         public Form1 form1;
         private bool _isLoading;
-        // Durante il caricamento della lista la selezione e le spunte cambiano da sole:
-        // in quella fase non va salvato nulla (altrimenti si scriverebbero stati sbagliati nei file).
+        // While the list is loading, selection and check marks change on their own:
+        // nothing must be saved in that phase (wrong states would be written to the files).
         private bool _initializing = true;
         private int last_index;
         private Script? c_script;
@@ -24,7 +24,7 @@ namespace SerialPortMacros
             form1 = form;
             InitializeComponent();
 
-            // Popola i ComboBox prima di associare il DataSource (che scatena gli eventi).
+            // Fill the ComboBoxes before binding the DataSource (which raises events).
             comboBox2.Items.Clear();
             comboBox2.Items.AddRange(LineEndings.ShortNames);
 
@@ -47,7 +47,7 @@ namespace SerialPortMacros
             FinishLoading();
         }
 
-        /// <summary>Applica le spunte salvate e mostra la macro selezionata, poi abilita il salvataggio.</summary>
+        /// <summary>Applies the saved check marks and shows the selected macro, then enables saving.</summary>
         private void FinishLoading()
         {
             _initializing = true;
@@ -84,7 +84,7 @@ namespace SerialPortMacros
             Close();
         }
 
-        // Chiudi (salvando la macro selezionata)
+        // Close (saving the selected macro)
         private void button1_Click(object sender, EventArgs e)
         {
             int index = checkedListBox1.SelectedIndex;
@@ -148,10 +148,10 @@ namespace SerialPortMacros
                 checkedListBox1.SetItemCheckState(i, form1.scripts[i].active ? CheckState.Checked : CheckState.Unchecked);
         }
 
-        // Nuovo file macro
+        // New macro file
         private void button3_Click(object sender, EventArgs e)
         {
-            // Salva le modifiche della macro selezionata prima di ricaricare la lista dai file.
+            // Save the selected macro's changes before reloading the list from the files.
             int selected = checkedListBox1.SelectedIndex;
             if (selected >= 0)
                 Applychanges(checkedListBox1.GetItemCheckState(selected) == CheckState.Checked);
@@ -176,7 +176,7 @@ namespace SerialPortMacros
             FinishLoading();
         }
 
-        // Crea/apre il file di codice della macro custom
+        // Creates/opens the code file of the custom macro
         private void button4_Click(object sender, EventArgs e)
         {
             string spec = textBox4.Text.Trim();
@@ -207,7 +207,7 @@ namespace SerialPortMacros
                 }
                 catch
                 {
-                    // Nessun programma associato ai .cs
+                    // No program associated with .cs files
                     Process.Start("notepad.exe", $"\"{path}\"");
                 }
             }
@@ -217,12 +217,12 @@ namespace SerialPortMacros
             }
         }
 
-        // Sceglie un file di codice (.cs o .dll) con una finestra di dialogo
+        // Picks a code file (.cs or .dll) with a file dialog
         private void button5_Click(object sender, EventArgs e)
         {
             string folder = AppPaths.CustomMacros;
 
-            // Parte dalla cartella del file già indicato, se esiste.
+            // Start from the folder of the current file, if it exists.
             string current = textBox4.Text.Trim();
             if (current.Length > 0)
             {
@@ -243,13 +243,13 @@ namespace SerialPortMacros
 
             textBox4.Text = ToMacroSpec(dialog.FileName);
 
-            // Verifica subito che il file contenga una macro valida.
+            // Check right away that the file contains a valid macro.
             string? error = CustomMacroLoader.Check(textBox4.Text);
             if (error != null)
                 MessageBox.Show(error, "Macro code", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
-        /// <summary>File dentro custom_macros: solo il nome (resta valido se sposti il programma); altrove: percorso completo.</summary>
+        /// <summary>File inside custom_macros: name only (stays valid if the program is moved); elsewhere: full path.</summary>
         private static string ToMacroSpec(string path)
         {
             string folder = Path.GetFullPath(AppPaths.CustomMacros).TrimEnd('\\') + "\\";
@@ -278,8 +278,8 @@ namespace SerialPortMacros
             button4.Visible = custom;
             button5.Visible = custom;
 
-            // La riga "Reply" (testo, porte di destinazione, fine riga) vale solo per "Write back":
-            // una macro custom sceglie da sola a quale porta scrivere.
+            // The "Reply" row (text, destination ports, line ending) applies only to "Write back":
+            // a custom macro chooses by itself which port to write to.
             bool reply = comboBox1.Text == EffectReply;
             comboBox2.Enabled = reply;
             textBox3.Enabled = reply;

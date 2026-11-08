@@ -1,22 +1,22 @@
 using System.Collections.Concurrent;
 
 // =====================================================================================
-//  API PUBBLICA PER LE MACRO CUSTOM
+//  PUBLIC API FOR CUSTOM MACROS
 //
-//  Una macro custom è una classe C# che implementa ICustomMacro (oppure eredita da
-//  SimpleMacro). Può stare in:
-//    - un file .cs nella cartella "custom_macros": viene compilato automaticamente;
-//    - una .dll compilata a parte (progetto Class Library che referenzia SerialPortMacros.dll).
+//  A custom macro is a C# class that implements ICustomMacro (or derives from
+//  SimpleMacro). It can live in:
+//    - a .cs file in the "custom_macros" folder: it is compiled automatically;
+//    - a separately built .dll (Class Library project referencing SerialPortMacros.dll).
 //
-//  Il codice viene chiamato dal thread di processing per ogni messaggio che passa il
-//  filtro della macro (chiave + porte). Mai in parallelo con sé stesso.
-//  Deve essere veloce: un'elaborazione lenta rallenta l'intera pipeline. Per lavori
-//  lunghi o periodici usa un tuo thread/timer e IMacroContext.Send().
+//  The code is called by the processing thread for every message that passes the
+//  macro filter (key + ports), never in parallel with itself.
+//  It must be fast: slow code slows down the whole pipeline. For long or periodic
+//  work use your own thread/timer and IMacroContext.Send().
 // =====================================================================================
 
 namespace SerialPortMacros.Macros;
 
-/// <summary>Il messaggio che ha attivato la macro.</summary>
+/// <summary>The message that triggered the macro.</summary>
 public sealed class MacroInput
 {
     public MacroInput(int port, string source, string message, IReadOnlyList<double> values, DateTime timestamp, double time)
@@ -29,35 +29,35 @@ public sealed class MacroInput
         Time = time;
     }
 
-    /// <summary>Porta logica di provenienza (1..4).</summary>
+    /// <summary>Source logical port (1..4).</summary>
     public int Port { get; }
 
-    /// <summary>Nome della sorgente ("COM3", "TCP1", ...).</summary>
+    /// <summary>Source name ("COM3", "TCP1", ...).</summary>
     public string Source { get; }
 
-    /// <summary>La stringa ricevuta (per i frame binari: la loro traduzione in testo).</summary>
+    /// <summary>The received string (for binary frames: the values rendered as text).</summary>
     public string Message { get; }
 
     /// <summary>
-    /// I numeri del messaggio: estratti dal testo oppure decodificati dal frame binario
-    /// (nell'ordine dei campi definiti).
+    /// The message numbers: parsed from the text or decoded from the binary frame
+    /// (in the order of the defined fields).
     /// </summary>
     public IReadOnlyList<double> Values { get; }
 
-    /// <summary>Ora di ricezione.</summary>
+    /// <summary>Receive time.</summary>
     public DateTime Timestamp { get; }
 
-    /// <summary>Tempo monotono in secondi (stesso orologio dei grafici): utile per calcolare dt.</summary>
+    /// <summary>Monotonic time in seconds (same clock as the graphs): handy to compute dt.</summary>
     public double Time { get; }
 }
 
-/// <summary>Un messaggio da inviare. Usa i metodi statici per crearlo.</summary>
+/// <summary>A message to send. Use the static methods to create it.</summary>
 public readonly struct MacroOutput
 {
-    /// <summary>Rispondi sulla stessa porta da cui è arrivato il messaggio.</summary>
+    /// <summary>Reply on the same port the message came from.</summary>
     public const int SourcePort = 0;
 
-    /// <summary>Invia a tutte e quattro le porte.</summary>
+    /// <summary>Send to all four ports.</summary>
     public const int AllPorts = -1;
 
     private MacroOutput(int port, string? text, byte[]? data)
@@ -67,77 +67,77 @@ public readonly struct MacroOutput
         Data = data;
     }
 
-    /// <summary>1..4, <see cref="SourcePort"/> o <see cref="AllPorts"/>.</summary>
+    /// <summary>1..4, <see cref="SourcePort"/> or <see cref="AllPorts"/>.</summary>
     public int Port { get; }
 
-    /// <summary>Testo da inviare (già comprensivo dell'eventuale fine riga).</summary>
+    /// <summary>Text to send (already including any line ending).</summary>
     public string? Text { get; }
 
-    /// <summary>Byte grezzi da inviare (in alternativa a <see cref="Text"/>).</summary>
+    /// <summary>Raw bytes to send (instead of <see cref="Text"/>).</summary>
     public byte[]? Data { get; }
 
-    /// <summary>Testo seguito da un fine riga (default "\n").</summary>
+    /// <summary>Text followed by a line ending (default "\n").</summary>
     public static MacroOutput Line(int port, string text, string lineEnding = "\n") =>
         new(port, text + lineEnding, null);
 
-    /// <summary>Testo inviato così com'è.</summary>
+    /// <summary>Text sent as is.</summary>
     public static MacroOutput Raw(int port, string text) => new(port, text, null);
 
-    /// <summary>Byte grezzi (es. un frame binario per il micro).</summary>
+    /// <summary>Raw bytes (e.g. a binary frame for the micro).</summary>
     public static MacroOutput Bytes(int port, byte[] data) => new(port, null, data);
 
-    /// <summary>Riga di risposta sulla porta di provenienza.</summary>
+    /// <summary>Reply line on the source port.</summary>
     public static MacroOutput Reply(string text, string lineEnding = "\n") => Line(SourcePort, text, lineEnding);
 }
 
-/// <summary>Servizi a disposizione della macro.</summary>
+/// <summary>Services available to the macro.</summary>
 public interface IMacroContext
 {
-    /// <summary>Variabili condivise con le interfacce (Form7) e con le altre macro.</summary>
+    /// <summary>Variables shared with the interfaces (Form7) and the other macros.</summary>
     ConcurrentDictionary<string, double> Variables { get; }
 
-    /// <summary>Tempo monotono in secondi (stesso orologio di <see cref="MacroInput.Time"/>).</summary>
+    /// <summary>Monotonic time in seconds (same clock as <see cref="MacroInput.Time"/>).</summary>
     double Now { get; }
 
-    /// <summary>Invia una riga. Utilizzabile anche da thread/timer propri della macro.</summary>
+    /// <summary>Sends a line. Can also be called from the macro's own threads/timers.</summary>
     void Send(int port, string text, string lineEnding = "\n");
 
-    /// <summary>Invia byte grezzi.</summary>
+    /// <summary>Sends raw bytes.</summary>
     void SendBytes(int port, byte[] data);
 
-    /// <summary>Scrive un messaggio nella finestra principale.</summary>
+    /// <summary>Writes a message to the main window.</summary>
     void Print(string text);
 
-    /// <summary>Ultima riga ricevuta su una porta (1..4), o null.</summary>
+    /// <summary>Last line received on a port (1..4), or null.</summary>
     string? LatestMessage(int port);
 
-    /// <summary>Ultimi numeri ricevuti su una porta (1..4), o null.</summary>
+    /// <summary>Last numbers received on a port (1..4), or null.</summary>
     IReadOnlyList<double>? LatestValues(int port);
 }
 
-/// <summary>Contratto completo di una macro custom.</summary>
+/// <summary>Full contract of a custom macro.</summary>
 public interface ICustomMacro
 {
-    /// <summary>Chiamato quando le macro vengono avviate (tasto Play) o ricaricate.</summary>
+    /// <summary>Called when macros are started (Play button) or reloaded.</summary>
     void Start(IMacroContext context) { }
 
     /// <summary>
-    /// Elabora un messaggio. Restituisci i messaggi da inviare, oppure null / vuoto
-    /// per non inviare nulla. Puoi usare "yield return".
+    /// Processes a message. Return the messages to send, or null / empty to send
+    /// nothing. "yield return" can be used.
     /// </summary>
     IEnumerable<MacroOutput>? Process(MacroInput input);
 
-    /// <summary>Chiamato quando le macro vengono fermate o ricaricate.</summary>
+    /// <summary>Called when macros are stopped or reloaded.</summary>
     void Stop() { }
 }
 
 /// <summary>
-/// Versione semplificata: (porta, stringa) in ingresso → (porta, stringa) in uscita.
-/// Restituisci null per non inviare nulla. La stringa di uscita riceve "\n" in coda.
+/// Simplified version: (port, string) in -> (port, string) out.
+/// Return null to send nothing. "\n" is appended to the output string.
 /// </summary>
 public abstract class SimpleMacro : ICustomMacro
 {
-    /// <summary>Disponibile da <see cref="OnStart"/> in poi.</summary>
+    /// <summary>Available from <see cref="OnStart"/> onwards.</summary>
     protected IMacroContext Context { get; private set; } = null!;
 
     void ICustomMacro.Start(IMacroContext context)
@@ -158,8 +158,8 @@ public abstract class SimpleMacro : ICustomMacro
     protected virtual void OnStop() { }
 
     /// <summary>
-    /// <paramref name="port"/>: porta di provenienza 1..4. Restituisci la porta di
-    /// destinazione (1..4, 0 = stessa porta, -1 = tutte) e il messaggio, oppure null.
+    /// <paramref name="port"/>: source port 1..4. Return the destination port
+    /// (1..4, 0 = same port, -1 = all) and the message, or null.
     /// </summary>
     public abstract (int Port, string Message)? OnMessage(int port, string message);
 }

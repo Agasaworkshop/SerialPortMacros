@@ -4,10 +4,10 @@ using SerialPortMacros.Core;
 
 namespace SerialPortMacros
 {
-    // Testo a video, input dell'utente e invio dei comandi.
+    // On-screen text, user input and command sending.
     public partial class Form1
     {
-        /// <summary>Con l'autoscroll attivo il testo più vecchio di questa soglia viene scartato.</summary>
+        /// <summary>With autoscroll on, text older than this limit is discarded.</summary>
         private const int MaxChars = 30000;
 
         [DllImport("user32.dll")]
@@ -17,17 +17,17 @@ namespace SerialPortMacros
         private readonly List<DisplayLine> _drained = new();
         private readonly StringBuilder _displaySb = new();
 
-        private bool is_locked = true;      // autoscroll
-        private bool time_log = true;       // timestamp
-        private bool stop_text;             // l'utente sta selezionando del testo
+        private bool _autoScroll = true;
+        private bool _timeStamps = true;
+        private bool _holdDisplay;          // the user is selecting text: do not append
 
         // ------------------------------------------------------------------
-        // Visualizzazione
+        // Display
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// Aggiunge una riga al testo a video. Da qualunque thread; sul thread UI
-        /// viene mostrata subito.
+        /// Adds a line to the on-screen text. From any thread; on the UI thread it
+        /// is shown immediately.
         /// </summary>
         private void ShowLine(string text, string user, Color color)
         {
@@ -37,13 +37,13 @@ namespace SerialPortMacros
         }
 
         /// <summary>
-        /// Preleva le righe dal <see cref="DisplayBuffer"/> e le scrive nella RichTextBox,
-        /// raggruppando le righe consecutive dello stesso colore in un solo AppendText.
+        /// Takes the lines from the <see cref="DisplayBuffer"/> and writes them to the
+        /// RichTextBox, grouping consecutive lines of the same color into one AppendText.
         /// </summary>
         private void FlushDisplay()
         {
-            if (IsDisposed || stop_text)
-                return; // le righe restano nel buffer (che si limita da solo)
+            if (IsDisposed || _holdDisplay)
+                return; // lines stay in the buffer (which limits itself)
 
             long dropped = _display.DrainTo(_drained);
             if (_drained.Count == 0 && dropped == 0)
@@ -69,9 +69,9 @@ namespace SerialPortMacros
             int selStart = textBox2.SelectionStart;
             int selLength = textBox2.SelectionLength;
 
-            // Con l'autoscroll il testo oltre MaxChars verrebbe comunque scartato: non scriverlo.
+            // With autoscroll, text beyond MaxChars would be discarded anyway: do not write it.
             int startIdx = 0;
-            if (is_locked)
+            if (_autoScroll)
             {
                 int total = 0;
                 for (int k = items.Count - 1; k >= 0; k--)
@@ -88,7 +88,7 @@ namespace SerialPortMacros
                     textBox2.Text = "";
             }
 
-            bool suspend = is_locked && items.Count - startIdx > 1;
+            bool suspend = _autoScroll && items.Count - startIdx > 1;
             if (suspend)
                 SendMessage(textBox2.Handle, WM_SETREDRAW, 0, 0);
 
@@ -124,7 +124,7 @@ namespace SerialPortMacros
                 }
             }
 
-            if (is_locked)
+            if (_autoScroll)
             {
                 textBox2.ScrollToCaret();
             }
@@ -137,17 +137,17 @@ namespace SerialPortMacros
 
         private void textBox2_Enter(object sender, EventArgs e)
         {
-            if (is_locked)
+            if (_autoScroll)
                 ActiveControl = null;
             else
-                stop_text = true;
+                _holdDisplay = true;
         }
 
         private void textBox2_Leave(object sender, EventArgs e)
         {
-            if (!is_locked)
+            if (!_autoScroll)
             {
-                stop_text = false;
+                _holdDisplay = false;
                 FlushDisplay();
             }
         }
@@ -155,12 +155,12 @@ namespace SerialPortMacros
         // Autoscroll
         private void button12_Click(object sender, EventArgs e)
         {
-            SetAutoScroll(!is_locked);
+            SetAutoScroll(!_autoScroll);
         }
 
         private void SetAutoScroll(bool on)
         {
-            is_locked = on;
+            _autoScroll = on;
             button12.Image = on ? Properties.Resources.Lock : Properties.Resources.Unlock;
             toolTip1.SetToolTip(button12, on ? "AutoScrolling on" : "AutoScrolling off");
             textBox2.ScrollBars = on ? RichTextBoxScrollBars.None : RichTextBoxScrollBars.Both;
@@ -170,7 +170,7 @@ namespace SerialPortMacros
             textBox2.ScrollToCaret();
         }
 
-        // Pulisci
+        // Clear
         private void button13_Click(object sender, EventArgs e)
         {
             textBox2.Text = "";
@@ -179,12 +179,12 @@ namespace SerialPortMacros
         // Timestamp
         private void button15_Click(object sender, EventArgs e)
         {
-            SetTimeStamps(!time_log);
+            SetTimeStamps(!_timeStamps);
         }
 
         private void SetTimeStamps(bool on)
         {
-            time_log = on;
+            _timeStamps = on;
             _pipeline.TimeStamps = on;
             _log.TimeStamps = on;
             button15.Image = on ? Properties.Resources.Time_color_16x : Properties.Resources.Time_16x_cross2;
@@ -192,12 +192,12 @@ namespace SerialPortMacros
         }
 
         // ------------------------------------------------------------------
-        // Input dell'utente e cronologia (frecce su/giù)
+        // User input and history (up/down arrows)
         // ------------------------------------------------------------------
 
         private const int MaxHistory = 50;
         private readonly List<string> _commandHistory = new();
-        private int _historyIndex;            // 0 = nessuna voce della cronologia attiva
+        private int _historyIndex;            // 0 = no history entry active
         private bool _changeDueToKey;
 
         private void textBox1_Keypress(object sender, KeyPressEventArgs e)
@@ -262,12 +262,12 @@ namespace SerialPortMacros
         }
 
         // ------------------------------------------------------------------
-        // Invio
+        // Sending
         // ------------------------------------------------------------------
 
         private string SelectedLineEnding => LineEndings.FromIndex(comboBox6.SelectedIndex);
 
-        /// <summary>Comando dell'utente: mostrato, inviato alle porte spuntate e loggato.</summary>
+        /// <summary>User command: shown, sent to the checked ports and logged.</summary>
         private void SendUserCommand(string text)
         {
             ShowLine(text, "You", Color.Black);
@@ -281,8 +281,8 @@ namespace SerialPortMacros
         }
 
         /// <summary>
-        /// Invio dalle interfacce (Form7). <paramref name="targetPorts"/> ha 4 elementi;
-        /// il messaggio può contenere più righe separate da "\n".
+        /// Sending from the interfaces (Form7). <paramref name="targetPorts"/> has 4 elements;
+        /// the message may contain several lines separated by "\n".
         /// </summary>
         public void SendCustomMacroLine(bool[] targetPorts, string message, string customLineEnding = "")
         {
@@ -290,7 +290,7 @@ namespace SerialPortMacros
 
             if (!hasTarget)
             {
-                // Nessuna porta: traccia solo l'azione (es. toggle di una variabile).
+                // No port: only record the action (e.g. toggling a variable).
                 ShowLine(message, "Macro/Form7 (No Port)", Color.Purple);
                 _log.WriteSent(message);
                 return;

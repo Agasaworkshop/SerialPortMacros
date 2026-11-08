@@ -3,8 +3,8 @@ using System.Globalization;
 namespace SerialPortMacros.Core;
 
 /// <summary>
-/// Estrae tutti i numeri presenti in una riga di testo ("T=12.5 H=-3" -> [12.5, -3]).
-/// Stessa logica della versione originale in Form1, ma senza allocare sottostringhe.
+/// Extracts every number found in a line of text ("T=12.5 H=-3" -> [12.5, -3]).
+/// Same rules as the original Form1 version, without allocating substrings.
 /// </summary>
 public static class NumberParser
 {

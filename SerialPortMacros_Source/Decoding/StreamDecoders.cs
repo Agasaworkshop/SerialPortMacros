@@ -2,13 +2,13 @@ using System.Text;
 
 namespace SerialPortMacros.Decoding;
 
-/// <summary>Un messaggio estratto dal flusso di byte.</summary>
+/// <summary>A message extracted from the byte stream.</summary>
 public readonly record struct DecodedFrame(string Text, double[]? Values);
 
 /// <summary>
-/// Trasforma il flusso di byte di una porta in messaggi.
-/// Ogni porta ha la sua istanza; <see cref="Feed"/> viene chiamato sempre dallo stesso
-/// thread di ricezione (evento seriale o task TCP).
+/// Turns the byte stream of a port into messages.
+/// Each port has its own instance; <see cref="Feed"/> is always called from the same
+/// receive thread (serial event or TCP task).
 /// </summary>
 public interface IStreamDecoder
 {
@@ -16,7 +16,7 @@ public interface IStreamDecoder
     void Reset();
 }
 
-/// <summary>Modalità classica: testo ASCII separato da \r o \n.</summary>
+/// <summary>Classic mode: ASCII text separated by \r or \n.</summary>
 public sealed class TextLineDecoder : IStreamDecoder
 {
     private const int MaxLineLength = 30000;
@@ -37,10 +37,10 @@ public sealed class TextLineDecoder : IStreamDecoder
             }
             else
             {
-                // Come Encoding.ASCII: i byte non ASCII diventano '?'.
+                // Same as Encoding.ASCII: non-ASCII bytes become '?'.
                 _line.Append(b < 0x80 ? (char)b : '?');
 
-                // Evita che un errore di protocollo riempia la memoria.
+                // Prevents a protocol error from filling memory.
                 if (_line.Length > MaxLineLength)
                     _line.Clear();
             }
@@ -51,8 +51,8 @@ public sealed class TextLineDecoder : IStreamDecoder
 }
 
 /// <summary>
-/// Modalità binaria: frame di lunghezza fissa descritti da <see cref="BinaryFrameFormat"/>,
-/// opzionalmente preceduti da un header di sincronizzazione e seguiti da un checksum.
+/// Binary mode: fixed-length frames described by <see cref="BinaryFrameFormat"/>,
+/// optionally preceded by a sync header and followed by a checksum.
 /// </summary>
 public sealed class BinaryFrameDecoder : IStreamDecoder
 {
@@ -87,7 +87,7 @@ public sealed class BinaryFrameDecoder : IStreamDecoder
                 int found = IndexOf(_buffer, pos, _count, header);
                 if (found < 0)
                 {
-                    // Tieni solo la coda che potrebbe essere l'inizio di un header.
+                    // Keep only the tail that could be the start of a header.
                     pos = Math.Max(pos, _count - (header.Length - 1));
                     break;
                 }
@@ -102,7 +102,7 @@ public sealed class BinaryFrameDecoder : IStreamDecoder
             if (!_format.ChecksumOk(frame))
             {
                 FramesBad++;
-                // Header falso o dati corrotti: riprova la sincronizzazione dal byte successivo.
+                // False header or corrupted data: resync from the next byte.
                 pos += header.Length > 0 ? 1 : frameLen;
                 continue;
             }
@@ -113,7 +113,7 @@ public sealed class BinaryFrameDecoder : IStreamDecoder
             pos += frameLen;
         }
 
-        // Compatta il buffer.
+        // Compact the buffer.
         if (pos > 0)
         {
             Buffer.BlockCopy(_buffer, pos, _buffer, 0, _count - pos);
@@ -124,7 +124,7 @@ public sealed class BinaryFrameDecoder : IStreamDecoder
     private void Append(ReadOnlySpan<byte> data)
     {
         if (_count + data.Length > MaxBuffer)
-            _count = 0; // flusso non sincronizzabile: ricomincia
+            _count = 0; // stream cannot be synchronized: start over
 
         if (_count + data.Length > _buffer.Length)
             Array.Resize(ref _buffer, Math.Max(_buffer.Length * 2, _count + data.Length));

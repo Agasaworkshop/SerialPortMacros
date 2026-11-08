@@ -5,10 +5,10 @@ using SerialPortMacros.Core;
 namespace SerialPortMacros.Sequences;
 
 /// <summary>
-/// Esegue un file di sequenza, una riga per comando:
+/// Runs a sequence file, one command per line:
 ///
-///   {wait(500)}                 attende 500 ms
-///   {1,3}messaggio{NL}          invia alle porte 1 e 3 con fine riga NL / CR / NLCR / N
+///   {wait(500)}                 waits 500 ms
+///   {1,3}message{NL}            sends to ports 1 and 3 with line ending NL / CR / NLCR / N
 /// </summary>
 public sealed class SequenceRunner
 {
@@ -20,7 +20,7 @@ public sealed class SequenceRunner
     public bool IsRunning { get; private set; }
     public bool IsPaused { get; private set; }
 
-    /// <summary>Chiamato per ogni comando (porte 1..4, messaggio con fine riga). Da un thread in background.</summary>
+    /// <summary>Raised for each command (ports 1..4, message with line ending), from a background thread.</summary>
     public event Action<int[], string>? Command;
 
     public void Pause()
@@ -71,7 +71,7 @@ public sealed class SequenceRunner
             var cmd = CommandRegex.Match(line);
             if (!cmd.Success)
             {
-                Debug.WriteLine($"Riga di sequenza non valida {i + 1}: {line}");
+                Debug.WriteLine($"Invalid sequence line {i + 1}: {line}");
                 continue;
             }
 
@@ -87,7 +87,7 @@ public sealed class SequenceRunner
         }
     }
 
-    /// <summary>Attesa che si ferma durante la pausa (conta solo il tempo non in pausa).</summary>
+    /// <summary>Delay that stops while paused (only time spent not paused counts).</summary>
     private void Delay(int milliseconds)
     {
         int remaining = milliseconds;

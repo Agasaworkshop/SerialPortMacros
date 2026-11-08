@@ -5,14 +5,14 @@ using SerialPortMacros.Transport;
 
 namespace SerialPortMacros
 {
-    // Connessione delle porte (seriale / TCP), impostazioni e formato dati.
+    // Port connection (serial / TCP), settings and data format.
     public partial class Form1
     {
         private bool _loadingSettings;
         private bool _scanningPorts;
 
         // ------------------------------------------------------------------
-        // Connessione
+        // Connection
         // ------------------------------------------------------------------
 
         private void ConnectButton_Click(object sender, EventArgs e)
@@ -64,7 +64,7 @@ namespace SerialPortMacros
                     }
                     catch (Exception ex)
                     {
-                        // La modalità TCP resta selezionata: l'utente può correggere la porta e riprovare.
+                        // TCP mode stays selected: the user can fix the port and retry.
                         ShowLine($"Error starting TCP on port {i + 1}: {ex.Message}", "Error", Color.Red);
                     }
                 }
@@ -109,7 +109,7 @@ namespace SerialPortMacros
         }
 
         // ------------------------------------------------------------------
-        // Modalità seriale / TCP
+        // Serial / TCP mode
         // ------------------------------------------------------------------
 
         private void TcpCheckBox_CheckedChanged(object? sender, EventArgs e)
@@ -130,7 +130,7 @@ namespace SerialPortMacros
             var newMode = useTcp ? ConnectionMode.Tcp : ConnectionMode.Serial;
             var oldMode = ch.Mode;
 
-            // Conserva il valore della modalità che si sta lasciando.
+            // Keep the value of the mode being left.
             if (!_loadingSettings && oldMode != newMode)
             {
                 if (oldMode == ConnectionMode.Serial)
@@ -161,7 +161,7 @@ namespace SerialPortMacros
 
         private int FindAvailableTcpPort(int i, int preferred)
         {
-            // Una porta è "occupata" solo se un'altra porta logica in modalità TCP la usa.
+            // A port is "in use" only if another logical port in TCP mode uses it.
             bool InUse(int candidate) => Enumerable.Range(0, _ui.Length).Any(j =>
                 j != i && _hub.Channels[j].Mode == ConnectionMode.Tcp && _settings.Ports[j].TcpPort == candidate);
 
@@ -191,7 +191,7 @@ namespace SerialPortMacros
         }
 
         // ------------------------------------------------------------------
-        // Elenco COM e nomi delle sorgenti
+        // COM list and source names
         // ------------------------------------------------------------------
 
         private void PortCombo_Click(object? sender, EventArgs e)
@@ -230,7 +230,7 @@ namespace SerialPortMacros
                 combo.SelectedItem = previous;
         }
 
-        // GetPortNames() interroga il sistema e può essere lento: fuori dal thread UI.
+        // GetPortNames() queries the system and can be slow: keep it off the UI thread.
         private async void PortScanTimer_Tick(object? sender, EventArgs e)
         {
             if (_scanningPorts) return;
@@ -258,8 +258,8 @@ namespace SerialPortMacros
         }
 
         /// <summary>
-        /// Nome della sorgente per una porta logica (1..4): la COM selezionata, oppure "TCPn"
-        /// se la porta è in modalità TCP. È la chiave usata anche per i grafici.
+        /// Source name of a logical port (1..4): the selected COM, or "TCPn" when the
+        /// port is in TCP mode. It is also the key used for the graphs.
         /// </summary>
         private string GetGraphPortName(int logicalPort)
         {
@@ -270,7 +270,7 @@ namespace SerialPortMacros
             return ui.Tcp.Checked ? $"TCP{logicalPort}" : string.Empty;
         }
 
-        /// <summary>Comunica ai canali il nome da usare per i messaggi TCP (letto qui sul thread UI).</summary>
+        /// <summary>Tells the channels which name to use for TCP messages (read here on the UI thread).</summary>
         private void RefreshPortNames()
         {
             for (int i = 0; i < _ui.Length; i++)
@@ -278,7 +278,7 @@ namespace SerialPortMacros
         }
 
         // ------------------------------------------------------------------
-        // Impostazioni della porta (parametri seriali + formato dati)
+        // Port settings (serial parameters + data format)
         // ------------------------------------------------------------------
 
         private void PortSettingsButton_Click(object? sender, EventArgs e)

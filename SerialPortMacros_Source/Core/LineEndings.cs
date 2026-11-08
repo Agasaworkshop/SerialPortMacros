@@ -1,8 +1,8 @@
 namespace SerialPortMacros.Core;
 
 /// <summary>
-/// Conversioni comuni per i terminatori di riga (combo, macro, sequenze, Form7).
-/// Indici: 0 = nessuno, 1 = NL, 2 = CR, 3 = CR+NL.
+/// Shared line-ending conversions (combo boxes, macros, sequences, Form7).
+/// Indices: 0 = none, 1 = NL, 2 = CR, 3 = CR+NL.
 /// </summary>
 public static class LineEndings
 {
@@ -22,7 +22,7 @@ public static class LineEndings
         _ => fallback
     };
 
-    /// <summary>Nome usato da Form7 ("New line", "Carriage return", "Both ...").</summary>
+    /// <summary>Name used by Form7 ("New line", "Carriage return", "Both ...").</summary>
     public static string? FromName(string? name)
     {
         if (string.IsNullOrEmpty(name)) return null;
@@ -32,7 +32,7 @@ public static class LineEndings
         return "";
     }
 
-    /// <summary>Tag usati nelle sequenze: {NL} {CR} {NLCR} {N}.</summary>
+    /// <summary>Tags used in sequences: {NL} {CR} {NLCR} {N}.</summary>
     public static string FromTag(string tag) => tag.ToUpperInvariant() switch
     {
         "NL" => "\n",

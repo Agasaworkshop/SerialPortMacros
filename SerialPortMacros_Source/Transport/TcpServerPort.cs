@@ -4,9 +4,9 @@ using System.Net.Sockets;
 namespace SerialPortMacros.Transport;
 
 /// <summary>
-/// Server TCP per una porta logica: accetta un client alla volta (es. un ESP) e
-/// consegna i byte ricevuti a <see cref="DataReceived"/>.
-/// Gli eventi vengono sollevati dal task di ricezione, non dal thread UI.
+/// TCP server for one logical port: accepts one client at a time (e.g. an ESP) and
+/// delivers the received bytes to <see cref="DataReceived"/>.
+/// Events are raised from the receive task, not from the UI thread.
 /// </summary>
 public sealed class TcpServerPort
 {
@@ -21,16 +21,16 @@ public sealed class TcpServerPort
     public bool IsListening => _listener != null;
     public bool IsClientConnected => _client?.Connected == true && _stream != null;
 
-    /// <summary>Byte ricevuti (buffer, numero di byte validi).</summary>
+    /// <summary>Bytes received (buffer, number of valid bytes).</summary>
     public event Action<byte[], int>? DataReceived;
 
-    /// <summary>Un nuovo client si è connesso (per azzerare il decoder).</summary>
+    /// <summary>A new client connected (used to reset the decoder).</summary>
     public event Action? ClientConnected;
 
-    /// <summary>Messaggi di stato da mostrare (testo, è un errore?).</summary>
+    /// <summary>Status messages to show (text, is it an error?).</summary>
     public event Action<string, bool>? Status;
 
-    /// <summary>Avvia l'ascolto. Lancia un'eccezione se la porta non è disponibile.</summary>
+    /// <summary>Starts listening. Throws if the port is not available.</summary>
     public void Start(int localPort)
     {
         Stop();
@@ -79,8 +79,8 @@ public sealed class TcpServerPort
             {
                 client = await listener.AcceptTcpClientAsync(token);
 
-                // Niente ritardo di Nagle e timeout in scrittura: un invio non può
-                // bloccare a lungo chi lo chiama.
+                // No Nagle delay and a write timeout: a send cannot block the
+                // caller for long.
                 client.NoDelay = true;
                 client.SendTimeout = 1000;
                 try { client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true); } catch { }

@@ -2,7 +2,7 @@ using System.IO.Ports;
 
 namespace SerialPortMacros.Core;
 
-/// <summary>Conversioni testo &lt;-&gt; impostazioni seriali (usate da settings e Form2).</summary>
+/// <summary>Text &lt;-&gt; serial setting conversions (used by the settings and Form2).</summary>
 public static class SerialPortHelpers
 {
     public static readonly string[] ParityNames = { "Odd", "Even", "None" };
@@ -38,7 +38,7 @@ public static class SerialPortHelpers
         _ => StopBits.One
     };
 
-    /// <summary>Imposta i parametri di default usati all'avvio.</summary>
+    /// <summary>Applies the default parameters used at startup.</summary>
     public static void ApplyDefaults(SerialPort port)
     {
         port.BaudRate = 9600;

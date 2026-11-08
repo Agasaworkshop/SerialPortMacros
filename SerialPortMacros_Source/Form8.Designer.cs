@@ -93,7 +93,7 @@
             button1.TabIndex = 4;
             button1.Text = "Browse";
             button1.UseVisualStyleBackColor = true;
-            button1.Click += btnSfogliaImmagine_Click;
+            button1.Click += BrowseImageButton_Click;
             // 
             // label3
             // 
@@ -208,7 +208,7 @@
             button2.TabIndex = 10;
             button2.Text = "save";
             button2.UseVisualStyleBackColor = true;
-            button2.Click += btnApplica_Click;
+            button2.Click += ApplyButton_Click;
             // 
             // button3
             // 

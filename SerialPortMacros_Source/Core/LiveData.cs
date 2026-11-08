@@ -3,18 +3,18 @@ using System.Collections.Concurrent;
 namespace SerialPortMacros.Core;
 
 /// <summary>
-/// Valori "live" condivisi fra processing, interfacce (Form7) e macro custom.
-/// Tutte le collezioni sono thread-safe.
+/// Live values shared between processing, interfaces (Form7) and custom macros.
+/// All collections are thread-safe.
 /// </summary>
 public sealed class LiveData
 {
-    /// <summary>Variabili dei pannelli (Form7) e delle macro custom.</summary>
+    /// <summary>Panel variables (Form7) and custom macro variables.</summary>
     public ConcurrentDictionary<string, double> Variables { get; } = new();
 
-    /// <summary>Ultima riga ricevuta, per chiave "port1".."port4" e per nome sorgente ("COM3").</summary>
+    /// <summary>Last received line, keyed by "port1".."port4" and by source name ("COM3").</summary>
     public ConcurrentDictionary<string, string> LatestText { get; } = new();
 
-    /// <summary>Ultimi numeri ricevuti per porta logica (1..4).</summary>
+    /// <summary>Last received numbers per logical port (1..4).</summary>
     public ConcurrentDictionary<int, List<double>> LatestNumbers { get; } = new();
 
     private static readonly string[] PortKeys = { "", "port1", "port2", "port3", "port4" };

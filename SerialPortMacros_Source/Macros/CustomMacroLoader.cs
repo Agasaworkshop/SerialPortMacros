@@ -14,13 +14,13 @@ public sealed class CustomMacroException : Exception
 }
 
 /// <summary>
-/// Carica le macro custom da file .cs (compilati al volo con Roslyn) o .dll.
+/// Loads custom macros from .cs files (compiled on the fly with Roslyn) or .dll files.
 ///
-/// Specifica: "nomefile.cs", "nomefile.dll", oppure "nomefile.cs:NomeClasse" se il file
-/// contiene più macro. I percorsi relativi partono dalla cartella "custom_macros".
+/// Spec: "file.cs", "file.dll", or "file.cs:ClassName" when the file contains more
+/// than one macro. Relative paths start from the "custom_macros" folder.
 ///
-/// Gli assembly compilati sono messi in cache finché il file non cambia; ogni macro
-/// riceve comunque una propria istanza (lo stato, es. l'integrale di un PID, non è condiviso).
+/// Compiled assemblies are cached until the file changes; each macro still gets its
+/// own instance (state, e.g. the integral of a PID, is not shared).
 /// </summary>
 public static class CustomMacroLoader
 {
@@ -30,7 +30,7 @@ public static class CustomMacroLoader
     private static readonly Dictionary<string, CacheEntry> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Lazy<List<MetadataReference>> References = new(BuildReferences);
 
-    /// <summary>Using aggiunti automaticamente a ogni file .cs.</summary>
+    /// <summary>Usings added automatically to every .cs file.</summary>
     private const string GlobalUsings =
         "global using System;\n" +
         "global using System.Collections.Generic;\n" +
@@ -58,15 +58,15 @@ public static class CustomMacroLoader
         return Path.IsPathRooted(file) ? file : Path.Combine(AppPaths.CustomMacros, file);
     }
 
-    /// <summary>Crea una nuova istanza della macro. Lancia <see cref="CustomMacroException"/> con il motivo dell'errore.</summary>
+    /// <summary>Creates a new macro instance. Throws <see cref="CustomMacroException"/> with the reason on failure.</summary>
     public static ICustomMacro CreateInstance(string spec)
     {
         if (string.IsNullOrWhiteSpace(spec))
-            throw new CustomMacroException("Nessun file di codice indicato.");
+            throw new CustomMacroException("No code file specified.");
 
         string path = ResolvePath(spec, out string? className);
         if (!File.Exists(path))
-            throw new CustomMacroException($"File non trovato: {path}");
+            throw new CustomMacroException($"File not found: {path}");
 
         Assembly asm = GetAssembly(path);
         Type type = FindMacroType(asm, className, path);
@@ -77,17 +77,17 @@ public static class CustomMacroLoader
         }
         catch (TargetInvocationException ex) when (ex.InnerException != null)
         {
-            throw new CustomMacroException($"Errore nel costruttore di {type.Name}: {ex.InnerException.Message}");
+            throw new CustomMacroException($"Error in the constructor of {type.Name}: {ex.InnerException.Message}");
         }
     }
 
-    /// <summary>Compila il file senza istanziarlo: restituisce null se va tutto bene, altrimenti gli errori.</summary>
+    /// <summary>Compiles the file without instantiating it: returns null on success, otherwise the errors.</summary>
     public static string? Check(string spec)
     {
         try
         {
             string path = ResolvePath(spec, out string? className);
-            if (!File.Exists(path)) return $"File non trovato: {path}";
+            if (!File.Exists(path)) return $"File not found: {path}";
             FindMacroType(GetAssembly(path), className, path);
             return null;
         }
@@ -122,7 +122,7 @@ public static class CustomMacroLoader
             }
 
             if (Cache.TryGetValue(path, out var old))
-                old.Context.Unload(); // la vecchia versione viene liberata quando non è più usata
+                old.Context.Unload(); // the old version is released once it is no longer used
 
             Cache[path] = new CacheEntry(info.LastWriteTimeUtc, info.Length, asm, context);
             return asm;
@@ -131,7 +131,7 @@ public static class CustomMacroLoader
 
     private static Assembly LoadDll(AssemblyLoadContext context, string path)
     {
-        // Caricata da memoria: il file non resta bloccato e si può ricompilare.
+        // Loaded from memory: the file is not locked and can be rebuilt.
         using var ms = new MemoryStream(File.ReadAllBytes(path));
         return context.LoadFromStream(ms);
     }
@@ -166,10 +166,10 @@ public static class CustomMacroLoader
                 .Select(d =>
                 {
                     var pos = d.Location.GetLineSpan().StartLinePosition;
-                    return $"  riga {pos.Line + 1}, col {pos.Character + 1}: {d.Id} {d.GetMessage()}";
+                    return $"  line {pos.Line + 1}, col {pos.Character + 1}: {d.Id} {d.GetMessage(System.Globalization.CultureInfo.InvariantCulture)}";
                 });
             throw new CustomMacroException(
-                $"Errori di compilazione in {Path.GetFileName(path)}:\n" + string.Join("\n", errors));
+                $"Compilation errors in {Path.GetFileName(path)}:\n" + string.Join("\n", errors));
         }
 
         ms.Position = 0;
@@ -197,25 +197,25 @@ public static class CustomMacroLoader
         {
             var match = candidates.FirstOrDefault(t => t.Name == className || t.FullName == className);
             return match ?? throw new CustomMacroException(
-                $"La classe '{className}' non esiste in {Path.GetFileName(path)} o non implementa ICustomMacro.");
+                $"Class '{className}' does not exist in {Path.GetFileName(path)} or does not implement ICustomMacro.");
         }
 
         return candidates.Count switch
         {
             0 => throw new CustomMacroException(
-                $"{Path.GetFileName(path)} non contiene classi pubbliche che implementano ICustomMacro " +
-                "(o derivano da SimpleMacro) con un costruttore senza parametri."),
+                $"{Path.GetFileName(path)} contains no public class implementing ICustomMacro " +
+                "(or deriving from SimpleMacro) with a parameterless constructor."),
             1 => candidates[0],
             _ => throw new CustomMacroException(
-                $"{Path.GetFileName(path)} contiene più macro ({string.Join(", ", candidates.Select(c => c.Name))}): " +
-                "indica quale usare con \"file.cs:NomeClasse\".")
+                $"{Path.GetFileName(path)} contains more than one macro ({string.Join(", ", candidates.Select(c => c.Name))}): " +
+                "choose one with \"file.cs:ClassName\".")
         };
     }
 
     // ------------------------------------------------------------------
-    // Riferimenti per la compilazione.
-    // Si usano i metadati degli assembly già caricati in memoria: funziona anche
-    // con l'eseguibile pubblicato come "single file" (dove i .dll non esistono su disco).
+    // Compilation references.
+    // The metadata of the assemblies already loaded in memory is used: this also works
+    // when the app is published as "single file" (where the .dll files do not exist on disk).
     // ------------------------------------------------------------------
 
     private static readonly string[] ExtraAssemblies =
@@ -268,7 +268,7 @@ public static class CustomMacroLoader
         {
         }
 
-#pragma warning disable IL3000 // in single-file Location è vuoto: è solo un fallback
+#pragma warning disable IL3000 // Location is empty in single-file apps: this is only a fallback
         try
         {
             if (!string.IsNullOrEmpty(asm.Location))
@@ -283,9 +283,9 @@ public static class CustomMacroLoader
     }
 
     /// <summary>
-    /// Contesto separato (scaricabile) per ogni versione di una macro. Gli assembly già
-    /// presenti nell'applicazione (incluso SerialPortMacros) sono sempre quelli condivisi,
-    /// così ICustomMacro è lo stesso tipo da entrambe le parti.
+    /// Separate (unloadable) context for each version of a macro. Assemblies already
+    /// loaded by the application (including SerialPortMacros) are always the shared ones,
+    /// so ICustomMacro is the same type on both sides.
     /// </summary>
     private sealed class MacroLoadContext : AssemblyLoadContext
     {
@@ -308,7 +308,7 @@ public static class CustomMacroLoader
                 return LoadFromStream(ms);
             }
 
-            return null; // risoluzione standard
+            return null; // default resolution
         }
     }
 }

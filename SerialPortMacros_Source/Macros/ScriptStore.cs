@@ -3,15 +3,15 @@ using SerialPortMacros.Core;
 namespace SerialPortMacros.Macros;
 
 /// <summary>
-/// Lettura/scrittura dei file macro (cartella "scripts"). Un valore per riga:
+/// Reads/writes the macro files ("scripts" folder). One value per line:
 ///
-///   0  chiave ("*" = ogni messaggio, "===" = righe che iniziano con ===)
-///   1  tipo: 1 = Keypress, 2 = Write back, 3 = Custom code
-///   2-5  porte che attivano la macro (true/false per porta 1..4)
+///   0  key ("*" = every message, "===" = lines starting with ===)
+///   1  type: 1 = Keypress, 2 = Write back, 3 = Custom code
+///   2-5  ports that trigger the macro (true/false for ports 1..4)
 ///
-///   Keypress:     6 tasto/testo        7 attiva
-///   Write back:   6 risposta  7-10 porte di destinazione  11 attiva  12 fine riga
-///   Custom code:  6 file (.cs/.dll[:Classe])  7 attiva
+///   Keypress:     6 key/text           7 active
+///   Write back:   6 reply  7-10 destination ports  11 active  12 line ending
+///   Custom code:  6 file (.cs/.dll[:Class])  7 active
 /// </summary>
 public static class ScriptStore
 {
@@ -28,7 +28,7 @@ public static class ScriptStore
             }
             catch (Exception ex)
             {
-                // Un file illeggibile non deve impedire di caricare gli altri.
+                // An unreadable file must not prevent loading the others.
                 result.Add(new Script { name = Path.GetFileName(path), path = path, LoadError = ex.Message });
             }
         }
@@ -65,7 +65,7 @@ public static class ScriptStore
                 s.p3_w = B(9);
                 s.p4_w = B(10);
                 s.active = B(11);
-                s.lineEndingIndex = int.TryParse(L(12), out int le) ? le : 1; // vecchi file: NL
+                s.lineEndingIndex = int.TryParse(L(12), out int le) ? le : 1; // old files: NL
                 break;
 
             case Script.TriggerCustom:
@@ -115,7 +115,7 @@ public static class ScriptStore
         File.WriteAllLines(s.path, lines);
     }
 
-    /// <summary>Crea un nuovo file macro di esempio. Restituisce false se esiste già.</summary>
+    /// <summary>Creates a new example macro file. Returns false if it already exists.</summary>
     public static bool CreateNew(string fileName)
     {
         string path = Path.Combine(AppPaths.Scripts, fileName);

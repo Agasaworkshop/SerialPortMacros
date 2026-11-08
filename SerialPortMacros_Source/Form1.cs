@@ -7,19 +7,19 @@ using SerialPortMacros.Transport;
 namespace SerialPortMacros
 {
     /// <summary>
-    /// Finestra principale. Il codice è diviso per area:
-    ///   Form1.cs           servizi, avvio/chiusura, mappa dei controlli delle 4 porte
-    ///   Form1.Ports.cs     connessione seriale/TCP, impostazioni porta, formato dati
-    ///   Form1.Display.cs   testo a video (decimato), input utente, cronologia comandi
-    ///   Form1.Logging.cs   sessioni di log
-    ///   Form1.Settings.cs  lettura/scrittura settings.json
-    ///   Form1.Tools.cs     macro, grafici, sequenze, interfacce, log viewer
+    /// Main window. The code is split by area:
+    ///   Form1.cs           services, startup/shutdown, map of the controls of the 4 ports
+    ///   Form1.Ports.cs     serial/TCP connection, port settings, data format
+    ///   Form1.Display.cs   on-screen text (decimated), user input, command history
+    ///   Form1.Logging.cs   log sessions
+    ///   Form1.Settings.cs  reading/writing settings.json
+    ///   Form1.Tools.cs     macros, graphs, sequences, interfaces, log viewer
     ///
-    /// La logica non-UI sta nelle cartelle Core, Transport, Decoding, Macros, Sequences.
+    /// Non-UI logic lives in the Core, Transport, Decoding, Macros and Sequences folders.
     /// </summary>
     public partial class Form1 : Form
     {
-        // ---- Servizi (thread-safe, indipendenti dalla UI) ----
+        // ---- Services (thread-safe, independent of the UI) ----
         private readonly LogManager _log = new();
         private readonly DisplayBuffer _display = new();
         private readonly LiveData _live = new();
@@ -31,7 +31,7 @@ namespace SerialPortMacros
 
         private AppSettings _settings = new();
 
-        /// <summary>Controlli di una porta logica nella finestra principale.</summary>
+        /// <summary>Controls of one logical port in the main window.</summary>
         private sealed record PortUi(
             Button Connect, TextBox Value, ComboBox Com, Label ValueLabel, Button Settings,
             CheckBox Send, CheckBox Log, CheckBox Tcp, NumericUpDown GraphCount, Button Graphs);
@@ -66,20 +66,20 @@ namespace SerialPortMacros
         }
 
         // ------------------------------------------------------------------
-        // API usata dagli altri form (Form3, Form4, Form6, Form7)
+        // API used by the other forms (Form3, Form4, Form6, Form7)
         // ------------------------------------------------------------------
 
         public ConcurrentDictionary<string, double> PanelVariables => _live.Variables;
         public ConcurrentDictionary<string, string> LatestSerialValues => _live.LatestText;
         public ConcurrentDictionary<int, List<double>> LatestPortNumbers => _live.LatestNumbers;
 
-        /// <summary>Macro attualmente caricate (Form3 le modifica direttamente).</summary>
+        /// <summary>Currently loaded macros (Form3 edits them directly).</summary>
         public Script[] scripts => _macros.Scripts;
 
         public PortHub Hub => _hub;
 
         // ------------------------------------------------------------------
-        // Avvio / chiusura
+        // Startup / shutdown
         // ------------------------------------------------------------------
 
         private void Form1_Load(object sender, EventArgs e)
@@ -106,7 +106,7 @@ namespace SerialPortMacros
             _portScanTimer.Tick += PortScanTimer_Tick;
             _portScanTimer.Start();
 
-            // La UI legge il buffer di visualizzazione al proprio ritmo (~20 fps).
+            // The UI reads the display buffer at its own pace (~20 fps).
             _uiTimer = new System.Windows.Forms.Timer { Interval = 50 };
             _uiTimer.Tick += (_, _) => FlushDisplay();
             _uiTimer.Start();
@@ -125,7 +125,7 @@ namespace SerialPortMacros
                 ch.CloseSerial();
             }
 
-            _pipeline.Dispose();   // svuota la coda e fa il flush dei log
+            _pipeline.Dispose();   // drains the queue and flushes the logs
             _log.Stop();
 
             SaveSettings();
@@ -136,7 +136,7 @@ namespace SerialPortMacros
             ActiveControl = null;
         }
 
-        /// <summary>Indice 0..3 della porta a cui appartiene un controllo.</summary>
+        /// <summary>Index 0..3 of the port a control belongs to.</summary>
         private int PortIndexOf(object? control)
         {
             for (int i = 0; i < _ui.Length; i++)

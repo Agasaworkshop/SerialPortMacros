@@ -4,8 +4,8 @@ using SerialPortMacros.Core;
 namespace SerialPortMacros.Macros;
 
 /// <summary>
-/// Esegue le macro sui messaggi ricevuti. <see cref="Process"/> viene chiamato dal
-/// thread di processing; <see cref="SetScripts"/> e <see cref="Running"/> dalla UI.
+/// Runs the macros on received messages. <see cref="Process"/> is called by the
+/// processing thread; <see cref="SetScripts"/> and <see cref="Running"/> by the UI.
 /// </summary>
 public sealed class MacroEngine
 {
@@ -26,7 +26,7 @@ public sealed class MacroEngine
 
     public Script[] Scripts => _scripts;
 
-    /// <summary>Avvia/ferma l'esecuzione delle macro (tasto Play).</summary>
+    /// <summary>Starts/stops macro execution (Play button).</summary>
     public bool Running
     {
         get => _running;
@@ -47,8 +47,8 @@ public sealed class MacroEngine
     }
 
     /// <summary>
-    /// Sostituisce l'elenco delle macro (dopo una nuova lettura dei file) e carica le
-    /// macro custom. Restituisce gli errori di caricamento, uno per riga.
+    /// Replaces the macro list (after re-reading the files) and loads the custom
+    /// macros. Returns the load errors, one per entry.
     /// </summary>
     public List<string> SetScripts(Script[] scripts)
     {
@@ -86,7 +86,7 @@ public sealed class MacroEngine
         return errors;
     }
 
-    /// <summary>Thread di processing.</summary>
+    /// <summary>Processing thread.</summary>
     public void Process(in RxMessage m, List<double> numbers)
     {
         if (!_running || _hub == null) return;
@@ -124,11 +124,11 @@ public sealed class MacroEngine
 
         try
         {
-            lock (s) // la stessa istanza non viene mai eseguita in parallelo con Start/Stop
+            lock (s) // the same instance never runs in parallel with Start/Stop
             {
                 var result = macro.Process(input);
                 if (result != null)
-                    outputs = result.ToList(); // materializza (yield return) dentro il try
+                    outputs = result.ToList(); // materialize (yield return) inside the try
             }
         }
         catch (Exception ex)
@@ -171,7 +171,7 @@ public sealed class MacroEngine
 
     private void ReportError(Script s, Exception ex)
     {
-        // Al massimo un messaggio ogni 2 secondi per macro, per non inondare il testo.
+        // At most one message every 2 seconds per macro, so the text is not flooded.
         long now = Environment.TickCount64;
         if (now - s.LastErrorTick < 2000) return;
         s.LastErrorTick = now;
@@ -221,7 +221,7 @@ public sealed class MacroEngine
         }
     }
 
-    /// <summary>Implementazione di <see cref="IMacroContext"/> passata alle macro.</summary>
+    /// <summary><see cref="IMacroContext"/> implementation passed to the macros.</summary>
     private sealed class MacroContext : IMacroContext
     {
         private readonly PortHub _hub;

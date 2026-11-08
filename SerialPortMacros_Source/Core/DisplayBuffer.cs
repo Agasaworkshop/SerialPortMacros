@@ -3,12 +3,12 @@ namespace SerialPortMacros.Core;
 public readonly record struct DisplayLine(string Text, Color Color);
 
 /// <summary>
-/// Buffer thread-safe fra il thread di processing e la UI.
+/// Thread-safe buffer between the processing thread and the UI.
 ///
-/// Il processing aggiunge righe senza mai bloccarsi; la UI le preleva al proprio ritmo
-/// (timer). Se la UI non riesce a stare al passo il buffer tiene solo le righe più
-/// recenti e conta quelle scartate: la visualizzazione viene "decimata", mentre log,
-/// macro e grafici ricevono comunque tutti i dati.
+/// Processing adds lines without ever blocking; the UI takes them at its own pace
+/// (timer). If the UI cannot keep up, the buffer keeps only the most recent lines and
+/// counts the dropped ones: the display is decimated, while logging, macros and graphs
+/// still receive all the data.
 /// </summary>
 public sealed class DisplayBuffer
 {
@@ -21,7 +21,7 @@ public sealed class DisplayBuffer
         MaxPendingLines = maxPendingLines;
     }
 
-    /// <summary>Righe massime in attesa; oltre questa soglia le più vecchie vengono scartate.</summary>
+    /// <summary>Maximum pending lines; beyond this limit the oldest ones are dropped.</summary>
     public int MaxPendingLines { get; set; }
 
     public int Count
@@ -43,8 +43,8 @@ public sealed class DisplayBuffer
     }
 
     /// <summary>
-    /// Sposta tutte le righe in attesa in <paramref name="destination"/>.
-    /// Restituisce il numero di righe scartate dall'ultimo prelievo.
+    /// Moves all pending lines into <paramref name="destination"/>.
+    /// Returns the number of lines dropped since the previous call.
     /// </summary>
     public long DrainTo(List<DisplayLine> destination)
     {

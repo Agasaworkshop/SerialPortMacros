@@ -1,8 +1,8 @@
 namespace SerialPortMacros.Core;
 
 /// <summary>
-/// Cartelle dell'applicazione (tutte relative alla cartella dell'eseguibile).
-/// Le cartelle vengono create al primo accesso.
+/// Application folders, all relative to the executable's folder.
+/// Each folder is created the first time it is accessed.
 /// </summary>
 public static class AppPaths
 {

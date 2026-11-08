@@ -4,7 +4,7 @@ using SerialPortMacros.Transport;
 
 namespace SerialPortMacros
 {
-    // Lettura e scrittura di settings.json.
+    // Reading and writing settings.json.
     public partial class Form1
     {
         private void LoadSettings()
@@ -58,7 +58,7 @@ namespace SerialPortMacros
                         ch.SetDataFormat(ps.DataFormat);
                     }
 
-                    // Imposta la checkbox (il suo evento chiamerebbe SetPortMode: lo chiamiamo esplicitamente).
+                    // Set the checkbox (its event would call SetPortMode: it is called explicitly here).
                     ui.Tcp.Checked = ps.UseTcp;
                     SetPortMode(i, ps.UseTcp);
                 }
@@ -77,7 +77,7 @@ namespace SerialPortMacros
                 _loadingSettings = false;
             }
 
-            // Se il file contiene porte TCP duplicate fra le modalità TCP attive, correggile.
+            // If the file contains duplicate TCP ports among the active TCP modes, fix them.
             for (int i = 0; i < _ui.Length; i++)
                 if (_hub.Channels[i].Mode == ConnectionMode.Tcp)
                     EnsureUniqueTcpPort(i);
@@ -114,8 +114,8 @@ namespace SerialPortMacros
                 _settings.LineEndIndex = comboBox6.SelectedIndex;
                 _settings.LogUserInput = checkBox9.Checked;
                 _settings.OpenLogsAfterStop = checkBox10.Checked;
-                _settings.TimeStamps = time_log;
-                _settings.AutoScroll = is_locked;
+                _settings.TimeStamps = _timeStamps;
+                _settings.AutoScroll = _autoScroll;
 
                 _settings.Save(AppPaths.SettingsFile);
             }

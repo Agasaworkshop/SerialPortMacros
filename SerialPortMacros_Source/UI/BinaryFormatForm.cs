@@ -3,17 +3,17 @@ using SerialPortMacros.Decoding;
 namespace SerialPortMacros
 {
     /// <summary>
-    /// Configurazione del formato binario di una porta, con anteprima e prova di decodifica.
-    /// L'aspetto si modifica dal designer (BinaryFormatForm.Designer.cs); qui c'è solo la logica.
+    /// Binary format configuration of a port, with a live preview and a decode test.
+    /// The layout is edited in the designer (BinaryFormatForm.Designer.cs); this file holds only the logic.
     /// </summary>
     public partial class BinaryFormatForm : Form
     {
         private bool _loading = true;
 
-        /// <summary>Formato scelto (valido dopo DialogResult.OK).</summary>
+        /// <summary>Chosen format (valid after DialogResult.OK).</summary>
         public PortDataFormat Result { get; private set; }
 
-        /// <summary>Costruttore usato solo dal designer di Visual Studio.</summary>
+        /// <summary>Constructor used only by the Visual Studio designer.</summary>
         public BinaryFormatForm() : this(new PortDataFormat())
         {
         }
@@ -43,7 +43,7 @@ namespace SerialPortMacros
             Checksum = Enum.TryParse(comboChecksum.SelectedItem as string, out ChecksumKind k) ? k : ChecksumKind.None
         };
 
-        /// <summary>Qualunque campo cambiato: ricalcola anteprima e test.</summary>
+        /// <summary>Any input changed: refresh the preview and the test.</summary>
         private void Inputs_Changed(object? sender, EventArgs e)
         {
             if (!_loading)
@@ -58,7 +58,7 @@ namespace SerialPortMacros
                 format = BinaryFrameFormat.Parse(Current());
                 labelInfo.ForeColor = Color.DarkGreen;
                 string warn = format.Header.Length == 0
-                    ? "\r\nSenza header il programma non può risincronizzarsi se perde un byte."
+                    ? "\r\nWithout a header the program cannot resynchronize if a byte is lost."
                     : "";
                 labelInfo.Text = format.Describe() + warn;
             }
@@ -84,8 +84,8 @@ namespace SerialPortMacros
                 decoder.Feed(bytes, frames);
 
                 textTestOutput.Text = frames.Count == 0
-                    ? $"Nessun frame completo ({bytes.Length} byte ricevuti, servono {format.FrameBytes}" +
-                      (decoder.FramesBad > 0 ? $", {decoder.FramesBad} checksum errati)" : ")")
+                    ? $"No complete frame ({bytes.Length} bytes received, {format.FrameBytes} needed" +
+                      (decoder.FramesBad > 0 ? $", {decoder.FramesBad} bad checksums)" : ")")
                     : string.Join(Environment.NewLine, frames.Select(f => f.Text));
             }
             catch (FormatException ex)
