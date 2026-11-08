@@ -1,116 +1,102 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using System.Diagnostics;
+using SerialPortMacros.Core;
+using SerialPortMacros.Macros;
 
 namespace SerialPortMacros
 {
+    /// <summary>Elenco e modifica delle macro.</summary>
     public partial class Form3 : Form
     {
-        public Form1 form1;
-        private bool _isLoading = false;
+        private const string EffectKeypress = "Keypress";
+        private const string EffectReply = "Write back";
+        private const string EffectCustom = "Custom code";
 
-        private int last_index = 0;
+        public Form1 form1;
+        private bool _isLoading;
+        // Durante il caricamento della lista la selezione e le spunte cambiano da sole:
+        // in quella fase non va salvato nulla (altrimenti si scriverebbero stati sbagliati nei file).
+        private bool _initializing = true;
+        private int last_index;
+        private Script? c_script;
 
         public Form3(Form1 form)
         {
             form1 = form;
             InitializeComponent();
 
-            // 1. Popola i ComboBox SUBITO nel costruttore, prima di associare il DataSource
+            // Popola i ComboBox prima di associare il DataSource (che scatena gli eventi).
             comboBox2.Items.Clear();
-            comboBox2.Items.Add("None");
-            comboBox2.Items.Add("NL");
-            comboBox2.Items.Add("CR");
-            comboBox2.Items.Add("Both");
+            comboBox2.Items.AddRange(LineEndings.ShortNames);
 
-            string[] effectlist = { "Keypress", "Write back" };
             comboBox1.Items.Clear();
-            comboBox1.Items.AddRange(effectlist);
+            comboBox1.Items.AddRange(new object[] { EffectKeypress, EffectReply, EffectCustom });
             comboBox1.SelectedIndexChanged += comboBox1_SelectedIndexChanged;
 
-            // 2. Ora è sicuro associare il DataSource (che scatenerà gli eventi trovando i comboBox già pronti)
+            BindList();
+        }
+
+        private void BindList()
+        {
             checkedListBox1.DataSource = form1.scripts;
             checkedListBox1.DisplayMember = "name";
         }
 
         private void Form3_Load(object sender, EventArgs e)
         {
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            FinishLoading();
+        }
+
+        /// <summary>Applica le spunte salvate e mostra la macro selezionata, poi abilita il salvataggio.</summary>
+        private void FinishLoading()
+        {
+            _initializing = true;
             findactivescripts();
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            last_index = checkedListBox1.SelectedIndex;
+            c_script = checkedListBox1.SelectedItem as Script;
             displayscript();
-            _isLoading = false; // Fine caricamento iniziale
-            c_script = (Script)checkedListBox1.Items[0];
+            _initializing = false;
         }
 
         private void checkedListBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (!_initializing && last_index >= 0 && last_index < checkedListBox1.Items.Count)
+                Applychanges(checkedListBox1.GetItemCheckState(last_index) == CheckState.Checked);
 
-            bool active = checkedListBox1.GetItemCheckState(last_index) == CheckState.Checked;
-            Applychanges(active);
             last_index = checkedListBox1.SelectedIndex;
-            c_script = (Script)checkedListBox1.SelectedItem; //sets  current selected 
+            c_script = checkedListBox1.SelectedItem as Script;
             displayscript();
         }
 
         private void CheckedListBox1_ItemCheck(object sender, ItemCheckEventArgs e)
         {
-            if (e.Index < 0 || e.Index >= checkedListBox1.Items.Count)
+            if (_initializing || e.Index < 0 || e.Index >= checkedListBox1.Items.Count)
+                return;
+            if (checkedListBox1.Items[e.Index] is not Script s || string.IsNullOrEmpty(s.path))
                 return;
 
-            Script c_script = checkedListBox1.Items[e.Index] as Script;
-            if (c_script == null)
-                return;
-
-            c_script.active = (e.NewValue == CheckState.Checked);
-
-            var lines = File.ReadAllLines(c_script.path);
-            if (lines.Length > 0)
-            {
-                if (c_script.trigger == 1 && lines.Length > 7)
-                {
-                    lines[7] = c_script.active.ToString();
-                }
-                else if (c_script.trigger == 2 && lines.Length > 11)
-                {
-                    lines[11] = c_script.active.ToString();
-                }
-                File.WriteAllLines(c_script.path, lines.Where(l => !string.IsNullOrWhiteSpace(l)));
-            }
+            s.active = e.NewValue == CheckState.Checked;
+            TrySave(s);
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
+        // Chiudi (salvando la macro selezionata)
         private void button1_Click(object sender, EventArgs e)
         {
-            try
-            {
-                int index = checkedListBox1.SelectedIndex;
-                bool active = checkedListBox1.GetItemCheckState(index) == CheckState.Checked;
-                Applychanges(active);
-                this.Close();
-            }
-            catch (Exception ex)
-            {
-                this.Close();
-            }
+            int index = checkedListBox1.SelectedIndex;
+            if (index >= 0)
+                Applychanges(checkedListBox1.GetItemCheckState(index) == CheckState.Checked);
+            Close();
         }
 
-        Script c_script;
         private void Applychanges(bool active)
         {
+            if (c_script == null || string.IsNullOrEmpty(c_script.path)) return;
 
-            if (c_script == null) return;
             c_script.key = textBox2.Text;
             c_script.p1 = checkBox1.Checked;
             c_script.p2 = checkBox2.Checked;
@@ -118,109 +104,186 @@ namespace SerialPortMacros
             c_script.p4 = checkBox4.Checked;
             c_script.active = active;
 
-            List<string> lines = new List<string>
+            switch (comboBox1.Text)
             {
-                c_script.key,
-                c_script.trigger.ToString(),
-                c_script.p1.ToString(),
-                c_script.p2.ToString(),
-                c_script.p3.ToString(),
-                c_script.p4.ToString()
-            };
+                case EffectKeypress:
+                    c_script.trigger = Script.TriggerKeypress;
+                    c_script.keypress = textBox4.Text;
+                    break;
 
-            if (comboBox1.Text == "Keypress")
-            {
-                c_script.trigger = 1;
-                lines[1] = "1";
-                c_script.keypress = textBox4.Text;
-                lines.Add(c_script.keypress);
-                lines.Add(c_script.active.ToString());
-            }
-            else if (comboBox1.Text == "Write back")
-            {
-                c_script.trigger = 2;
-                lines[1] = "2";
-                c_script.reply = textBox3.Text;
-                lines.Add(c_script.reply);
+                case EffectReply:
+                    c_script.trigger = Script.TriggerReply;
+                    c_script.reply = textBox3.Text;
+                    c_script.p1_w = checkBox8.Checked;
+                    c_script.p2_w = checkBox7.Checked;
+                    c_script.p3_w = checkBox6.Checked;
+                    c_script.p4_w = checkBox5.Checked;
+                    c_script.lineEndingIndex = comboBox2.SelectedIndex >= 0 ? comboBox2.SelectedIndex : 1;
+                    break;
 
-                c_script.p1_w = checkBox8.Checked;
-                lines.Add(c_script.p1_w.ToString());
-                c_script.p2_w = checkBox7.Checked;
-                lines.Add(c_script.p2_w.ToString());
-                c_script.p3_w = checkBox6.Checked;
-                lines.Add(c_script.p3_w.ToString());
-                c_script.p4_w = checkBox5.Checked;
-                lines.Add(c_script.p4_w.ToString());
-
-                lines.Add(c_script.active.ToString());
-
-                c_script.lineEndingIndex = comboBox2.SelectedIndex >= 0 ? comboBox2.SelectedIndex : 1;
-                lines.Add(c_script.lineEndingIndex.ToString());
+                case EffectCustom:
+                    c_script.trigger = Script.TriggerCustom;
+                    c_script.customFile = textBox4.Text.Trim();
+                    break;
             }
 
-            File.WriteAllLines(c_script.path, lines);
+            TrySave(c_script);
+        }
+
+        private static void TrySave(Script s)
+        {
+            try
+            {
+                ScriptStore.Save(s);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Cannot save {s.name}: {ex.Message}");
+            }
         }
 
         void findactivescripts()
         {
-            int num = (form1.scripts.Length);
-            for (int i = 0; i < num; i++)
-            {
-                if (form1.scripts[i].active)
-                {
-                    checkedListBox1.SetItemCheckState(i, CheckState.Checked);
-                }
-                else
-                    checkedListBox1.SetItemCheckState(i, CheckState.Unchecked);
-            }
+            for (int i = 0; i < form1.scripts.Length; i++)
+                checkedListBox1.SetItemCheckState(i, form1.scripts[i].active ? CheckState.Checked : CheckState.Unchecked);
         }
 
+        // Nuovo file macro
         private void button3_Click(object sender, EventArgs e)
         {
+            // Salva le modifiche della macro selezionata prima di ricaricare la lista dai file.
+            int selected = checkedListBox1.SelectedIndex;
+            if (selected >= 0)
+                Applychanges(checkedListBox1.GetItemCheckState(selected) == CheckState.Checked);
+
             if (textBox5.Text != "")
             {
-                string filePath = Path.Combine("./scripts", textBox5.Text);
                 try
                 {
-                    string[] newfile = new string[]
-                    {
-                        "test",
-                        "1",
-                        "false",
-                        "false",
-                        "false",
-                        "false",
-                        "%100%!LMB",
-                        "false"
-                    };
-                    File.WriteAllLines(filePath, newfile);
+                    if (!ScriptStore.CreateNew(textBox5.Text))
+                        MessageBox.Show($"{textBox5.Text} already exists.");
                 }
-                catch (IOException ex)
+                catch (Exception ex)
                 {
-                    Console.WriteLine("An error occurred while creating the file: " + ex.Message);
+                    MessageBox.Show("An error occurred while creating the file: " + ex.Message);
                 }
                 textBox5.Text = "";
             }
+
+            _initializing = true;
             form1.ScanScripts();
-            checkedListBox1.DataSource = form1.scripts;
-            checkedListBox1.DisplayMember = "name";
+            BindList();
+            FinishLoading();
         }
 
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        // Crea/apre il file di codice della macro custom
+        private void button4_Click(object sender, EventArgs e)
         {
+            string spec = textBox4.Text.Trim();
+            if (spec.Length == 0)
+            {
+                spec = (c_script != null ? Path.GetFileNameWithoutExtension(c_script.name) : "MyMacro") + ".cs";
+                textBox4.Text = spec;
+            }
+
+            try
+            {
+                string path = CustomMacroTemplates.CreateIfMissing(spec);
+                if (!File.Exists(path))
+                {
+                    MessageBox.Show($"File not found: {path}");
+                    return;
+                }
+
+                if (Path.GetExtension(path).Equals(".dll", StringComparison.OrdinalIgnoreCase))
+                {
+                    Process.Start(new ProcessStartInfo { FileName = Path.GetDirectoryName(path)!, UseShellExecute = true });
+                    return;
+                }
+
+                try
+                {
+                    Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+                }
+                catch
+                {
+                    // Nessun programma associato ai .cs
+                    Process.Start("notepad.exe", $"\"{path}\"");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        // Sceglie un file di codice (.cs o .dll) con una finestra di dialogo
+        private void button5_Click(object sender, EventArgs e)
+        {
+            string folder = AppPaths.CustomMacros;
+
+            // Parte dalla cartella del file già indicato, se esiste.
+            string current = textBox4.Text.Trim();
+            if (current.Length > 0)
+            {
+                string dir = Path.GetDirectoryName(CustomMacroLoader.ResolvePath(current, out _)) ?? "";
+                if (Directory.Exists(dir)) folder = dir;
+            }
+
+            using var dialog = new OpenFileDialog
+            {
+                Title = "Choose the macro code",
+                Filter = "Macro code (*.cs;*.dll)|*.cs;*.dll|C# source (*.cs)|*.cs|Library (*.dll)|*.dll",
+                InitialDirectory = folder,
+                CheckFileExists = true,
+                Multiselect = false
+            };
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            textBox4.Text = ToMacroSpec(dialog.FileName);
+
+            // Verifica subito che il file contenga una macro valida.
+            string? error = CustomMacroLoader.Check(textBox4.Text);
+            if (error != null)
+                MessageBox.Show(error, "Macro code", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        /// <summary>File dentro custom_macros: solo il nome (resta valido se sposti il programma); altrove: percorso completo.</summary>
+        private static string ToMacroSpec(string path)
+        {
+            string folder = Path.GetFullPath(AppPaths.CustomMacros).TrimEnd('\\') + "\\";
+            string full = Path.GetFullPath(path);
+            return full.StartsWith(folder, StringComparison.OrdinalIgnoreCase) ? full[folder.Length..] : full;
+        }
+
+        private void comboBox1_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            UpdateEffectControls();
             if (_isLoading) return;
 
-            if (comboBox1.Text == "Keypress")
-            {
-                comboBox2.Enabled = false;
+            if (comboBox1.Text == EffectReply && comboBox2.SelectedIndex == -1)
+                comboBox2.SelectedIndex = 1; // default NL
+            if (comboBox1.Text != EffectReply)
                 comboBox2.SelectedIndex = -1;
-            }
-            else if (comboBox1.Text == "Write back")
-            {
-                comboBox2.Enabled = true;
-                if (comboBox2.SelectedIndex == -1)
-                    comboBox2.SelectedIndex = 1; // Default a NL
-            }
+        }
+
+        private void UpdateEffectControls()
+        {
+            bool custom = comboBox1.Text == EffectCustom;
+            label14.Text = custom ? "Code file" : "Keypress";
+            toolTip1.SetToolTip(textBox4, custom
+                ? "File .cs or .dll in the custom_macros folder (optional \":ClassName\")"
+                : "");
+            button4.Visible = custom;
+            button5.Visible = custom;
+
+            // La riga "Reply" (testo, porte di destinazione, fine riga) vale solo per "Write back":
+            // una macro custom sceglie da sola a quale porta scrivere.
+            bool reply = comboBox1.Text == EffectReply;
+            comboBox2.Enabled = reply;
+            textBox3.Enabled = reply;
+            checkBox5.Enabled = checkBox6.Enabled = checkBox7.Enabled = checkBox8.Enabled = reply;
         }
 
         public void displayscript()
@@ -229,50 +292,45 @@ namespace SerialPortMacros
             textBox4.Text = "";
             comboBox1.Text = "";
             textBox3.Text = "";
-            checkBox8.Checked = false;
-            checkBox7.Checked = false;
-            checkBox6.Checked = false;
-            checkBox5.Checked = false;
+            checkBox8.Checked = checkBox7.Checked = checkBox6.Checked = checkBox5.Checked = false;
             comboBox2.SelectedIndex = -1;
-            comboBox2.Enabled = false;
 
-            Script c_script = (Script)checkedListBox1.SelectedItem;
-            if (c_script != null)
+            if (checkedListBox1.SelectedItem is Script s)
             {
-                textBox1.Text = c_script.name;
-                textBox2.Text = c_script.key;
-                checkBox1.Checked = c_script.p1;
-                checkBox2.Checked = c_script.p2;
-                checkBox3.Checked = c_script.p3;
-                checkBox4.Checked = c_script.p4;
+                textBox1.Text = s.name;
+                textBox2.Text = s.key;
+                checkBox1.Checked = s.p1;
+                checkBox2.Checked = s.p2;
+                checkBox3.Checked = s.p3;
+                checkBox4.Checked = s.p4;
 
-                if (c_script.trigger == 1)
+                switch (s.trigger)
                 {
-                    comboBox1.Text = "Keypress";
-                    textBox4.Text = c_script.keypress;
-                    comboBox2.Enabled = false;
-                    comboBox2.SelectedIndex = -1;
-                }
-                else if (c_script.trigger == 2)
-                {
-                    comboBox1.Text = "Write back";
-                    textBox3.Text = c_script.reply;
-                    checkBox8.Checked = c_script.p1_w;
-                    checkBox7.Checked = c_script.p2_w;
-                    checkBox6.Checked = c_script.p3_w;
-                    checkBox5.Checked = c_script.p4_w;
-                    comboBox2.Enabled = true;
+                    case Script.TriggerKeypress:
+                        comboBox1.Text = EffectKeypress;
+                        textBox4.Text = s.keypress;
+                        break;
 
-                    if (c_script.lineEndingIndex >= 0 && c_script.lineEndingIndex < comboBox2.Items.Count)
-                    {
-                        comboBox2.SelectedIndex = c_script.lineEndingIndex;
-                    }
-                    else
-                    {
-                        comboBox2.SelectedIndex = 1; // Default a NL
-                    }
+                    case Script.TriggerReply:
+                        comboBox1.Text = EffectReply;
+                        textBox3.Text = s.reply;
+                        checkBox8.Checked = s.p1_w;
+                        checkBox7.Checked = s.p2_w;
+                        checkBox6.Checked = s.p3_w;
+                        checkBox5.Checked = s.p4_w;
+                        comboBox2.SelectedIndex = s.lineEndingIndex >= 0 && s.lineEndingIndex < comboBox2.Items.Count
+                            ? s.lineEndingIndex
+                            : 1;
+                        break;
+
+                    case Script.TriggerCustom:
+                        comboBox1.Text = EffectCustom;
+                        textBox4.Text = s.customFile;
+                        break;
                 }
             }
+
+            UpdateEffectControls();
             _isLoading = false;
         }
     }

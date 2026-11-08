@@ -61,6 +61,8 @@
             button3 = new Button();
             textBox5 = new TextBox();
             toolTip1 = new ToolTip(components);
+            button4 = new Button();
+            button5 = new Button();
             comboBox2 = new ComboBox();
             SuspendLayout();
             // 
@@ -342,6 +344,30 @@
             textBox5.Text = "script.txt";
             toolTip1.SetToolTip(textBox5, "New file name");
             // 
+            // button4
+            // 
+            button4.Image = Properties.Resources.Edit;
+            button4.Location = new Point(749, 109);
+            button4.Name = "button4";
+            button4.Size = new Size(29, 29);
+            button4.TabIndex = 33;
+            toolTip1.SetToolTip(button4, "Create / open the custom code file");
+            button4.UseVisualStyleBackColor = true;
+            button4.Visible = false;
+            button4.Click += button4_Click;
+            // 
+            // button5
+            // 
+            button5.Location = new Point(714, 109);
+            button5.Name = "button5";
+            button5.Size = new Size(29, 29);
+            button5.TabIndex = 34;
+            button5.Text = "...";
+            toolTip1.SetToolTip(button5, "Choose a .cs / .dll file");
+            button5.UseVisualStyleBackColor = true;
+            button5.Visible = false;
+            button5.Click += button5_Click;
+            // 
             // comboBox2
             // 
             comboBox2.FormattingEnabled = true;
@@ -355,6 +381,8 @@
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(button5);
+            Controls.Add(button4);
             Controls.Add(comboBox2);
             Controls.Add(textBox5);
             Controls.Add(button3);
@@ -432,5 +460,7 @@
         private TextBox textBox5;
         private ToolTip toolTip1;
         private ComboBox comboBox2;
+        private Button button4;
+        private Button button5;
     }
 }

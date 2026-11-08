@@ -39,11 +39,14 @@
             label4 = new Label();
             textBox1 = new TextBox();
             checkBox1 = new CheckBox();
+            label5 = new Label();
+            dataModeBox = new ComboBox();
+            binaryButton = new Button();
             SuspendLayout();
             // 
             // button1
             // 
-            button1.Location = new Point(12, 198);
+            button1.Location = new Point(12, 244);
             button1.Name = "button1";
             button1.Size = new Size(94, 29);
             button1.TabIndex = 0;
@@ -53,7 +56,7 @@
             // 
             // button2
             // 
-            button2.Location = new Point(120, 198);
+            button2.Location = new Point(120, 244);
             button2.Name = "button2";
             button2.Size = new Size(94, 29);
             button2.TabIndex = 1;
@@ -136,11 +139,43 @@
             checkBox1.TabIndex = 15;
             checkBox1.UseVisualStyleBackColor = true;
             // 
+            // label5
+            // 
+            label5.AutoSize = true;
+            label5.Location = new Point(3, 207);
+            label5.Name = "label5";
+            label5.Size = new Size(41, 20);
+            label5.TabIndex = 16;
+            label5.Text = "Data";
+            // 
+            // dataModeBox
+            // 
+            dataModeBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            dataModeBox.FormattingEnabled = true;
+            dataModeBox.Location = new Point(89, 204);
+            dataModeBox.Name = "dataModeBox";
+            dataModeBox.Size = new Size(84, 28);
+            dataModeBox.TabIndex = 17;
+            dataModeBox.SelectedIndexChanged += dataModeBox_SelectedIndexChanged;
+            // 
+            // binaryButton
+            // 
+            binaryButton.Location = new Point(176, 203);
+            binaryButton.Name = "binaryButton";
+            binaryButton.Size = new Size(38, 29);
+            binaryButton.TabIndex = 18;
+            binaryButton.Text = "...";
+            binaryButton.UseVisualStyleBackColor = true;
+            binaryButton.Click += binaryButton_Click;
+            // 
             // Form2
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(226, 239);
+            ClientSize = new Size(226, 285);
+            Controls.Add(binaryButton);
+            Controls.Add(dataModeBox);
+            Controls.Add(label5);
             Controls.Add(checkBox1);
             Controls.Add(textBox1);
             Controls.Add(label4);
@@ -153,9 +188,9 @@
             Controls.Add(button2);
             Controls.Add(button1);
             MaximizeBox = false;
-            MaximumSize = new Size(244, 286);
+            MaximumSize = new Size(244, 332);
             MinimizeBox = false;
-            MinimumSize = new Size(244, 256);
+            MinimumSize = new Size(244, 332);
             Name = "Form2";
             ShowIcon = false;
             Text = "Form2";
@@ -177,5 +212,8 @@
         private Label label4;
         private TextBox textBox1;
         private CheckBox checkBox1;
+        private Label label5;
+        private ComboBox dataModeBox;
+        private Button binaryButton;
     }
 }
