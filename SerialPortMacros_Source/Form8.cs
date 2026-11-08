@@ -326,9 +326,19 @@ namespace SerialPortMacros
 
         private void DeleteButton_Click(object sender, EventArgs e)
         {
-            // Non elimina più la cartella dal disco, segnala solo di rimuovere l'elemento singolo
-            DialogResult = DialogResult.Abort;
-            Close();
+            DialogResult result = MessageBox.Show(
+                "Are you sure you want to remove this item?",
+                "Confirm deletion",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning
+            );
+
+            if (result == DialogResult.Yes)
+            {
+                // Non elimina la cartella dal disco, segnala solo di rimuovere l'elemento singolo
+                DialogResult = DialogResult.Abort;
+                Close();
+            }
         }
     }
 

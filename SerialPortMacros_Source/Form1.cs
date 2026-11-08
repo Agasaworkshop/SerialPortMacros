@@ -4,18 +4,11 @@ using System.Text;
 using WindowsInput;
 using System.Globalization;
 using System.Collections.Concurrent;
-using System.Text.RegularExpressions; // Regex, Match
-using System.Linq;                   // Cast, Select, ToList
-using System.Globalization;          // CultureInfo
-using System.Windows.Forms;
+using System.Text.RegularExpressions; 
 using System.Text.Json;
-
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms.Design;
+
 
 namespace SerialPortMacros
 {
@@ -2734,7 +2727,7 @@ namespace SerialPortMacros
         // Nuova interfaccia
         private void button21_Click(object sender, EventArgs e)
         {
-            var form = new Form7(this, true);
+            var form = new Form7(this, true,true);
             form.Show();
         }
 

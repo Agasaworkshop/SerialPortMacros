@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -15,6 +16,8 @@ namespace SerialPortMacros
     {
         public Form1 form1;
         private bool _isLoading = false;
+
+        private int last_index = 0;
 
         public Form3(Form1 form)
         {
@@ -44,10 +47,16 @@ namespace SerialPortMacros
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             displayscript();
             _isLoading = false; // Fine caricamento iniziale
+            c_script = (Script)checkedListBox1.Items[0];
         }
 
         private void checkedListBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
+
+            bool active = checkedListBox1.GetItemCheckState(last_index) == CheckState.Checked;
+            Applychanges(active);
+            last_index = checkedListBox1.SelectedIndex;
+            c_script = (Script)checkedListBox1.SelectedItem; //sets  current selected 
             displayscript();
         }
 
@@ -86,23 +95,22 @@ namespace SerialPortMacros
         {
             try
             {
-                Applychanges();
-                MessageBox.Show("Modifiche salvate con successo!", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                int index = checkedListBox1.SelectedIndex;
+                bool active = checkedListBox1.GetItemCheckState(index) == CheckState.Checked;
+                Applychanges(active);
+                this.Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Errore nel salvataggio: {ex.Message}", "Errore", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this.Close();
             }
         }
 
-        private void Applychanges()
+        Script c_script;
+        private void Applychanges(bool active)
         {
-            Script c_script = (Script)checkedListBox1.SelectedItem;
+
             if (c_script == null) return;
-
-            int index = checkedListBox1.SelectedIndex;
-            bool active = checkedListBox1.GetItemCheckState(index) == CheckState.Checked;
-
             c_script.key = textBox2.Text;
             c_script.p1 = checkBox1.Checked;
             c_script.p2 = checkBox2.Checked;

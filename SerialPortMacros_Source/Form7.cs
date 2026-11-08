@@ -28,12 +28,21 @@ namespace SerialPortMacros
         private Point _dragStartLocation;
         private bool _isResizing = false;
         private Size _resizeStartSize;
+        private bool _wasShiftDown = false;
         private System.Windows.Forms.Timer? _refreshTimer;
+        private bool new_interface;
+        private bool _wasControlDown;
 
-        public Form7(Form1? form1, bool isEditMode)
+        private readonly List<int> _verticalSnapGuides = new List<int>();
+        private readonly List<int> _horizontalSnapGuides = new List<int>();
+
+        public Form7(Form1? form1, bool isEditMode, bool is_new = false)
         {
             InitializeComponent();
             _form1 = form1;
+            panel1.Paint += Panel1_Paint;
+
+            new_interface = is_new;
 
             panel1.MouseDown += (s, ev) => { this.ActiveControl = null; };
 
@@ -160,6 +169,25 @@ namespace SerialPortMacros
 
             string imageName = Path.GetFileName(selectedPath);
 
+            int initialWidth = 160;
+            int initialHeight = 120;
+            double imageAspectRatio = 4.0 / 3.0;
+
+            try
+            {
+                using (Image importedImage = Image.FromFile(selectedPath))
+                {
+                    imageAspectRatio = (double)importedImage.Width / importedImage.Height;
+                    double scale = Math.Min(160.0 / importedImage.Width, 120.0 / importedImage.Height);
+                    initialWidth = Math.Max(32, (int)Math.Round(importedImage.Width * scale));
+                    initialHeight = Math.Max(32, (int)Math.Round(importedImage.Height * scale));
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Impossibile leggere le dimensioni dell'immagine: " + ex.Message);
+            }
+
             var element = new InterfaceElement
             {
                 ModuleName = moduleName,
@@ -167,8 +195,9 @@ namespace SerialPortMacros
                 ElementType = "Button",
                 X = 20,
                 Y = 20,
-                Width = 160,
-                Height = 120,
+                Width = initialWidth,
+                Height = initialHeight,
+                ImageAspectRatio = imageAspectRatio,
                 TargetPorts = new bool[] { true, false, false, false },
                 StringFormatTemplate = "",
                 SecondImageName = "",
@@ -210,171 +239,293 @@ namespace SerialPortMacros
             string interfacesPath = Path.Combine(AppContext.BaseDirectory, "interfaces");
             Directory.CreateDirectory(interfacesPath);
 
-            using SaveFileDialog dialog = new SaveFileDialog();
-            dialog.InitialDirectory = interfacesPath;
-            dialog.Filter = "Serial Port Macro (*.spm)|*.spm";
-            dialog.DefaultExt = "spm";
-            dialog.AddExtension = true;
-            dialog.Title = "Salva interfaccia";
+            if (new_interface)
+            {
+                using SaveFileDialog dialog = new SaveFileDialog();
+                dialog.InitialDirectory = interfacesPath;
+                dialog.Filter = "Serial Port Macro (*.spm)|*.spm";
+                dialog.DefaultExt = "spm";
+                dialog.AddExtension = true;
+                dialog.Title = "Salva interfaccia";
 
-            if (!string.IsNullOrEmpty(_currentFilePath)) dialog.FileName = Path.GetFileName(_currentFilePath);
-            if (dialog.ShowDialog() != DialogResult.OK) return;
+                if (!string.IsNullOrEmpty(_currentFilePath)) dialog.FileName = Path.GetFileName(_currentFilePath);
+                if (dialog.ShowDialog() != DialogResult.OK) return;
 
-            _document.Name = Path.GetFileNameWithoutExtension(dialog.FileName);
-            SpmSerializer.Save(dialog.FileName, _document);
-            _currentFilePath = dialog.FileName;
-            MessageBox.Show("Interfaccia salvata.");
+                _document.Name = Path.GetFileNameWithoutExtension(dialog.FileName);
+                _currentFilePath = dialog.FileName;
+            }
+
+            _document.Name = Path.GetFileNameWithoutExtension(_currentFilePath);
+            SpmSerializer.Save(_currentFilePath, _document);
+            this.Close();
         }
 
         private void RenderElement(InterfaceElement element)
         {
-            string imagePath = Path.Combine(ModulePath, element.ModuleName, element.ImageName);
             Image? imgToUse = null;
 
-            try
+            // Le Label non hanno bisogno di immagini.
+            bool isLabel = element.ElementType == "Label";
+
+            if (!isLabel)
             {
-                if (File.Exists(imagePath))
+                string imagePath = Path.Combine(
+                    ModulePath,
+                    element.ModuleName,
+                    element.ImageName);
+
+                try
                 {
-                    using (Image loadedImage = Image.FromFile(imagePath))
+                    if (File.Exists(imagePath))
                     {
-                        imgToUse = new Bitmap(loadedImage);
+                        using (Image loadedImage = Image.FromFile(imagePath))
+                        {
+                            imgToUse = new Bitmap(loadedImage);
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Impossibile caricare l'immagine {imagePath}: {ex.Message}");
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Impossibile caricare l'immagine {imagePath}: {ex.Message}");
+                }
+
+                // Inizializza l'aspect ratio se non è ancora presente.
+                if (imgToUse != null && element.ImageAspectRatio <= 0)
+                {
+                    element.ImageAspectRatio =
+                        (double)imgToUse.Width / imgToUse.Height;
+                }
+
+                // Immagine di fallback.
+                if (imgToUse == null)
+                {
+                    Bitmap fallbackBmp = new Bitmap(
+                        Math.Max(32, element.Width),
+                        Math.Max(32, element.Height));
+
+                    using (Graphics g = Graphics.FromImage(fallbackBmp))
+                    {
+                        g.Clear(Color.LightGray);
+
+                        g.DrawRectangle(
+                            Pens.Red,
+                            0,
+                            0,
+                            fallbackBmp.Width - 1,
+                            fallbackBmp.Height - 1);
+
+                        using Font errorFont = new Font(
+                            "Segoe UI",
+                            8);
+
+                        g.DrawString(
+                            "Err Img",
+                            errorFont,
+                            Brushes.Red,
+                            2,
+                            2);
+                    }
+
+                    imgToUse = fallbackBmp;
+                }
             }
 
-            if (imgToUse == null)
-            {
-                Bitmap fallbackBmp = new Bitmap(Math.Max(32, element.Width), Math.Max(32, element.Height));
-                using (Graphics g = Graphics.FromImage(fallbackBmp))
-                {
-                    g.Clear(Color.LightGray);
-                    g.DrawRectangle(Pens.Red, 0, 0, fallbackBmp.Width - 1, fallbackBmp.Height - 1);
-                    g.DrawString("Err Img", new Font("Segoe UI", 8), Brushes.Red, 2, 2);
-                }
-                imgToUse = fallbackBmp;
-            }
+            // -----------------------------------------
+            // PICTUREBOX PRINCIPALE
+            // -----------------------------------------
 
             PictureBox picture = new PictureBox
             {
                 Location = new Point(element.X, element.Y),
-                Size = new Size(element.Width, element.Height),
-                SizeMode = PictureBoxSizeMode.Zoom,
-                BorderStyle = _isEditMode ? BorderStyle.FixedSingle : BorderStyle.None,
+
+                Size = new Size(
+                    Math.Max(32, element.Width),
+                    Math.Max(32, element.Height)),
+
+                SizeMode = PictureBoxSizeMode.StretchImage,
+
+                BorderStyle = _isEditMode
+                    ? BorderStyle.FixedSingle
+                    : BorderStyle.None,
+
+                BackColor = Color.Transparent,
+
                 Tag = element,
+
                 Image = imgToUse
             };
 
+            // Rotazione immagine.
             if (element.Rotation != 0)
             {
                 int rotations = (element.Rotation / 90) % 4;
-                for (int i = 0; i < rotations; i++) picture.Image?.RotateFlip(RotateFlipType.Rotate90FlipNone);
+
+                for (int i = 0; i < rotations; i++)
+                {
+                    picture.Image?.RotateFlip(
+                        RotateFlipType.Rotate90FlipNone);
+                }
             }
 
             panel1.Controls.Add(picture);
 
+            // -----------------------------------------
+            // MODALITA' EDITING
+            // -----------------------------------------
+
             if (_isEditMode)
             {
                 picture.Paint += Element_Paint;
+
                 picture.MouseDown += Element_MouseDown;
                 picture.MouseMove += Element_MouseMove;
                 picture.MouseUp += Element_MouseUp;
-                picture.DoubleClick += (s, e) => OpenElementConfig(element, picture);
+
+                picture.DoubleClick +=
+                    (s, e) => OpenElementConfig(element, picture);
             }
             else
             {
+                // -------------------------------------
+                // BUTTON
+                // -------------------------------------
+
                 if (element.ElementType == "Button")
                 {
                     picture.MouseDown += Button_MouseDown;
                     picture.MouseUp += Button_MouseUp;
                 }
+
+                // -------------------------------------
+                // TOGGLE
+                // -------------------------------------
+
                 else if (element.ElementType == "Toggle")
                 {
                     picture.MouseClick += Toggle_MouseClick;
                 }
+
+                // -------------------------------------
+                // LABEL
+                // -------------------------------------
+
                 else if (element.ElementType == "Label")
                 {
                     int lblWidth = element.Width;
                     int lblHeight = element.Height;
-                    int lblX = element.X;
-                    int lblY = element.Y;
 
-                    string labelText = !string.IsNullOrEmpty(element.StringFormatTemplate) ? element.StringFormatTemplate : element.VariableName;
+                    string labelText =
+                        !string.IsNullOrEmpty(element.StringFormatTemplate)
+                            ? element.StringFormatTemplate
+                            : element.VariableName;
 
-                    // Partiamo da una dimensione proporzionale all'altezza e la riduciamo finché il testo entra nei limiti
-                    float fontSize = Math.Max(6f, element.Height * 0.5f);
-
-                    while (fontSize > 4f)
-                    {
-                        using (Font testFont = new Font("Segoe UI", fontSize, FontStyle.Bold))
-                        {
-                            // TextRenderer misura esattamente lo stesso motore di rendering delle Label di Windows Forms
-                            Size textSize = TextRenderer.MeasureText(labelText, testFont);
-                            if (textSize.Width <= lblWidth && textSize.Height <= lblHeight)
-                            {
-                                break;
-                            }
-                            fontSize -= 0.5f;
-                        }
-                    }
-                    if (fontSize < 4f) fontSize = 4f;
+                    float fontSize = CalculateLabelFontSize(
+                        labelText,
+                        lblWidth,
+                        lblHeight);
 
                     Label staticLbl = new Label
                     {
-                        Location = new Point(lblX, lblY),
+                        Location = new Point(
+                            element.X,
+                            element.Y),
+
                         Width = lblWidth,
                         Height = lblHeight,
+
+                        AutoSize = false,
+                        AutoEllipsis = false,
+
+                        Padding = new Padding(2),
+
                         ForeColor = Color.Black,
                         BackColor = Color.Transparent,
-                        Font = new Font("Segoe UI", fontSize, FontStyle.Bold),
+
+                        Font = new Font(
+                            "Segoe UI",
+                            fontSize,
+                            FontStyle.Bold),
+
                         TextAlign = ContentAlignment.MiddleCenter,
+
+                        UseCompatibleTextRendering = false,
+
                         Text = labelText,
+
                         Tag = element
                     };
+
                     panel1.Controls.Add(staticLbl);
                     staticLbl.BringToFront();
                 }
+
+                // -------------------------------------
+                // NUMERIC INPUT
+                // -------------------------------------
+
                 else if (element.ElementType == "NumericInput")
                 {
                     int tbWidth = Math.Max(40, element.Width - 12);
 
-                    // Definiamo un font proporzionato all'altezza dell'elemento
-                    float fontSize = Math.Max(8f, Math.Min(16f, element.Height * 0.45f));
+                    float fontSize = Math.Max(
+                        8f,
+                        Math.Min(16f, element.Height * 0.45f));
 
                     TextBox inputTb = new TextBox
                     {
                         Width = tbWidth,
-                        Font = new Font("Segoe UI", fontSize, FontStyle.Bold),
-                        Text = element.NumericValue.ToString(CultureInfo.InvariantCulture),
-                        BorderStyle = BorderStyle.None, // Rimuove completamente il riquadro nero/bordo rigido
+
+                        Font = new Font(
+                            "Segoe UI",
+                            fontSize,
+                            FontStyle.Bold),
+
+                        Text = element.NumericValue.ToString(
+                            CultureInfo.InvariantCulture),
+
+                        BorderStyle = BorderStyle.None,
+
                         BackColor = Color.White,
                         ForeColor = Color.Black,
+
                         TextAlign = HorizontalAlignment.Center,
+
                         Tag = element
                     };
 
-                    // Centramento orizzontale e verticale perfetto basato sull'altezza nativa (PreferredHeight)
-                    int tbX = element.X + (element.Width - tbWidth) / 2;
-                    int tbY = element.Y + (element.Height - inputTb.PreferredHeight) / 2;
+                    int tbX = element.X +
+                        (element.Width - tbWidth) / 2;
+
+                    int tbY = element.Y +
+                        (element.Height - inputTb.PreferredHeight) / 2;
+
                     inputTb.Location = new Point(tbX, tbY);
 
-                    // Inizializza subito la variabile nel dizionario di Form1 all'avvio
-                    if (!_isEditMode && _form1 != null && !string.IsNullOrEmpty(element.VariableName))
+                    if (_form1 != null &&
+                        !string.IsNullOrEmpty(element.VariableName))
                     {
-                        _form1.PanelVariables[element.VariableName.Trim()] = element.NumericValue;
+                        _form1.PanelVariables[
+                            element.VariableName.Trim()
+                        ] = element.NumericValue;
                     }
 
                     inputTb.TextChanged += (s, e) =>
                     {
-                        if (double.TryParse(inputTb.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double val))
+                        if (double.TryParse(
+                            inputTb.Text,
+                            NumberStyles.Float,
+                            CultureInfo.InvariantCulture,
+                            out double val))
                         {
                             element.NumericValue = val;
-                            if (_form1 != null && !string.IsNullOrEmpty(element.VariableName))
+
+                            if (_form1 != null &&
+                                !string.IsNullOrEmpty(element.VariableName))
                             {
-                                _form1.PanelVariables[element.VariableName.Trim()] = val;
+                                _form1.PanelVariables[
+                                    element.VariableName.Trim()
+                                ] = val;
                             }
                         }
                     };
@@ -382,26 +533,47 @@ namespace SerialPortMacros
                     panel1.Controls.Add(inputTb);
                     inputTb.BringToFront();
                 }
+
+                // -------------------------------------
+                // NUMERIC OUTPUT
+                // -------------------------------------
+
                 else if (element.ElementType == "NumericOutput")
                 {
                     int lblWidth = Math.Max(40, element.Width - 16);
                     int lblHeight = Math.Max(20, element.Height / 2);
-                    int lblX = element.X + (element.Width - lblWidth) / 2;
-                    int lblY = element.Y + (element.Height - lblHeight) / 2;
 
-                    float fontSize = Math.Max(8f, Math.Min(16f, element.Height * 0.4f));
+                    int lblX = element.X +
+                        (element.Width - lblWidth) / 2;
+
+                    int lblY = element.Y +
+                        (element.Height - lblHeight) / 2;
+
+                    float fontSize = Math.Max(
+                        8f,
+                        Math.Min(16f, element.Height * 0.4f));
 
                     Label outputLbl = new Label
                     {
                         Location = new Point(lblX, lblY),
+
                         Width = lblWidth,
                         Height = lblHeight,
-                        Font = new Font("Segoe UI", fontSize, FontStyle.Bold),
+
+                        Font = new Font(
+                            "Segoe UI",
+                            fontSize,
+                            FontStyle.Bold),
+
                         ForeColor = Color.Black,
-                        BackColor = Color.White,              // Sfondo bianco pulito stile display
-                        BorderStyle = BorderStyle.None,// Bordo sottile e ordinato
+                        BackColor = Color.White,
+
+                        BorderStyle = BorderStyle.None,
+
                         TextAlign = ContentAlignment.MiddleCenter,
+
                         Text = "0",
+
                         Tag = element
                     };
 
@@ -461,6 +633,7 @@ namespace SerialPortMacros
                 form8.checkBox3.Checked,
                 form8.checkBox4.Checked
             };
+                    RenderDocument();
                 }
             }
         }
@@ -478,6 +651,95 @@ namespace SerialPortMacros
                 {
                     System.Diagnostics.Debug.WriteLine("Button_MouseDown error: " + ex.Message);
                 }
+            }
+        }
+
+        private void Element_MouseMove(object? sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            if (!_isEditMode || _draggedPicture == null) return;
+
+            Point currentMouse = panel1.PointToClient(Control.MousePosition);
+
+            InterfaceElement? element = _draggedPicture.Tag as InterfaceElement;
+            bool controlDown = (Control.ModifierKeys & Keys.Control) != 0;
+            bool shiftDown = (Control.ModifierKeys & Keys.Shift) != 0;
+
+            // Rileva il cambiamento dello stato di Shift.
+            // La nuova baseline evita salti nelle dimensioni.
+            if (_isResizing && controlDown != _wasControlDown)
+            {
+                _resizeStartSize = _draggedPicture.Size;
+                _dragStartMouse = currentMouse;
+
+                if (element != null && element.ElementType != "Label")
+                {
+                    element.ImageAspectRatio =
+                        (double)_draggedPicture.Width / _draggedPicture.Height;
+                }
+
+                _wasControlDown = controlDown;
+            }
+
+            int dx = currentMouse.X - _dragStartMouse.X;
+            int dy = currentMouse.Y - _dragStartMouse.Y;
+
+            if (_isResizing)
+            {
+                int newWidth = Math.Max(32, _resizeStartSize.Width + dx);
+                int newHeight = Math.Max(32, _resizeStartSize.Height + dy);
+
+                bool isImage = element != null && element.ElementType != "Label";
+                bool preserveAspectRatio = isImage && !controlDown;
+
+                if (preserveAspectRatio)
+                {
+                    double ratio = element!.ImageAspectRatio > 0
+                        ? element.ImageAspectRatio
+                        : (double)_resizeStartSize.Width / _resizeStartSize.Height;
+
+                    double scaleX = newWidth / (double)_resizeStartSize.Width;
+                    double scaleY = newHeight / (double)_resizeStartSize.Height;
+
+                    double scale = Math.Abs(scaleX - 1) >= Math.Abs(scaleY - 1)
+                        ? scaleX
+                        : scaleY;
+
+                    newWidth = Math.Max(32,
+                        (int)Math.Round(_resizeStartSize.Width * scale));
+
+                    newHeight = Math.Max(32,
+                        (int)Math.Round(newWidth / ratio));
+                }
+
+                _draggedPicture.Size = SnapResize(
+                    new Size(newWidth, newHeight),
+                    preserveAspectRatio);
+
+                // Durante lo stretch libero aggiorna il rapporto.
+                if (shiftDown && isImage)
+                {
+                    element!.ImageAspectRatio =
+                        (double)_draggedPicture.Width / _draggedPicture.Height;
+                }
+
+                _draggedPicture.Invalidate();
+
+                // Durante Shift utilizziamo una baseline incrementale.
+                if (shiftDown)
+                {
+                    _resizeStartSize = _draggedPicture.Size;
+                    _dragStartMouse = currentMouse;
+                }
+            }
+            else
+            {
+                Point proposedLocation = new Point(
+                    _dragStartLocation.X + dx,
+                    _dragStartLocation.Y + dy);
+
+                _draggedPicture.Location = SnapLocation(
+                    proposedLocation,
+                    _draggedPicture.Size);
             }
         }
 
@@ -518,6 +780,295 @@ namespace SerialPortMacros
             }
             return bmp;
         }
+
+        private int FindSnapDelta(IEnumerable<int> movingCoordinates, IEnumerable<int> targetCoordinates, int threshold = 7)
+        {
+            int bestDelta = 0;
+            int bestDistance = threshold + 1;
+
+            foreach (int moving in movingCoordinates)
+            {
+                foreach (int target in targetCoordinates)
+                {
+                    int delta = target - moving;
+                    int distance = Math.Abs(delta);
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                        bestDelta = delta;
+                    }
+                }
+            }
+
+            return bestDistance <= threshold ? bestDelta : 0;
+        }
+
+        private IEnumerable<PictureBox> GetOtherEditorObjects()
+        {
+            return panel1.Controls
+                .OfType<PictureBox>()
+                .Where(p => p != _draggedPicture && p.Tag is InterfaceElement);
+        }
+
+        private Point SnapLocation(Point location, Size size)
+        {
+            if ((Control.ModifierKeys & Keys.Shift) != 0)
+            {
+                ClearSnapGuides();
+                return location;
+            }
+
+            Rectangle moving = new Rectangle(location, size);
+            var others = GetOtherEditorObjects().ToList();
+
+            SnapResult snapX = FindSnapResult(
+                new[] { moving.Left, moving.Left + moving.Width / 2, moving.Right },
+                others.SelectMany(p => new[] { p.Left, p.Left + p.Width / 2, p.Right }));
+
+            SnapResult snapY = FindSnapResult(
+                new[] { moving.Top, moving.Top + moving.Height / 2, moving.Bottom },
+                others.SelectMany(p => new[] { p.Top, p.Top + p.Height / 2, p.Bottom }));
+
+            _verticalSnapGuides.Clear();
+            _horizontalSnapGuides.Clear();
+
+            if (snapX.Delta != 0)
+                _verticalSnapGuides.Add(snapX.GuidePosition);
+
+            if (snapY.Delta != 0)
+                _horizontalSnapGuides.Add(snapY.GuidePosition);
+
+            RefreshSnapGuides();
+
+            return new Point(
+                location.X + snapX.Delta,
+                location.Y + snapY.Delta);
+        }
+
+        private Size SnapResize(Size proposedSize, bool preserveAspectRatio)
+        {
+            if ((Control.ModifierKeys & Keys.Shift) != 0)
+            {
+                ClearSnapGuides();
+                return proposedSize;
+            }
+
+            var others = GetOtherEditorObjects().ToList();
+
+            int proposedRight = _draggedPicture!.Left + proposedSize.Width;
+            int proposedBottom = _draggedPicture.Top + proposedSize.Height;
+
+            SnapResult snapX = FindSnapResult(
+                new[] { proposedRight },
+                others.SelectMany(p => new[]
+                {
+            p.Left,
+            p.Left + p.Width / 2,
+            p.Right
+                }));
+
+            SnapResult snapY = FindSnapResult(
+                new[] { proposedBottom },
+                others.SelectMany(p => new[]
+                {
+            p.Top,
+            p.Top + p.Height / 2,
+            p.Bottom
+                }));
+
+            int dx = snapX.Delta;
+            int dy = snapY.Delta;
+
+            if (preserveAspectRatio)
+            {
+                double ratio = _draggedPicture.Tag is InterfaceElement el &&
+                               el.ImageAspectRatio > 0
+                    ? el.ImageAspectRatio
+                    : (double)_resizeStartSize.Width / _resizeStartSize.Height;
+
+                double scaleX = (proposedSize.Width + dx) /
+                                (double)_resizeStartSize.Width;
+
+                double scaleY = (proposedSize.Height + dy) /
+                                (double)_resizeStartSize.Height;
+
+                if (dx != 0 && (dy == 0 || Math.Abs(dx) <= Math.Abs(dy)))
+                {
+                    proposedSize.Width = Math.Max(
+                        32,
+                        (int)Math.Round(_resizeStartSize.Width * scaleX));
+
+                    proposedSize.Height = Math.Max(
+                        32,
+                        (int)Math.Round(proposedSize.Width / ratio));
+                }
+                else if (dy != 0)
+                {
+                    proposedSize.Height = Math.Max(
+                        32,
+                        (int)Math.Round(_resizeStartSize.Height * scaleY));
+
+                    proposedSize.Width = Math.Max(
+                        32,
+                        (int)Math.Round(proposedSize.Height * ratio));
+                }
+            }
+            else
+            {
+                proposedSize.Width = Math.Max(32, proposedSize.Width + dx);
+                proposedSize.Height = Math.Max(32, proposedSize.Height + dy);
+            }
+
+            // Aggiorna le coordinate delle guide.
+            _verticalSnapGuides.Clear();
+            _horizontalSnapGuides.Clear();
+
+            if (dx != 0)
+                _verticalSnapGuides.Add(snapX.GuidePosition);
+
+            if (dy != 0)
+                _horizontalSnapGuides.Add(snapY.GuidePosition);
+
+            RefreshSnapGuides();
+
+            return proposedSize;
+        }
+
+        private void Element_Paint(object? sender, PaintEventArgs e)
+        {
+            if (sender is not PictureBox picture) return;
+
+            // -----------------------------------------
+            // GUIDE DI ALLINEAMENTO
+            // -----------------------------------------
+
+            using Pen guidePen = new Pen(Color.DodgerBlue, 1.5f)
+            {
+                DashStyle = System.Drawing.Drawing2D.DashStyle.Dash
+            };
+
+            guidePen.DashPattern = new float[] { 4f, 3f };
+
+            // Guide verticali: coordinate del pannello
+            foreach (int x in _verticalSnapGuides)
+            {
+                int localX = x - picture.Left;
+
+                if (localX >= 0 && localX <= picture.Width)
+                {
+                    e.Graphics.DrawLine(
+                        guidePen,
+                        localX, 0,
+                        localX, picture.Height);
+                }
+            }
+
+            // Guide orizzontali
+            foreach (int y in _horizontalSnapGuides)
+            {
+                int localY = y - picture.Top;
+
+                if (localY >= 0 && localY <= picture.Height)
+                {
+                    e.Graphics.DrawLine(
+                        guidePen,
+                        0, localY,
+                        picture.Width, localY);
+                }
+            }
+
+            // -----------------------------------------
+            // LABEL
+            // -----------------------------------------
+
+            if (picture.Tag is InterfaceElement element &&
+                element.ElementType == "Label")
+            {
+                string labelText =
+                    !string.IsNullOrEmpty(element.StringFormatTemplate)
+                        ? element.StringFormatTemplate
+                        : element.VariableName;
+
+                float fontSize = CalculateLabelFontSize(
+                    labelText,
+                    picture.Width,
+                    picture.Height);
+
+                using Font font = new Font(
+                    "Segoe UI",
+                    fontSize,
+                    FontStyle.Bold);
+
+                TextRenderer.DrawText(
+                    e.Graphics,
+                    labelText,
+                    font,
+                    new Rectangle(
+                        2,
+                        2,
+                        Math.Max(1, picture.Width - 4),
+                        Math.Max(1, picture.Height - 4)),
+                    Color.Black,
+                    TextFormatFlags.HorizontalCenter |
+                    TextFormatFlags.VerticalCenter |
+                    TextFormatFlags.WordBreak);
+            }
+
+            // -----------------------------------------
+            // GRIP DI RIDIMENSIONAMENTO
+            // -----------------------------------------
+
+            const int gripSize = 10;
+
+            Rectangle grip = new Rectangle(
+                picture.ClientSize.Width - gripSize,
+                picture.ClientSize.Height - gripSize,
+                gripSize,
+                gripSize);
+
+            e.Graphics.FillRectangle(Brushes.DodgerBlue, grip);
+            e.Graphics.DrawRectangle(Pens.White, grip);
+        }
+
+        private void RefreshSnapGuides()
+        {
+            panel1.Invalidate();
+
+            foreach (PictureBox picture in panel1.Controls.OfType<PictureBox>())
+                picture.Invalidate();
+        }
+
+        private static float CalculateLabelFontSize(
+    string text, int width, int height)
+        {
+            float fontSize = Math.Max(6f, height * 0.5f);
+
+            while (fontSize > 4f)
+            {
+                using (Font testFont = new Font(
+                    "Segoe UI", fontSize, FontStyle.Bold))
+                {
+                    Size textSize = TextRenderer.MeasureText(
+                        text ?? string.Empty,
+                        testFont);
+
+                    if (textSize.Width <= width &&
+                        textSize.Height <= height)
+                    {
+                        break;
+                    }
+
+                    fontSize -= 0.5f;
+                }
+            }
+
+            if (fontSize < 4f)
+                fontSize = 4f;
+
+            return fontSize;
+        }
+
+
 
         private void ExecuteButtonAction(InterfaceElement element)
         {
@@ -704,14 +1255,6 @@ namespace SerialPortMacros
             return true;
         }
 
-        private void Element_Paint(object? sender, PaintEventArgs e)
-        {
-            if (sender is not PictureBox picture) return;
-            const int gripSize = 10;
-            Rectangle grip = new Rectangle(picture.ClientSize.Width - gripSize, picture.ClientSize.Height - gripSize, gripSize, gripSize);
-            e.Graphics.FillRectangle(Brushes.DodgerBlue, grip);
-            e.Graphics.DrawRectangle(Pens.White, grip);
-        }
 
         private void Element_MouseDown(object? sender, System.Windows.Forms.MouseEventArgs e)
         {
@@ -720,30 +1263,14 @@ namespace SerialPortMacros
             _dragStartMouse = panel1.PointToClient(Control.MousePosition);
             _dragStartLocation = picture.Location;
             _resizeStartSize = picture.Size;
+            _wasShiftDown = (Control.ModifierKeys & Keys.Shift) != 0;
+            _wasControlDown = (Control.ModifierKeys & Keys.Control) != 0;
+
             const int gripSize = 14;
             Rectangle grip = new Rectangle(picture.ClientSize.Width - gripSize, picture.ClientSize.Height - gripSize, gripSize, gripSize);
             _isResizing = grip.Contains(e.Location);
             picture.BringToFront();
             picture.Capture = true;
-        }
-
-        private void Element_MouseMove(object? sender, System.Windows.Forms.MouseEventArgs e)
-        {
-            if (!_isEditMode || _draggedPicture == null) return;
-            Point currentMouse = panel1.PointToClient(Control.MousePosition);
-            int dx = currentMouse.X - _dragStartMouse.X;
-            int dy = currentMouse.Y - _dragStartMouse.Y;
-
-            if (_isResizing)
-            {
-                int newWidth = Math.Max(32, _resizeStartSize.Width + dx);
-                int newHeight = Math.Max(32, _resizeStartSize.Height + dy);
-                _draggedPicture.Size = new Size(newWidth, newHeight);
-            }
-            else
-            {
-                _draggedPicture.Location = new Point(_dragStartLocation.X + dx, _dragStartLocation.Y + dy);
-            }
         }
 
 
@@ -784,16 +1311,64 @@ namespace SerialPortMacros
         private void Element_MouseUp(object? sender, System.Windows.Forms.MouseEventArgs e)
         {
             if (_draggedPicture == null) return;
+
             _draggedPicture.Capture = false;
+
             if (_draggedPicture.Tag is InterfaceElement element)
             {
+                // Salva il nuovo aspect ratio dopo il ridimensionamento.
+                // Questo diventa il rapporto di riferimento per i resize successivi.
+                if (_isResizing &&
+                    element.ElementType != "Label" &&
+                    _draggedPicture.Height > 0)
+                {
+                    element.ImageAspectRatio =
+                        (double)_draggedPicture.Width / _draggedPicture.Height;
+                }
+
                 element.X = _draggedPicture.Left;
                 element.Y = _draggedPicture.Top;
                 element.Width = _draggedPicture.Width;
                 element.Height = _draggedPicture.Height;
             }
+
             _draggedPicture = null;
             _isResizing = false;
+
+            ClearSnapGuides();
+        }
+
+        private void ClearSnapGuides()
+        {
+            _verticalSnapGuides.Clear();
+            _horizontalSnapGuides.Clear();
+            RefreshSnapGuides();
+        }
+
+        private void Panel1_Paint(object? sender, PaintEventArgs e)
+        {
+            using Pen guidePen = new Pen(Color.DodgerBlue, 1.5f)
+            {
+                DashStyle = System.Drawing.Drawing2D.DashStyle.Dash
+            };
+
+            guidePen.DashPattern = new float[] { 4f, 3f };
+
+            foreach (int x in _verticalSnapGuides)
+            {
+                e.Graphics.DrawLine(
+                    guidePen,
+                    x, 0,
+                    x, panel1.ClientSize.Height);
+            }
+
+            foreach (int y in _horizontalSnapGuides)
+            {
+                e.Graphics.DrawLine(
+                    guidePen,
+                    0, y,
+                    panel1.ClientSize.Width, y);
+            }
         }
 
         private void RenderDocument()
@@ -812,6 +1387,49 @@ namespace SerialPortMacros
             foreach (InterfaceElement element in _document.Elements)
             {
                 RenderElement(element);
+            }
+        }
+
+
+        private SnapResult FindSnapResult(
+    IEnumerable<int> movingCoordinates,
+    IEnumerable<int> targetCoordinates)
+        {
+            const int snapDistance = 8;
+
+            int bestDelta = 0;
+            int bestGuidePosition = 0;
+            int minDistance = snapDistance + 1;
+
+            foreach (int moving in movingCoordinates)
+            {
+                foreach (int target in targetCoordinates)
+                {
+                    int delta = target - moving;
+                    int distance = Math.Abs(delta);
+
+                    if (distance < minDistance)
+                    {
+                        minDistance = distance;
+                        bestDelta = delta;
+                        bestGuidePosition = target;
+                    }
+                }
+            }
+
+            return new SnapResult(bestDelta, bestGuidePosition);
+        }
+
+
+        private struct SnapResult
+        {
+            public int Delta;
+            public int GuidePosition;
+
+            public SnapResult(int delta, int guidePosition)
+            {
+                Delta = delta;
+                GuidePosition = guidePosition;
             }
         }
     }
@@ -842,6 +1460,8 @@ namespace SerialPortMacros
         public bool IsToggled { get; set; } = false;
         public double NumericValue { get; set; } = 0;
 
+        public double ImageAspectRatio { get; set; } = 0;
+
         public string CustomLineEnding { get; set; } = ""; // Per Form8
 
     }
@@ -863,6 +1483,7 @@ namespace SerialPortMacros
             string json = JsonSerializer.Serialize(document, options);
             File.WriteAllText(filePath, json);
         }
+
 
         public static InterfaceDocument Load(string filePath)
         {
