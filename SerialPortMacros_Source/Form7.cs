@@ -32,8 +32,10 @@ namespace SerialPortMacros
         private readonly bool _isNewInterface;
         private bool _wasControlDown;
 
-        private readonly List<int> _verticalSnapGuides = new List<int>();
-        private readonly List<int> _horizontalSnapGuides = new List<int>();
+        // Edit mode: snapping, guides and selection
+        private readonly SnapEngine _snap = new();
+        private List<SnapGuide> _snapGuides = new();
+        private PictureBox? _selectedPicture;
 
         /// <summary>Module images, read from disk once and shared by the elements.</summary>
         private readonly ModuleImageCache _images = new();
@@ -50,7 +52,11 @@ namespace SerialPortMacros
 
             _isNewInterface = isNew;
 
-            panel1.MouseDown += (s, ev) => { this.ActiveControl = null; };
+            panel1.MouseDown += (s, ev) =>
+            {
+                this.ActiveControl = null;
+                SelectPicture(null);   // clicking the empty panel clears the selection
+            };
 
             this.KeyPreview = true;
             this.KeyDown += Form7_KeyDown;

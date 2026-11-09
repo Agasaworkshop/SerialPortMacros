@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using SerialPortMacros.Decoding;
+using SerialPortMacros.Transport;
 
 namespace SerialPortMacros.Core;
 
@@ -9,7 +10,15 @@ public sealed class PortSettings
 {
     public bool SendEnabled { get; set; }
     public bool LogEnabled { get; set; }
+    /// <summary>Serial, TCP (Wi-Fi) or BLE.</summary>
+    public ConnectionMode Mode { get; set; } = ConnectionMode.Serial;
+
+    /// <summary>Kept in sync with <see cref="Mode"/> for older versions of the program.</summary>
     public bool UseTcp { get; set; }
+
+    /// <summary>Bluetooth LE device chosen for this port (0 = none).</summary>
+    public ulong BleAddress { get; set; }
+    public string BleName { get; set; } = "";
     public string BaudRate { get; set; } = "9600";
     public int TcpPort { get; set; }
     public int GraphCount { get; set; } = 1;
@@ -86,7 +95,8 @@ public sealed class AppSettings
     /// <summary>Migrates the legacy format and fixes missing or invalid values.</summary>
     public void Normalize()
     {
-        bool legacy = Ports == null || Ports.Length != PortCount || check1.HasValue || BaudRate1 != null;
+        bool legacy = Ports == null || Ports.Length != PortCount || check1.HasValue || BaudRate1 != null ||
+                      UseTcp1.HasValue || UseTcp2.HasValue || UseTcp3.HasValue || UseTcp4.HasValue;
 
         if (Ports == null || Ports.Length != PortCount)
         {
@@ -105,6 +115,8 @@ public sealed class AppSettings
             Ports[i] ??= new PortSettings();
             var p = Ports[i];
             if (p.TcpPort is < 1 or > 65535) p.TcpPort = 5001 + i;
+            if (p.Mode == ConnectionMode.Serial && p.UseTcp) p.Mode = ConnectionMode.Tcp;   // files without "Mode"
+            p.BleName ??= "";
             if (string.IsNullOrWhiteSpace(p.BaudRate)) p.BaudRate = "9600";
             if (p.GraphCount < 1) p.GraphCount = 1;
             if (p.DataBits is < 5 or > 8) p.DataBits = 8;

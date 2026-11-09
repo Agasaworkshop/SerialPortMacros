@@ -8,16 +8,16 @@ namespace SerialPortMacros
     public partial class Form2 : Form
     {
         private readonly SerialPort _port;
-        private readonly bool _tcpMode;
+        private readonly bool _serialDisabled;
 
         /// <summary>Chosen data format (valid after DialogResult.OK).</summary>
         public PortDataFormat DataFormat { get; private set; }
 
-        public Form2(SerialPort port, PortDataFormat format, bool tcpMode)
+        public Form2(SerialPort port, PortDataFormat format, bool serialDisabled)
         {
             InitializeComponent();
             _port = port;
-            _tcpMode = tcpMode;
+            _serialDisabled = serialDisabled;
             DataFormat = format.Clone();
         }
 
@@ -37,9 +37,9 @@ namespace SerialPortMacros
                 checkBox1.Checked = true;
             }
 
-            // Serial parameters have no effect in TCP mode.
+            // Serial parameters have no effect in TCP and BLE mode.
             Paritybox.Enabled = databitsbox.Enabled = stopbitsbox.Enabled =
-                textBox1.Enabled = checkBox1.Enabled = !_tcpMode;
+                textBox1.Enabled = checkBox1.Enabled = !_serialDisabled;
 
             dataModeBox.Items.AddRange(new object[] { "Text", "Binary" });
             dataModeBox.SelectedIndex = DataFormat.Mode == DataMode.Binary ? 1 : 0;
@@ -54,7 +54,7 @@ namespace SerialPortMacros
 
         private void button2_Click(object sender, EventArgs e)
         {
-            if (!_tcpMode)
+            if (!_serialDisabled)
             {
                 try
                 {

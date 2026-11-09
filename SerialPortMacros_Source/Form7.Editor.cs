@@ -168,6 +168,8 @@ namespace SerialPortMacros
         {
             if (!_isEditMode || e.Button != MouseButtons.Left || sender is not PictureBox picture) return;
             _draggedPicture = picture;
+            SelectPicture(picture);
+            ActiveControl = null;   // arrow keys go to the selected element
             _dragStartMouse = panel1.PointToClient(Control.MousePosition);
             _dragStartLocation = picture.Location;
             _resizeStartSize = picture.Size;
@@ -301,107 +303,65 @@ namespace SerialPortMacros
         }
 
         // ------------------------------------------------------------------
-        // Snapping
+        // Snapping (rules in UI/SnapEngine.cs)
         // ------------------------------------------------------------------
 
-        private IEnumerable<PictureBox> GetOtherEditorObjects()
-        {
-            return panel1.Controls
+        /// <summary>Bounds of every element except the one being dragged.</summary>
+        private List<Rectangle> OtherElementBounds() =>
+            panel1.Controls
                 .OfType<PictureBox>()
-                .Where(p => p != _draggedPicture && p.Tag is InterfaceElement);
-        }
+                .Where(p => p != _draggedPicture && p.Tag is InterfaceElement)
+                .Select(p => p.Bounds)
+                .ToList();
+
+        private Rectangle SnapContainer => panel1.ClientRectangle;
+
+        private static bool SnapDisabled => (Control.ModifierKeys & Keys.Shift) != 0;
 
         private Point SnapLocation(Point location, Size size)
         {
-            if ((Control.ModifierKeys & Keys.Shift) != 0)
+            if (SnapDisabled)
             {
                 ClearSnapGuides();
                 return location;
             }
 
-            Rectangle moving = new Rectangle(location, size);
-            var others = GetOtherEditorObjects().ToList();
+            var others = OtherElementBounds();
+            var result = _snap.SnapMove(new Rectangle(location, size), others, SnapContainer);
 
-            SnapResult snapX = FindSnapResult(
-                new[] { moving.Left, moving.Left + moving.Width / 2, moving.Right },
-                others.SelectMany(p => new[] { p.Left, p.Left + p.Width / 2, p.Right }));
-
-            SnapResult snapY = FindSnapResult(
-                new[] { moving.Top, moving.Top + moving.Height / 2, moving.Bottom },
-                others.SelectMany(p => new[] { p.Top, p.Top + p.Height / 2, p.Bottom }));
-
-            _verticalSnapGuides.Clear();
-            _horizontalSnapGuides.Clear();
-
-            if (snapX.Delta != 0)
-                _verticalSnapGuides.Add(snapX.GuidePosition);
-
-            if (snapY.Delta != 0)
-                _horizontalSnapGuides.Add(snapY.GuidePosition);
-
-            RefreshSnapGuides();
-
-            return new Point(
-                location.X + snapX.Delta,
-                location.Y + snapY.Delta);
+            SetSnapGuides(_snap.GuidesFor(result.Bounds, others, SnapContainer, resize: false));
+            return result.Bounds.Location;
         }
 
         private Size SnapResize(Size proposedSize, bool preserveAspectRatio)
         {
-            if ((Control.ModifierKeys & Keys.Shift) != 0)
+            if (SnapDisabled)
             {
                 ClearSnapGuides();
                 return proposedSize;
             }
 
-            var others = GetOtherEditorObjects().ToList();
-
-            int proposedRight = _draggedPicture!.Left + proposedSize.Width;
-            int proposedBottom = _draggedPicture.Top + proposedSize.Height;
-
-            SnapResult snapX = FindSnapResult(
-                new[] { proposedRight },
-                others.SelectMany(p => new[] { p.Left, p.Left + p.Width / 2, p.Right }));
-
-            SnapResult snapY = FindSnapResult(
-                new[] { proposedBottom },
-                others.SelectMany(p => new[] { p.Top, p.Top + p.Height / 2, p.Bottom }));
-
-            int dx = snapX.Delta;
-            int dy = snapY.Delta;
+            var others = OtherElementBounds();
+            var (dx, dy, _) = _snap.SnapResize(new Rectangle(_draggedPicture!.Location, proposedSize), others, SnapContainer);
 
             if (preserveAspectRatio)
             {
-                double ratio = _draggedPicture.Tag is InterfaceElement el &&
-                               el.ImageAspectRatio > 0
+                double ratio = _draggedPicture.Tag is InterfaceElement el && el.ImageAspectRatio > 0
                     ? el.ImageAspectRatio
                     : (double)_resizeStartSize.Width / _resizeStartSize.Height;
 
-                double scaleX = (proposedSize.Width + dx) /
-                                (double)_resizeStartSize.Width;
-
-                double scaleY = (proposedSize.Height + dy) /
-                                (double)_resizeStartSize.Height;
+                double scaleX = (proposedSize.Width + dx) / (double)_resizeStartSize.Width;
+                double scaleY = (proposedSize.Height + dy) / (double)_resizeStartSize.Height;
 
                 if (dx != 0 && (dy == 0 || Math.Abs(dx) <= Math.Abs(dy)))
                 {
-                    proposedSize.Width = Math.Max(
-                        32,
-                        (int)Math.Round(_resizeStartSize.Width * scaleX));
-
-                    proposedSize.Height = Math.Max(
-                        32,
-                        (int)Math.Round(proposedSize.Width / ratio));
+                    proposedSize.Width = Math.Max(32, (int)Math.Round(_resizeStartSize.Width * scaleX));
+                    proposedSize.Height = Math.Max(32, (int)Math.Round(proposedSize.Width / ratio));
                 }
                 else if (dy != 0)
                 {
-                    proposedSize.Height = Math.Max(
-                        32,
-                        (int)Math.Round(_resizeStartSize.Height * scaleY));
-
-                    proposedSize.Width = Math.Max(
-                        32,
-                        (int)Math.Round(proposedSize.Height * ratio));
+                    proposedSize.Height = Math.Max(32, (int)Math.Round(_resizeStartSize.Height * scaleY));
+                    proposedSize.Width = Math.Max(32, (int)Math.Round(proposedSize.Height * ratio));
                 }
             }
             else
@@ -410,63 +370,80 @@ namespace SerialPortMacros
                 proposedSize.Height = Math.Max(32, proposedSize.Height + dy);
             }
 
-            // Update the guide coordinates.
-            _verticalSnapGuides.Clear();
-            _horizontalSnapGuides.Clear();
-
-            if (dx != 0)
-                _verticalSnapGuides.Add(snapX.GuidePosition);
-
-            if (dy != 0)
-                _horizontalSnapGuides.Add(snapY.GuidePosition);
-
-            RefreshSnapGuides();
-
+            // Guides of the final size (the aspect ratio may have moved the other edge).
+            SetSnapGuides(_snap.GuidesFor(new Rectangle(_draggedPicture.Location, proposedSize), others, SnapContainer, resize: true));
             return proposedSize;
         }
 
-        private SnapResult FindSnapResult(IEnumerable<int> movingCoordinates, IEnumerable<int> targetCoordinates)
+        // ------------------------------------------------------------------
+        // Selection and keyboard nudge
+        // ------------------------------------------------------------------
+
+        private void SelectPicture(PictureBox? picture)
         {
-            const int snapDistance = 8;
+            if (_selectedPicture == picture) return;
 
-            int bestDelta = 0;
-            int bestGuidePosition = 0;
-            int minDistance = snapDistance + 1;
+            var old = _selectedPicture;
+            _selectedPicture = picture;
+            old?.Invalidate();
+            picture?.Invalidate();
+        }
 
-            foreach (int moving in movingCoordinates)
+        /// <summary>Arrow keys move the selected element by 1 px (Shift: 10 px).</summary>
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (_isEditMode && _selectedPicture != null && _draggedPicture == null &&
+                ActiveControl is not TextBoxBase && ActiveControl is not ComboBox)
             {
-                foreach (int target in targetCoordinates)
-                {
-                    int delta = target - moving;
-                    int distance = Math.Abs(delta);
+                int step = (keyData & Keys.Shift) != 0 ? 10 : 1;
+                int dx = 0, dy = 0;
 
-                    if (distance < minDistance)
-                    {
-                        minDistance = distance;
-                        bestDelta = delta;
-                        bestGuidePosition = target;
-                    }
+                switch (keyData & Keys.KeyCode)
+                {
+                    case Keys.Left: dx = -step; break;
+                    case Keys.Right: dx = step; break;
+                    case Keys.Up: dy = -step; break;
+                    case Keys.Down: dy = step; break;
+                }
+
+                if (dx != 0 || dy != 0)
+                {
+                    MoveSelected(dx, dy);
+                    return true;
                 }
             }
 
-            return new SnapResult(bestDelta, bestGuidePosition);
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
-        private struct SnapResult
+        private void MoveSelected(int dx, int dy)
         {
-            public int Delta;
-            public int GuidePosition;
+            var picture = _selectedPicture!;
+            picture.Location = new Point(Math.Max(0, picture.Left + dx), Math.Max(0, picture.Top + dy));
 
-            public SnapResult(int delta, int guidePosition)
+            if (picture.Tag is InterfaceElement element)
             {
-                Delta = delta;
-                GuidePosition = guidePosition;
+                element.X = picture.Left;
+                element.Y = picture.Top;
             }
+
+            // Show which guides the new position matches, without snapping.
+            var others = panel1.Controls.OfType<PictureBox>()
+                .Where(p => p != picture && p.Tag is InterfaceElement)
+                .Select(p => p.Bounds)
+                .ToList();
+            SetSnapGuides(_snap.GuidesFor(picture.Bounds, others, SnapContainer, resize: false));
         }
 
         // ------------------------------------------------------------------
         // Snap guides and painting
         // ------------------------------------------------------------------
+
+        private void SetSnapGuides(List<SnapGuide> guides)
+        {
+            _snapGuides = guides;
+            RefreshSnapGuides();
+        }
 
         private void RefreshSnapGuides()
         {
@@ -478,97 +455,96 @@ namespace SerialPortMacros
 
         private void ClearSnapGuides()
         {
-            _verticalSnapGuides.Clear();
-            _horizontalSnapGuides.Clear();
+            _snapGuides = new List<SnapGuide>();
             RefreshSnapGuides();
+        }
+
+        /// <summary>Draws the guides; <paramref name="offset"/> converts panel to control coordinates.</summary>
+        private void DrawSnapGuides(Graphics g, Point offset)
+        {
+            if (_snapGuides.Count == 0) return;
+
+            using var alignPen = new Pen(Color.DodgerBlue, 1.5f) { DashPattern = new[] { 4f, 3f } };
+            using var containerPen = new Pen(Color.Gray, 1f) { DashPattern = new[] { 2f, 3f } };
+            using var spacingPen = new Pen(Color.Magenta, 1.5f);
+            using var sizePen = new Pen(Color.OrangeRed, 1.5f);
+
+            foreach (var guide in _snapGuides)
+            {
+                var from = new Point(guide.From.X + offset.X, guide.From.Y + offset.Y);
+                var to = new Point(guide.To.X + offset.X, guide.To.Y + offset.Y);
+
+                switch (guide.Kind)
+                {
+                    case SnapGuideKind.Align:
+                        g.DrawLine(alignPen, from, to);
+                        break;
+                    case SnapGuideKind.Container:
+                        g.DrawLine(containerPen, from, to);
+                        break;
+                    case SnapGuideKind.Spacing:
+                        DrawMeasure(g, spacingPen, from, to);
+                        break;
+                    case SnapGuideKind.Size:
+                        DrawMeasure(g, sizePen, from, to);
+                        break;
+                }
+            }
+        }
+
+        /// <summary>A segment with short end ticks, like a dimension line.</summary>
+        private static void DrawMeasure(Graphics g, Pen pen, Point from, Point to)
+        {
+            g.DrawLine(pen, from, to);
+            bool horizontal = from.Y == to.Y;
+            const int tick = 4;
+            if (horizontal)
+            {
+                g.DrawLine(pen, from.X, from.Y - tick, from.X, from.Y + tick);
+                g.DrawLine(pen, to.X, to.Y - tick, to.X, to.Y + tick);
+            }
+            else
+            {
+                g.DrawLine(pen, from.X - tick, from.Y, from.X + tick, from.Y);
+                g.DrawLine(pen, to.X - tick, to.Y, to.X + tick, to.Y);
+            }
         }
 
         private void Element_Paint(object? sender, PaintEventArgs e)
         {
             if (sender is not PictureBox picture) return;
 
-            // -----------------------------------------
-            // ALIGNMENT GUIDES
-            // -----------------------------------------
+            // Guides that cross this element (panel coordinates -> element coordinates)
+            DrawSnapGuides(e.Graphics, new Point(-picture.Left, -picture.Top));
 
-            using Pen guidePen = new Pen(Color.DodgerBlue, 1.5f)
+            // Label text
+            if (picture.Tag is InterfaceElement element && element.ElementType == "Label")
             {
-                DashStyle = System.Drawing.Drawing2D.DashStyle.Dash
-            };
+                string labelText = !string.IsNullOrEmpty(element.StringFormatTemplate)
+                    ? element.StringFormatTemplate
+                    : element.VariableName;
 
-            guidePen.DashPattern = new float[] { 4f, 3f };
-
-            // Vertical guides: panel coordinates
-            foreach (int x in _verticalSnapGuides)
-            {
-                int localX = x - picture.Left;
-
-                if (localX >= 0 && localX <= picture.Width)
-                {
-                    e.Graphics.DrawLine(
-                        guidePen,
-                        localX, 0,
-                        localX, picture.Height);
-                }
-            }
-
-            // Horizontal guides
-            foreach (int y in _horizontalSnapGuides)
-            {
-                int localY = y - picture.Top;
-
-                if (localY >= 0 && localY <= picture.Height)
-                {
-                    e.Graphics.DrawLine(
-                        guidePen,
-                        0, localY,
-                        picture.Width, localY);
-                }
-            }
-
-            // -----------------------------------------
-            // LABEL
-            // -----------------------------------------
-
-            if (picture.Tag is InterfaceElement element &&
-                element.ElementType == "Label")
-            {
-                string labelText =
-                    !string.IsNullOrEmpty(element.StringFormatTemplate)
-                        ? element.StringFormatTemplate
-                        : element.VariableName;
-
-                float fontSize = CalculateLabelFontSize(
-                    labelText,
-                    picture.Width,
-                    picture.Height);
-
-                using Font font = new Font(
-                    "Segoe UI",
-                    fontSize,
-                    FontStyle.Bold);
+                float fontSize = CalculateLabelFontSize(labelText, picture.Width, picture.Height);
+                using Font font = new Font("Segoe UI", fontSize, FontStyle.Bold);
 
                 TextRenderer.DrawText(
                     e.Graphics,
                     labelText,
                     font,
-                    new Rectangle(
-                        2,
-                        2,
-                        Math.Max(1, picture.Width - 4),
-                        Math.Max(1, picture.Height - 4)),
+                    new Rectangle(2, 2, Math.Max(1, picture.Width - 4), Math.Max(1, picture.Height - 4)),
                     Color.Black,
-                    TextFormatFlags.HorizontalCenter |
-                    TextFormatFlags.VerticalCenter |
-                    TextFormatFlags.WordBreak);
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
             }
 
-            // -----------------------------------------
-            // RESIZE GRIP
-            // -----------------------------------------
+            // Selection frame
+            if (picture == _selectedPicture)
+            {
+                using var selectionPen = new Pen(Color.Orange, 2f);
+                e.Graphics.DrawRectangle(selectionPen, 1, 1, picture.ClientSize.Width - 2, picture.ClientSize.Height - 2);
+            }
 
+            // Resize grip
             const int gripSize = 10;
-
             Rectangle grip = new Rectangle(
                 picture.ClientSize.Width - gripSize,
                 picture.ClientSize.Height - gripSize,
@@ -581,28 +557,7 @@ namespace SerialPortMacros
 
         private void Panel1_Paint(object? sender, PaintEventArgs e)
         {
-            using Pen guidePen = new Pen(Color.DodgerBlue, 1.5f)
-            {
-                DashStyle = System.Drawing.Drawing2D.DashStyle.Dash
-            };
-
-            guidePen.DashPattern = new float[] { 4f, 3f };
-
-            foreach (int x in _verticalSnapGuides)
-            {
-                e.Graphics.DrawLine(
-                    guidePen,
-                    x, 0,
-                    x, panel1.ClientSize.Height);
-            }
-
-            foreach (int y in _horizontalSnapGuides)
-            {
-                e.Graphics.DrawLine(
-                    guidePen,
-                    0, y,
-                    panel1.ClientSize.Width, y);
-            }
+            DrawSnapGuides(e.Graphics, Point.Empty);
         }
     }
 }

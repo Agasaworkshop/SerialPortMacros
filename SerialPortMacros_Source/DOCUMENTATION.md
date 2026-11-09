@@ -23,7 +23,7 @@
 | `Macros/` | macro files, macro engine, keypress, custom macros (API + loader) |
 | `Sequences/` | sequence file runner |
 | `UI/` | binary format dialog, interface document model (`.spm`) |
-| `Examples/` | ESP32-C3 sketches (serial and TCP) used with the PID example |
+| `Examples/` | ESP32-C3 sketches (serial, TCP and BLE) used with the PID example |
 
 ## Data flow
 
@@ -41,6 +41,36 @@ Logging, macros and graphs receive **every** message regardless of the UI.
 If the window cannot keep up, the display buffer keeps only the latest
 `DisplayMaxPendingLines` lines (default 2000, in `settings.json`) and the text shows
 `··· N lines not shown ···`.
+
+## Port modes: Serial, Wi-Fi (TCP), BLE
+
+Each port has a mode selector under its value box:
+
+- **Serial**: choose the COM port, set the baud rate, connect.
+- **Wi-Fi**: the program listens as a TCP server on the given port; the device connects to it.
+- **BLE**: Bluetooth LE with the **Nordic UART Service** (service `6E400001-…`, RX `6E400002-…`
+  written by the PC, TX `6E400003-…` notified by the device). Choosing BLE opens a window
+  listing the nearby devices; the chosen one appears in the port list (click the list to
+  change it). The connect button connects / disconnects; while connected, Windows reconnects
+  automatically if the link drops. Received bytes go through the same text/binary decoder as
+  the other modes, and macros can reply on the BLE port like on any other port.
+
+BLE requires Windows 10 1809 or later with a Bluetooth LE adapter.
+
+## Interface editor (snapping)
+
+While dragging or resizing an element:
+
+- edges and centers snap to the other elements (blue guides) and to the panel edges,
+  10 px margins and center lines (gray guides);
+- equal spacing: the element snaps to a gap already used between two other elements, or
+  to the middle between two neighbours (magenta measures);
+- resizing also snaps to the width/height of another element (red measures);
+- hold **Shift** to move freely without snapping;
+- click an element to select it (orange frame), then use the **arrow keys** to move it by
+  1 px (**Shift + arrows**: 10 px).
+
+The rules are in `UI/SnapEngine.cs`.
 
 ## Binary format
 
@@ -134,7 +164,8 @@ Speed is the same as a `.cs` file: both are compiled to the same code once loade
 
 ## PID example (ESP32-C3)
 
-- `Examples/ESP32C3_PlantSim` (USB serial) and `Examples/ESP32C3_PlantSim_TCP` (Wi-Fi)
+- `Examples/ESP32C3_PlantSim` (USB serial), `Examples/ESP32C3_PlantSim_TCP` (Wi-Fi) and
+  `Examples/ESP32C3_PlantSim_BLE` (Bluetooth LE)
   simulate a one-pole system and send a 13-byte frame 100 times per second.
 - Binary format: Fields `n:i13 y:f32 u:f32`, header `AA 55`, little-endian, Xor8.
 - `custom_macros/Pid.cs` reads `y`, computes the command and replies `U=<value>`.

@@ -58,9 +58,9 @@ namespace SerialPortMacros
                         ch.SetDataFormat(ps.DataFormat);
                     }
 
-                    // Set the checkbox (its event would call SetPortMode: it is called explicitly here).
-                    ui.Tcp.Checked = ps.UseTcp;
-                    SetPortMode(i, ps.UseTcp);
+                    // Set the mode selector (its event would call SetPortMode: it is called explicitly here).
+                    ui.Mode.SelectedIndex = (int)ps.Mode;
+                    SetPortMode(i, ps.Mode);
                 }
 
                 if (_settings.LineEndIndex >= 0 && _settings.LineEndIndex < comboBox6.Items.Count)
@@ -95,7 +95,8 @@ namespace SerialPortMacros
 
                     ps.SendEnabled = ui.Send.Checked;
                     ps.LogEnabled = ui.Log.Checked;
-                    ps.UseTcp = ui.Tcp.Checked;
+                    ps.Mode = ch.Mode;
+                    ps.UseTcp = ch.Mode == ConnectionMode.Tcp;
                     ps.GraphCount = (int)ui.GraphCount.Value;
 
                     if (ch.Mode == ConnectionMode.Serial)
