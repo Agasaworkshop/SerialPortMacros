@@ -36,10 +36,11 @@ namespace SerialPortMacros
                 textBox1.Text = _port.ReadBufferSize.ToString();
                 checkBox1.Checked = true;
             }
+            dtrBox.Checked = _port.DtrEnable;
 
             // Serial parameters have no effect in TCP and BLE mode.
             Paritybox.Enabled = databitsbox.Enabled = stopbitsbox.Enabled =
-                textBox1.Enabled = checkBox1.Enabled = !_serialDisabled;
+                textBox1.Enabled = checkBox1.Enabled = dtrBox.Enabled = !_serialDisabled;
 
             dataModeBox.Items.AddRange(new object[] { "Text", "Binary" });
             dataModeBox.SelectedIndex = DataFormat.Mode == DataMode.Binary ? 1 : 0;
@@ -64,6 +65,8 @@ namespace SerialPortMacros
                     _port.StopBits = SerialPortHelpers.ParseStopBits(stopbitsbox.Text);
                     if (checkBox1.Checked && int.TryParse(textBox1.Text, out int size) && size > 0)
                         _port.ReadBufferSize = size;
+                    // Can be changed while the port is open: the line follows immediately.
+                    _port.DtrEnable = dtrBox.Checked;
                 }
                 catch (Exception ex)
                 {

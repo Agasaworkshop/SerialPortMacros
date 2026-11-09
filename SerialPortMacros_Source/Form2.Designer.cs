@@ -42,11 +42,13 @@
             label5 = new Label();
             dataModeBox = new ComboBox();
             binaryButton = new Button();
+            label6 = new Label();
+            dtrBox = new CheckBox();
             SuspendLayout();
-            // 
+            //
             // button1
-            // 
-            button1.Location = new Point(12, 244);
+            //
+            button1.Location = new Point(12, 284);
             button1.Name = "button1";
             button1.Size = new Size(94, 29);
             button1.TabIndex = 0;
@@ -56,7 +58,7 @@
             // 
             // button2
             // 
-            button2.Location = new Point(120, 244);
+            button2.Location = new Point(120, 284);
             button2.Name = "button2";
             button2.Size = new Size(94, 29);
             button2.TabIndex = 1;
@@ -138,11 +140,29 @@
             checkBox1.Size = new Size(18, 17);
             checkBox1.TabIndex = 15;
             checkBox1.UseVisualStyleBackColor = true;
-            // 
+            //
+            // label6
+            //
+            label6.AutoSize = true;
+            label6.Location = new Point(3, 207);
+            label6.Name = "label6";
+            label6.Size = new Size(152, 20);
+            label6.TabIndex = 19;
+            label6.Text = "DTR on (native USB)";
+            //
+            // dtrBox
+            //
+            dtrBox.AutoSize = true;
+            dtrBox.Location = new Point(200, 210);
+            dtrBox.Name = "dtrBox";
+            dtrBox.Size = new Size(18, 17);
+            dtrBox.TabIndex = 20;
+            dtrBox.UseVisualStyleBackColor = true;
+            //
             // label5
-            // 
+            //
             label5.AutoSize = true;
-            label5.Location = new Point(3, 207);
+            label5.Location = new Point(3, 247);
             label5.Name = "label5";
             label5.Size = new Size(41, 20);
             label5.TabIndex = 16;
@@ -152,7 +172,7 @@
             // 
             dataModeBox.DropDownStyle = ComboBoxStyle.DropDownList;
             dataModeBox.FormattingEnabled = true;
-            dataModeBox.Location = new Point(89, 204);
+            dataModeBox.Location = new Point(89, 244);
             dataModeBox.Name = "dataModeBox";
             dataModeBox.Size = new Size(84, 28);
             dataModeBox.TabIndex = 17;
@@ -160,7 +180,7 @@
             // 
             // binaryButton
             // 
-            binaryButton.Location = new Point(176, 203);
+            binaryButton.Location = new Point(176, 243);
             binaryButton.Name = "binaryButton";
             binaryButton.Size = new Size(38, 29);
             binaryButton.TabIndex = 18;
@@ -172,7 +192,9 @@
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(226, 285);
+            ClientSize = new Size(226, 325);
+            Controls.Add(dtrBox);
+            Controls.Add(label6);
             Controls.Add(binaryButton);
             Controls.Add(dataModeBox);
             Controls.Add(label5);
@@ -188,9 +210,9 @@
             Controls.Add(button2);
             Controls.Add(button1);
             MaximizeBox = false;
-            MaximumSize = new Size(244, 332);
+            MaximumSize = new Size(244, 372);
             MinimizeBox = false;
-            MinimumSize = new Size(244, 332);
+            MinimumSize = new Size(244, 372);
             Name = "Form2";
             ShowIcon = false;
             Text = "Form2";
@@ -215,5 +237,7 @@
         private Label label5;
         private ComboBox dataModeBox;
         private Button binaryButton;
+        private Label label6;
+        private CheckBox dtrBox;
     }
 }

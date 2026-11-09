@@ -101,6 +101,34 @@ Example: `a:u5 b:u13 c:f32 d:i6` = 56 bits = 7 bytes → shown as `a=21 b=5000 c
 Decoded values are used exactly like the numbers parsed from text: graphs,
 `{1P1}` in interfaces, logs, macros.
 
+### Several samples per frame (blocks)
+
+Micros that sample fast (ADC with DMA, audio, ...) often send a block of readings in one
+frame instead of one frame per reading. The payload is then:
+
+```
+[Frame fields, once]  [Sample fields] x Samples/frame   (one continuous bit stream)
+```
+
+- **Sample fields**: the fields of *one* sample (one message).
+- **Frame fields** (optional): sent once per frame, before the samples, e.g. a sequence
+  counter. Their values are put at the start of every message of that frame.
+- **Samples/frame**: how many samples the frame contains (1 = classic behavior).
+
+Each sample becomes a separate message, so graphs show a real time series. Messages of the
+same frame are spread evenly in time between the arrival of the previous data and this one.
+
+Example (nRF52840, 2 ADC channels at 4 kHz, 128 samples per block):
+header `AA 55`, frame fields `seq:u16`, sample fields `env:i16 aud:i16`, samples/frame `128`
+→ 516-byte frames, each producing 128 messages `seq=.. env=.. aud=..`.
+
+## Serial: DTR
+
+Port settings → **DTR on (native USB)**. Boards with native USB (nRF52, RP2040, STM32
+virtual COM, Arduino Leonardo/Micro...) often send nothing until the PC raises DTR when it
+opens the port. Leave it off for boards with a USB-serial chip and an auto-reset circuit
+(Arduino Uno, many ESP32 boards): there DTR can reset the micro.
+
 ## Custom macros
 
 Macros window → effect **Custom code** → in *Code file* enter the file name
