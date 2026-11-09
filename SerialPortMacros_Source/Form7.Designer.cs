@@ -85,6 +85,7 @@
             Text = "Form7";
             Load += Form7_Load;
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
