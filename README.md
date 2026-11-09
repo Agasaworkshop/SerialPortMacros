@@ -56,7 +56,7 @@ Whatever the mode, the received data goes through the same path: log, plots, mac
 # Binary data
 By default a port reads text lines. In the port settings you can switch **Data** to **Binary** and describe a binary frame, so a microcontroller can send compact bit fields instead of text. Each frame is decoded into numbers, shown as text (e.g. `n=1520 y=0.8731 u=0.564`) and used exactly like numbers read from text: plots, logs, macros and interfaces.
 
-<img width="642" height="559" alt="Binary frame format" src="docs/images/binary_format.png" />
+<img width="640" height="551" alt="image" src="https://github.com/user-attachments/assets/11001157-378c-4a05-89aa-46ee7ea88c98" />
 
 Fields are listed in transmission order, separated by spaces: `[name:]type[[n]][*scale][+offset]`
 
