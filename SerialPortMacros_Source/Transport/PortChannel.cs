@@ -6,14 +6,17 @@ using SerialPortMacros.Decoding;
 
 namespace SerialPortMacros.Transport;
 
+/// <summary>How a logical port talks to its device. The values match the order of the mode selector.</summary>
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
 public enum ConnectionMode
 {
-    Serial,
-    Tcp
+    Serial = 0,
+    Tcp = 1,
+    Ble = 2
 }
 
 /// <summary>
-/// One logical port (1..4): serial or TCP server, with its own decoder.
+/// One logical port (1..4): serial, TCP server or Bluetooth LE (Nordic UART), with its own decoder.
 /// Receives bytes on the driver thread, decodes them and hands the messages to the
 /// pipeline. Never touches the UI.
 /// </summary>
@@ -25,20 +28,24 @@ public sealed class PortChannel
     private byte[] _serialBuffer = new byte[4096];
     private volatile IStreamDecoder _decoder = new TextLineDecoder();
     private volatile bool _serialOpen;
-    private volatile string _tcpName;
+    private volatile string _networkName;
 
     public PortChannel(int number, DataPipeline pipeline)
     {
         Number = number;
         _pipeline = pipeline;
-        _tcpName = $"TCP{number}";
+        _networkName = $"TCP{number}";
 
         SerialPortHelpers.ApplyDefaults(Serial);
         Serial.DataReceived += OnSerialData;
 
-        Tcp.DataReceived += (buffer, count) => Decode(buffer.AsSpan(0, count), _tcpName);
+        Tcp.DataReceived += (buffer, count) => Decode(buffer.AsSpan(0, count), _networkName);
         Tcp.ClientConnected += () => _decoder.Reset();
         Tcp.Status += (text, isError) => StatusMessage?.Invoke(text, isError);
+
+        Ble.DataReceived += (buffer, count) => Decode(buffer.AsSpan(0, count), _networkName);
+        Ble.Connected += () => _decoder.Reset();
+        Ble.Status += (text, isError) => StatusMessage?.Invoke(text, isError);
     }
 
     /// <summary>Logical port number (1..4).</summary>
@@ -46,26 +53,27 @@ public sealed class PortChannel
 
     public SerialPort Serial { get; } = new();
     public TcpServerPort Tcp { get; } = new();
+    public BleUartPort Ble { get; } = new();
 
     public ConnectionMode Mode { get; set; } = ConnectionMode.Serial;
 
     public bool SerialOpen => _serialOpen;
-    public bool IsActive => _serialOpen || Tcp.IsListening;
+    public bool IsActive => _serialOpen || Tcp.IsListening || Ble.IsOpen;
 
     /// <summary>Active data format (text or binary).</summary>
     public PortDataFormat DataFormat { get; private set; } = new();
 
-    /// <summary>Status messages (e.g. TCP connection); raised from network threads.</summary>
+    /// <summary>Status messages (e.g. TCP/BLE connection); raised from network threads.</summary>
     public event Action<string, bool>? StatusMessage;
 
     /// <summary>
-    /// Name used for text, logs and graphs when the port is in TCP mode
-    /// (updated by the UI: the selected COM name or "TCPn").
+    /// Name used for text, logs and graphs when the port is in TCP or BLE mode
+    /// (updated by the UI: the COM / BLE device name shown, or "TCPn").
     /// </summary>
-    public string TcpDisplayName
+    public string NetworkDisplayName
     {
-        get => _tcpName;
-        set => _tcpName = string.IsNullOrWhiteSpace(value) ? $"TCP{Number}" : value.Trim();
+        get => _networkName;
+        set => _networkName = string.IsNullOrWhiteSpace(value) ? $"TCP{Number}" : value.Trim();
     }
 
     /// <summary>Applies a new data format. Throws <see cref="FormatException"/> if invalid.</summary>
@@ -171,7 +179,7 @@ public sealed class PortChannel
                 return true;
             }
 
-            return Tcp.Send(data);
+            return Mode == ConnectionMode.Ble ? Ble.Send(data) : Tcp.Send(data);
         }
         catch (Exception ex)
         {

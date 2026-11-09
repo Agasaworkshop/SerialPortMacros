@@ -81,10 +81,10 @@
             checkBox10 = new CheckBox();
             label5 = new Label();
             button20 = new Button();
-            checkBox11 = new CheckBox();
-            checkBox12 = new CheckBox();
-            checkBox13 = new CheckBox();
-            checkBox14 = new CheckBox();
+            modeBox3 = new ComboBox();
+            modeBox2 = new ComboBox();
+            modeBox1 = new ComboBox();
+            modeBox4 = new ComboBox();
             button21 = new Button();
             button22 = new Button();
             button23 = new Button();
@@ -666,53 +666,53 @@
             button20.UseVisualStyleBackColor = true;
             button20.Click += button20_Click;
             // 
-            // checkBox11
+            // modeBox3
             // 
-            checkBox11.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            checkBox11.AutoSize = true;
-            checkBox11.Location = new Point(351, 358);
-            checkBox11.Name = "checkBox11";
-            checkBox11.Size = new Size(55, 24);
-            checkBox11.TabIndex = 47;
-            checkBox11.Text = "wifi";
-            checkBox11.UseVisualStyleBackColor = true;
-            checkBox11.CheckedChanged += TcpCheckBox_CheckedChanged;
+            modeBox3.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            modeBox3.DropDownStyle = ComboBoxStyle.DropDownList;
+            modeBox3.FormattingEnabled = true;
+            modeBox3.Items.AddRange(new object[] { "Serial", "Wi-Fi", "BLE" });
+            modeBox3.Location = new Point(351, 357);
+            modeBox3.Name = "modeBox3";
+            modeBox3.Size = new Size(72, 28);
+            modeBox3.TabIndex = 47;
+            modeBox3.SelectedIndexChanged += ModeBox_SelectedIndexChanged;
             // 
-            // checkBox12
+            // modeBox2
             // 
-            checkBox12.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            checkBox12.AutoSize = true;
-            checkBox12.Location = new Point(206, 358);
-            checkBox12.Name = "checkBox12";
-            checkBox12.Size = new Size(55, 24);
-            checkBox12.TabIndex = 47;
-            checkBox12.Text = "wifi";
-            checkBox12.UseVisualStyleBackColor = true;
-            checkBox12.CheckedChanged += TcpCheckBox_CheckedChanged;
+            modeBox2.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            modeBox2.DropDownStyle = ComboBoxStyle.DropDownList;
+            modeBox2.FormattingEnabled = true;
+            modeBox2.Items.AddRange(new object[] { "Serial", "Wi-Fi", "BLE" });
+            modeBox2.Location = new Point(206, 357);
+            modeBox2.Name = "modeBox2";
+            modeBox2.Size = new Size(72, 28);
+            modeBox2.TabIndex = 47;
+            modeBox2.SelectedIndexChanged += ModeBox_SelectedIndexChanged;
             // 
-            // checkBox13
+            // modeBox1
             // 
-            checkBox13.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            checkBox13.AutoSize = true;
-            checkBox13.Location = new Point(74, 358);
-            checkBox13.Name = "checkBox13";
-            checkBox13.Size = new Size(55, 24);
-            checkBox13.TabIndex = 47;
-            checkBox13.Text = "wifi";
-            checkBox13.UseVisualStyleBackColor = true;
-            checkBox13.CheckedChanged += TcpCheckBox_CheckedChanged;
+            modeBox1.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            modeBox1.DropDownStyle = ComboBoxStyle.DropDownList;
+            modeBox1.FormattingEnabled = true;
+            modeBox1.Items.AddRange(new object[] { "Serial", "Wi-Fi", "BLE" });
+            modeBox1.Location = new Point(74, 357);
+            modeBox1.Name = "modeBox1";
+            modeBox1.Size = new Size(72, 28);
+            modeBox1.TabIndex = 47;
+            modeBox1.SelectedIndexChanged += ModeBox_SelectedIndexChanged;
             // 
-            // checkBox14
+            // modeBox4
             // 
-            checkBox14.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            checkBox14.AutoSize = true;
-            checkBox14.Location = new Point(490, 358);
-            checkBox14.Name = "checkBox14";
-            checkBox14.Size = new Size(55, 24);
-            checkBox14.TabIndex = 47;
-            checkBox14.Text = "wifi";
-            checkBox14.UseVisualStyleBackColor = true;
-            checkBox14.CheckedChanged += TcpCheckBox_CheckedChanged;
+            modeBox4.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            modeBox4.DropDownStyle = ComboBoxStyle.DropDownList;
+            modeBox4.FormattingEnabled = true;
+            modeBox4.Items.AddRange(new object[] { "Serial", "Wi-Fi", "BLE" });
+            modeBox4.Location = new Point(490, 357);
+            modeBox4.Name = "modeBox4";
+            modeBox4.Size = new Size(72, 28);
+            modeBox4.TabIndex = 47;
+            modeBox4.SelectedIndexChanged += ModeBox_SelectedIndexChanged;
             // 
             // button21
             // 
@@ -779,10 +779,10 @@
             Controls.Add(button23);
             Controls.Add(button22);
             Controls.Add(button21);
-            Controls.Add(checkBox13);
-            Controls.Add(checkBox12);
-            Controls.Add(checkBox14);
-            Controls.Add(checkBox11);
+            Controls.Add(modeBox1);
+            Controls.Add(modeBox2);
+            Controls.Add(modeBox4);
+            Controls.Add(modeBox3);
             Controls.Add(button20);
             Controls.Add(label5);
             Controls.Add(checkBox10);
@@ -901,10 +901,10 @@
         private CheckBox checkBox10;
         private Label label5;
         private Button button20;
-        private CheckBox checkBox11;
-        private CheckBox checkBox12;
-        private CheckBox checkBox13;
-        private CheckBox checkBox14;
+        private ComboBox modeBox3;
+        private ComboBox modeBox2;
+        private ComboBox modeBox1;
+        private ComboBox modeBox4;
         private Button button21;
         private Button button22;
         private Button button23;

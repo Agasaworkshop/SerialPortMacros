@@ -34,7 +34,7 @@ namespace SerialPortMacros
         /// <summary>Controls of one logical port in the main window.</summary>
         private sealed record PortUi(
             Button Connect, TextBox Value, ComboBox Com, Label ValueLabel, Button Settings,
-            CheckBox Send, CheckBox Log, CheckBox Tcp, NumericUpDown GraphCount, Button Graphs);
+            CheckBox Send, CheckBox Log, ComboBox Mode, NumericUpDown GraphCount, Button Graphs);
 
         private readonly PortUi[] _ui;
 
@@ -52,10 +52,10 @@ namespace SerialPortMacros
 
             _ui = new[]
             {
-                new PortUi(button3, textBox3, comboBox2, label1, button8, checkBox1, checkBox8, checkBox13, numericUpDown1, button16),
-                new PortUi(button5, textBox5, comboBox1, label2, button9, checkBox2, checkBox7, checkBox12, numericUpDown2, button17),
-                new PortUi(button4, textBox4, comboBox3, label3, button10, checkBox3, checkBox6, checkBox11, numericUpDown3, button18),
-                new PortUi(button6, textBox6, comboBox4, label4, button11, checkBox4, checkBox5, checkBox14, numericUpDown4, button19),
+                new PortUi(button3, textBox3, comboBox2, label1, button8, checkBox1, checkBox8, modeBox1, numericUpDown1, button16),
+                new PortUi(button5, textBox5, comboBox1, label2, button9, checkBox2, checkBox7, modeBox2, numericUpDown2, button17),
+                new PortUi(button4, textBox4, comboBox3, label3, button10, checkBox3, checkBox6, modeBox3, numericUpDown3, button18),
+                new PortUi(button6, textBox6, comboBox4, label4, button11, checkBox4, checkBox5, modeBox4, numericUpDown4, button19),
             };
 
             foreach (var ch in _hub.Channels)
@@ -120,6 +120,7 @@ namespace SerialPortMacros
             {
                 ch.Tcp.Stop();
                 ch.CloseSerial();
+                ch.Ble.Disconnect();
             }
 
             _pipeline.Dispose();   // drains the queue and flushes the logs
@@ -140,7 +141,7 @@ namespace SerialPortMacros
             {
                 var u = _ui[i];
                 if (control == u.Connect || control == u.Value || control == u.Com || control == u.Settings ||
-                    control == u.Send || control == u.Log || control == u.Tcp || control == u.GraphCount ||
+                    control == u.Send || control == u.Log || control == u.Mode || control == u.GraphCount ||
                     control == u.Graphs)
                     return i;
             }

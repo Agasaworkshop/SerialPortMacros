@@ -66,7 +66,7 @@ namespace SerialPortMacros
             int i = PortIndexOf(sender);
             if (i < 0) return;
 
-            if (_ui[i].Com.Text != "" || _ui[i].Tcp.Checked)
+            if (_ui[i].Com.Text != "" || _hub.Channels[i].Mode != SerialPortMacros.Transport.ConnectionMode.Serial)
                 LaunchGraphs((int)_ui[i].GraphCount.Value, GetGraphPortName(i + 1));
         }
 
