@@ -29,6 +29,13 @@ public sealed class PortSettings
     public bool CustomBuffer { get; set; }
     public int ReadBufferSize { get; set; } = 4096;
 
+    /// <summary>
+    /// Raise DTR while the port is open. Needed by native-USB boards (nRF52, RP2040, STM32 VCP,
+    /// Arduino Leonardo...) that only start sending once the host sets DTR. Off by default:
+    /// on boards with an auto-reset circuit (Arduino Uno, many ESP32) it can reset the micro.
+    /// </summary>
+    public bool DtrEnable { get; set; }
+
     /// <summary>How received bytes are interpreted (text lines or binary frames).</summary>
     public PortDataFormat DataFormat { get; set; } = new PortDataFormat();
 }
@@ -121,6 +128,8 @@ public sealed class AppSettings
             if (p.GraphCount < 1) p.GraphCount = 1;
             if (p.DataBits is < 5 or > 8) p.DataBits = 8;
             p.DataFormat ??= new PortDataFormat();
+            p.DataFormat.FrameFields ??= "";
+            if (p.DataFormat.SamplesPerFrame < 1) p.DataFormat.SamplesPerFrame = 1;   // hand-edited file
         }
 
         if (DisplayMaxPendingLines < 100) DisplayMaxPendingLines = 2000;

@@ -47,16 +47,18 @@ Each port has a mode selector under its value box:
 Devices that offer the Nordic UART Service are marked in the UART column and listed first. The service UUIDs are:
 service `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`, RX (written by the PC) `6E400002-…`, TX (notified by the device) `6E400003-…`.
 
-The cog button of each port opens its settings: parity, data bits, stop bits and buffer size (serial mode only), and the **data format** (text or binary, see below).
+The cog button of each port opens its settings: parity, data bits, stop bits, buffer size and DTR (serial mode only), and the **data format** (text or binary, see below).
 
-<img width="228" height="324" alt="Port settings" src="docs/images/port_settings.png" />
+<img width="228" height="364" alt="Port settings" src="docs/images/port_settings.png" />
+
+**DTR on (native USB)**: boards with native USB (nRF52, RP2040, STM32 virtual COM port, Arduino Leonardo/Micro...) often send nothing until the PC raises the DTR line when it opens the port. Tick it for those boards. Leave it off for boards with a USB-serial chip and an auto-reset circuit (Arduino Uno, many ESP32 boards): on them DTR can reset the microcontroller. The setting is saved for each port.
 
 Whatever the mode, the received data goes through the same path: log, plots, macros and interfaces work the same way on serial, Wi-Fi and BLE.
 
 # Binary data
 By default a port reads text lines. In the port settings you can switch **Data** to **Binary** and describe a binary frame, so a microcontroller can send compact bit fields instead of text. Each frame is decoded into numbers, shown as text (e.g. `n=1520 y=0.8731 u=0.564`) and used exactly like numbers read from text: plots, logs, macros and interfaces.
 
-<img width="640" height="551" alt="image" src="https://github.com/user-attachments/assets/11001157-378c-4a05-89aa-46ee7ea88c98" />
+<img width="642" height="637" alt="Binary frame format" src="docs/images/binary_format.png" />
 
 Fields are listed in transmission order, separated by spaces: `[name:]type[[n]][*scale][+offset]`
 
@@ -78,6 +80,31 @@ For example `n:i13 y:f32 u:f32` is 77 bits (10 bytes with padding).
 - **Test (hex)**: paste some bytes to see immediately how they are decoded.
 
 The [ESP32 examples](#esp32-examples) show how to pack the bits on the microcontroller side.
+
+## Several samples in one frame
+A microcontroller that samples fast (ADC with DMA, audio...) usually sends a block of readings in one frame instead of one frame per reading. The program can split such a frame into one message per sample, so the plots show a real time series. The frame is read as:
+
+```
+[sync header] [frame fields, once] [sample fields] x Samples/frame [checksum]
+```
+
+- **Sample fields**: the fields of one sample, written as above.
+- **Frame fields** (optional): fields sent once per frame, before the samples, for example a sequence counter. Their values are put at the start of every message of that frame.
+- **Samples/frame**: how many samples each frame contains. With 1 (the default) nothing changes: one frame is one message.
+
+The messages of a frame are spread evenly in time between the arrival of the previous data and this one. The checksum, if any, is one per frame and covers the whole payload.
+
+Example: an nRF52840 samples two ADC channels at 4 kHz and sends blocks of 128 samples, each block starting with `AA 55` and a 16-bit block counter (it skips a value when a block is lost):
+
+| Setting | Value |
+|---|---|
+| Sync header | `AA 55` |
+| Frame fields | `seq:u16` |
+| Sample fields | `env:i16 aud:i16` |
+| Samples/frame | `128` |
+| Byte order / checksum | little-endian / None |
+
+Each 516-byte frame becomes 128 messages like `seq=7 env=1650 aud=2048`, about 4000 per second. When so many messages arrive, the text window shows only part of them, while logs, macros and plots still receive all of them.
 
 # Logging
 

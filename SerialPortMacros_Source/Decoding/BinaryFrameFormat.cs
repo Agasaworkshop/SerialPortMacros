@@ -34,8 +34,23 @@ public sealed class PortDataFormat
 {
     public DataMode Mode { get; set; } = DataMode.Text;
 
-    /// <summary>Field list, e.g. "a:u5 b:i13 temp:f32 st:u6".</summary>
+    /// <summary>
+    /// Fields of one sample (one message), e.g. "a:u5 b:i13 temp:f32 st:u6".
+    /// Repeated <see cref="SamplesPerFrame"/> times in each frame.
+    /// </summary>
     public string Fields { get; set; } = "";
+
+    /// <summary>
+    /// Optional fields sent once per frame, before the samples (e.g. "seq:u16").
+    /// Their values are added at the start of every message produced by the frame.
+    /// </summary>
+    public string FrameFields { get; set; } = "";
+
+    /// <summary>
+    /// Samples (messages) contained in each frame: 1 = one message per frame (classic behavior),
+    /// N = a block of N consecutive samples, e.g. 128 ADC readings sent together.
+    /// </summary>
+    public int SamplesPerFrame { get; set; } = 1;
 
     /// <summary>Sync header in hex, e.g. "AA 55". Empty = none.</summary>
     public string Header { get; set; } = "";
@@ -81,14 +96,31 @@ public sealed record BinaryField(string Name, FieldKind Kind, int Bits, double S
 ///   +offset  added after scaling, e.g. p:u10*0.1-40
 ///
 /// Example: "a:u5 b:u13 c:f32 d:i6"  -> 56 bits = 7 payload bytes.
+///
+/// Block frames: the payload can also be
+///   [frame fields, once] [sample fields] x SamplesPerFrame
+/// as one continuous bit stream. Each sample becomes a separate message whose values are
+/// the frame fields followed by that sample's fields, e.g. frame "seq:u16", sample
+/// "env:i16 aud:i16", 128 samples -> 128 messages "seq=.. env=.. aud=..".
 /// </summary>
 public sealed class BinaryFrameFormat
 {
+    public const int MaxFrameBytes = 4096;
+    public const int MaxSamplesPerFrame = 4096;
+
+    /// <summary>Fields of one sample (repeated <see cref="SamplesPerFrame"/> times).</summary>
     public IReadOnlyList<BinaryField> Fields { get; }
+
+    /// <summary>Fields sent once per frame, before the samples (may be empty).</summary>
+    public IReadOnlyList<BinaryField> FrameFields { get; }
+
+    public int SamplesPerFrame { get; }
     public byte[] Header { get; }
     public bool LittleEndian { get; }
     public ChecksumKind Checksum { get; }
 
+    public int FrameFieldBits { get; }
+    public int SampleBits { get; }
     public int PayloadBits { get; }
     public int PayloadBytes => (PayloadBits + 7) / 8;
     public int ChecksumBytes => Checksum switch
@@ -98,34 +130,62 @@ public sealed class BinaryFrameFormat
         _ => 1
     };
     public int FrameBytes => Header.Length + PayloadBytes + ChecksumBytes;
-    public int ValueCount { get; }
 
-    private BinaryFrameFormat(List<BinaryField> fields, byte[] header, bool littleEndian, ChecksumKind checksum)
+    /// <summary>Values in each message: frame values followed by sample values.</summary>
+    public int ValueCount => _frameValueCount + _sampleValueCount;
+
+    private readonly int _frameValueCount;
+    private readonly int _sampleValueCount;
+    private readonly BinaryField[] _messageFields;   // frame fields + sample fields, for the text
+
+    private BinaryFrameFormat(List<BinaryField> frameFields, List<BinaryField> fields, int samplesPerFrame,
+                              byte[] header, bool littleEndian, ChecksumKind checksum)
     {
+        FrameFields = frameFields;
         Fields = fields;
+        SamplesPerFrame = samplesPerFrame;
         Header = header;
         LittleEndian = littleEndian;
         Checksum = checksum;
-        PayloadBits = fields.Sum(f => f.Bits);
-        ValueCount = fields.Count(f => f.Kind != FieldKind.Skip);
+        FrameFieldBits = frameFields.Sum(f => f.Bits);
+        SampleBits = fields.Sum(f => f.Bits);
+        PayloadBits = FrameFieldBits + SampleBits * samplesPerFrame;
+        _frameValueCount = frameFields.Count(f => f.Kind != FieldKind.Skip);
+        _sampleValueCount = fields.Count(f => f.Kind != FieldKind.Skip);
+        _messageFields = frameFields.Concat(fields).ToArray();
     }
 
     public static BinaryFrameFormat Parse(PortDataFormat cfg) =>
-        Parse(cfg.Fields, cfg.Header, cfg.LittleEndian, cfg.Checksum);
+        Parse(cfg.Fields, cfg.Header, cfg.LittleEndian, cfg.Checksum, cfg.FrameFields, cfg.SamplesPerFrame);
 
-    public static BinaryFrameFormat Parse(string fieldSpec, string headerHex, bool littleEndian, ChecksumKind checksum)
+    public static BinaryFrameFormat Parse(string fieldSpec, string headerHex, bool littleEndian, ChecksumKind checksum,
+                                          string? frameFieldSpec = null, int samplesPerFrame = 1)
     {
         var fields = ParseFields(fieldSpec ?? "");
         if (fields.Count == 0)
             throw new FormatException("No fields defined.");
-        if (fields.All(f => f.Kind == FieldKind.Skip))
+
+        List<BinaryField> frameFields;
+        try
+        {
+            frameFields = ParseFields(frameFieldSpec ?? "");
+        }
+        catch (FormatException ex)
+        {
+            throw new FormatException("Frame fields: " + ex.Message);
+        }
+
+        if (samplesPerFrame < 1 || samplesPerFrame > MaxSamplesPerFrame)
+            throw new FormatException($"Samples per frame must be 1..{MaxSamplesPerFrame}.");
+
+        if (fields.Concat(frameFields).All(f => f.Kind == FieldKind.Skip))
             throw new FormatException("The frame contains only padding fields (x).");
 
-        int bits = fields.Sum(f => f.Bits);
-        if (bits > 8 * 4096)
-            throw new FormatException("Frame too long (max 4096 bytes).");
+        long bits = frameFields.Sum(f => (long)f.Bits) + fields.Sum(f => (long)f.Bits) * samplesPerFrame;
+        if (bits > 8L * MaxFrameBytes)
+            throw new FormatException($"Frame too long ({(bits + 7) / 8} bytes, max {MaxFrameBytes}).");
 
-        return new BinaryFrameFormat(fields, ParseHex(headerHex ?? ""), littleEndian, checksum);
+        return new BinaryFrameFormat(frameFields, fields, samplesPerFrame, ParseHex(headerHex ?? ""), littleEndian, checksum);
     }
 
     public string Describe()
@@ -134,7 +194,19 @@ public sealed class BinaryFrameFormat
         sb.Append($"Frame: {FrameBytes} bytes");
         sb.Append($" (header {Header.Length} + payload {PayloadBytes}");
         if (ChecksumBytes > 0) sb.Append($" + checksum {ChecksumBytes}");
-        sb.Append($"), {PayloadBits} data bits, {ValueCount} values");
+        sb.Append($"), {PayloadBits} data bits");
+
+        if (SamplesPerFrame == 1 && FrameFields.Count == 0)
+        {
+            sb.Append($", {ValueCount} values");
+        }
+        else
+        {
+            sb.Append($"\r\n{SamplesPerFrame} {(SamplesPerFrame == 1 ? "message" : "messages")} per frame, {ValueCount} values each");
+            if (_frameValueCount > 0)
+                sb.Append($" ({_frameValueCount} frame + {_sampleValueCount} sample)");
+        }
+
         int pad = PayloadBytes * 8 - PayloadBits;
         if (pad > 0) sb.Append($", {pad} padding bits at the end of the payload");
         return sb.ToString();
@@ -144,13 +216,29 @@ public sealed class BinaryFrameFormat
     // Decoding
     // ------------------------------------------------------------------
 
-    public double[] Decode(ReadOnlySpan<byte> payload)
+    /// <summary>
+    /// Decodes one payload into <see cref="SamplesPerFrame"/> messages (added to
+    /// <paramref name="messages"/>), each with <see cref="ValueCount"/> values.
+    /// </summary>
+    public void Decode(ReadOnlySpan<byte> payload, List<double[]> messages)
     {
-        var values = new double[ValueCount];
-        int bitPos = 0;
-        int v = 0;
+        // Frame fields are read once and copied in front of every sample.
+        var frameValues = new double[_frameValueCount];
+        int bitPos = DecodeFields(payload, 0, FrameFields, frameValues, 0);
 
-        foreach (var f in Fields)
+        for (int s = 0; s < SamplesPerFrame; s++)
+        {
+            var values = new double[ValueCount];
+            frameValues.CopyTo(values, 0);
+            bitPos = DecodeFields(payload, bitPos, Fields, values, _frameValueCount);
+            messages.Add(values);
+        }
+    }
+
+    private int DecodeFields(ReadOnlySpan<byte> payload, int bitPos, IReadOnlyList<BinaryField> fields,
+                             double[] values, int v)
+    {
+        foreach (var f in fields)
         {
             if (f.Kind == FieldKind.Skip)
             {
@@ -177,7 +265,7 @@ public sealed class BinaryFrameFormat
             values[v++] = value * f.Scale + f.Offset;
         }
 
-        return values;
+        return bitPos;
     }
 
     /// <summary>
@@ -274,7 +362,7 @@ public sealed class BinaryFrameFormat
     {
         var sb = new StringBuilder(values.Length * 10);
         int v = 0;
-        foreach (var f in Fields)
+        foreach (var f in _messageFields)
         {
             if (f.Kind == FieldKind.Skip) continue;
 

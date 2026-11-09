@@ -61,6 +61,7 @@ public sealed class BinaryFrameDecoder : IStreamDecoder
     private readonly BinaryFrameFormat _format;
     private byte[] _buffer = new byte[1024];
     private int _count;
+    private readonly List<double[]> _messages = new();
 
     public long FramesOk { get; private set; }
     public long FramesBad { get; private set; }
@@ -107,8 +108,11 @@ public sealed class BinaryFrameDecoder : IStreamDecoder
                 continue;
             }
 
-            double[] values = _format.Decode(payload);
-            output.Add(new DecodedFrame(_format.FormatValues(values), values));
+            // A frame can carry several samples: one message each, in order.
+            _messages.Clear();
+            _format.Decode(payload, _messages);
+            foreach (double[] values in _messages)
+                output.Add(new DecodedFrame(_format.FormatValues(values), values));
             FramesOk++;
             pos += frameLen;
         }

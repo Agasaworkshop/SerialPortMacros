@@ -46,6 +46,7 @@ namespace SerialPortMacros
                     ch.Serial.StopBits = SerialPortHelpers.ParseStopBits(ps.StopBits);
                     if (ps.CustomBuffer && ps.ReadBufferSize > 0)
                         ch.Serial.ReadBufferSize = ps.ReadBufferSize;
+                    ch.Serial.DtrEnable = ps.DtrEnable;
 
                     try
                     {
@@ -109,6 +110,7 @@ namespace SerialPortMacros
                     ps.StopBits = SerialPortHelpers.ToText(ch.Serial.StopBits);
                     ps.ReadBufferSize = ch.Serial.ReadBufferSize;
                     ps.CustomBuffer = ch.Serial.ReadBufferSize != 4096;
+                    ps.DtrEnable = ch.Serial.DtrEnable;
                     ps.DataFormat = ch.DataFormat.Clone();
                 }
 

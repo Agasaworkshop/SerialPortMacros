@@ -26,6 +26,8 @@ namespace SerialPortMacros
             comboChecksum.Items.AddRange(Enum.GetNames(typeof(ChecksumKind)));
 
             textFields.Text = Result.Fields;
+            textFrameFields.Text = Result.FrameFields;
+            numSamples.Value = Math.Clamp(Result.SamplesPerFrame, (int)numSamples.Minimum, (int)numSamples.Maximum);
             textHeader.Text = Result.Header;
             comboEndian.SelectedIndex = Result.LittleEndian ? 0 : 1;
             comboChecksum.SelectedItem = Result.Checksum.ToString();
@@ -38,6 +40,8 @@ namespace SerialPortMacros
         {
             Mode = DataMode.Binary,
             Fields = textFields.Text.Trim(),
+            FrameFields = textFrameFields.Text.Trim(),
+            SamplesPerFrame = (int)numSamples.Value,
             Header = textHeader.Text.Trim(),
             LittleEndian = comboEndian.SelectedIndex != 1,
             Checksum = Enum.TryParse(comboChecksum.SelectedItem as string, out ChecksumKind k) ? k : ChecksumKind.None
