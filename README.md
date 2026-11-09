@@ -1,7 +1,7 @@
 # SerialPortMacros
 A C# program to talk with up to 4 devices at the same time over **serial ports, Wi-Fi (TCP) or Bluetooth LE**: it shows and logs what they send, plots their values in real time, reacts to their messages with macros (from simple key presses to your own C# code), runs scripted sequences of commands and lets you build custom control panels ("interfaces").
 
-<img width="818" height="534" alt="Main window" src="docs/images/main_window.png" />
+<img width="802" height="526" alt="Main window" src="docs/images/main_window.png" />
 
 [I've also made a short video to show some capabilities of this software](https://www.youtube.com/watch?v=STqCw-Kn7qI)
 
@@ -42,21 +42,21 @@ Each port has a mode selector under its value box:
 | **Wi-Fi** | The program listens as a TCP server on the given port (the box shows "port" instead of "baud"); your device (e.g. an ESP32) connects to the PC's IP address on that port. Two ports cannot use the same TCP port: a free one is assigned automatically. |
 | **BLE** | Bluetooth LE with the Nordic UART Service (the usual "serial over BLE"). Choosing BLE opens a window with the nearby devices; the chosen one appears in the port list (click the list to choose another one). The connect button connects and disconnects; if the link drops, Windows reconnects by itself. |
 
-<img width="578" height="423" alt="Bluetooth LE device list" src="docs/images/ble_devices.png" />
+<img width="562" height="415" alt="Bluetooth LE device list" src="docs/images/ble_devices.png" />
 
 Devices that offer the Nordic UART Service are marked in the UART column and listed first. The service UUIDs are:
 service `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`, RX (written by the PC) `6E400002-…`, TX (notified by the device) `6E400003-…`.
 
 The cog button of each port opens its settings: parity, data bits, stop bits and buffer size (serial mode only), and the **data format** (text or binary, see below).
 
-<img width="244" height="332" alt="Port settings" src="docs/images/port_settings.png" />
+<img width="228" height="324" alt="Port settings" src="docs/images/port_settings.png" />
 
 Whatever the mode, the received data goes through the same path: log, plots, macros and interfaces work the same way on serial, Wi-Fi and BLE.
 
 # Binary data
 By default a port reads text lines. In the port settings you can switch **Data** to **Binary** and describe a binary frame, so a microcontroller can send compact bit fields instead of text. Each frame is decoded into numbers, shown as text (e.g. `n=1520 y=0.8731 u=0.564`) and used exactly like numbers read from text: plots, logs, macros and interfaces.
 
-<img width="658" height="567" alt="Binary frame format" src="docs/images/binary_format.png" />
+<img width="642" height="559" alt="Binary frame format" src="docs/images/binary_format.png" />
 
 Fields are listed in transmission order, separated by spaces: `[name:]type[[n]][*scale][+offset]`
 
@@ -81,7 +81,7 @@ The [ESP32 examples](#esp32-examples) show how to pack the bits on the microcont
 
 # Logging
 
-<img width="797" height="518" alt="image" src="https://github.com/user-attachments/assets/da365469-b167-4387-ab2c-ee84752be0f7" />
+<img width="802" height="526" alt="Main window while logging" src="docs/images/logging.png" />
 
 By checking the log option under a port, you will enable logging for that port. If you do, when using the logging feature, a text file corresponding to that port will be created in the logs folder* in the same directory as the exe file. This file will contain the log of all that was written by that port; if the timestamp option is enabled, the timestamp will also be written (the name of the sender is only visible if the sender is the user in this case).
 
@@ -94,17 +94,17 @@ By checking the log option near the text box, you will also be logging user inpu
 ## Logging data stored on the device
 Some devices record their data and send it all at the end (for example a data logger that stores samples in RAM while it runs). The cog button next to "Start Logging" opens the log options:
 
-<img width="372" height="222" alt="Log options" src="docs/images/log_messages.png" />
+<img width="356" height="214" alt="Log options" src="docs/images/log_messages.png" />
 
 - **Starting message**: sent to the ports when you press "Start Logging" (e.g. to tell the device to start recording);
 - **Ending message**: sent when you press the button again (e.g. "send me the log");
 - **Wait to finish**: instead of closing the log files immediately, the program keeps logging while the device is sending its data, and closes them automatically when nothing has arrived for 1 second.
 
 # Plotting a log
-<img width="800" height="522" alt="image" src="https://github.com/user-attachments/assets/9ab631ef-b574-4e0d-bce3-febafd761e21" />
+<img width="802" height="526" alt="Plot Log at the end option" src="docs/images/logging.png" />
 
 By checking the "Plot Log at the end" option the program will automatically open a dedicated window to plot the log:
-<img width="968" height="485" alt="image" src="https://github.com/user-attachments/assets/d5141603-b343-4c0e-91c2-7b94a993850f" />
+<img width="984" height="512" alt="Log viewer" src="docs/images/log_viewer.png" />
 
 The program takes any line containing a set of numbers spaced with any delimiter (different from ".") from a port and interprets each number in the string as a different vector
 e.g.
@@ -114,7 +114,7 @@ will be interpreted as the values of 3 different plots at the same sample.
 
 The program will automatically decide what format the data is in and will ignore any line different from the main format (so it decides how many plots from the data and then sticks to that), to prevent it from choosing a wrong format due to random messages. The program will check that the chosen format has at least "minimum occurrences" lines with that format; this value can be changed to make sure you exclude known ambiguous lines.
 
-<img width="976" height="485" alt="image" src="https://github.com/user-attachments/assets/e593320d-3521-4ea8-935f-97c64f3cb587" />
+<img width="984" height="512" alt="Log viewer with an element as time base" src="docs/images/log_viewer_timebase.png" />
 
 Each plot will be shown as an "element" in the table on the right; if a plot is checked, it will be displayed.
 In addition, in the table one can set a gain and a low-pass filter cutoff frequency (only available in x-axis auto mode).
@@ -129,17 +129,17 @@ Will consider 51 as the timestamp of the elements 132.50,-76457.00,847.36 in the
 One can also open an old log with the drag and drop feature, which functions identically to the window that opens after a log if the box is checked.
 
 # Plotting in real time
-<img width="1918" height="1015" alt="image" src="https://github.com/user-attachments/assets/535a5f56-c7e3-442d-bfec-a6f98fb20602" />
+<img width="1500" height="960" alt="Real-time graphs" src="docs/images/realtime.png" />
 
 Under each port, you can find a button to open the graphs; the number near the button decides how many plots will be opened. When reading the lines of a port, the software will associate the first number in the line to the first graph, the second number to the second graph, and so on. There are no defined delimiters; just make sure to add something between your numbers that isn't a dot (used for decimals). With a binary port, the decoded fields are plotted in the order they are defined. In the plot window, you can also select how long the time window should be.
 
 ## Merging graphs
 You can also merge two graphs by using the merge button
-<img width="1570" height="514" alt="image" src="https://github.com/user-attachments/assets/e7df99b2-9336-4e63-b991-0d3c69e8a95a" />
+<img width="1320" height="340" alt="Merging two graphs" src="docs/images/merging.png" />
 In the image, the graph on the right is looking to merge. After clicking the merge button on a second graph, the two windows will become invisible, and a new merged window will appear
 
 
-<img width="787" height="513" alt="image" src="https://github.com/user-attachments/assets/bec74c95-a074-4af0-bd73-a33f8f500ea0" />
+<img width="764" height="412" alt="Merged graph" src="docs/images/merged.png" />
 
 You can toggle the legend by clicking the eye icon at the bottom.
 You can show the original windows by clicking the new unmerge button; this will not close the merged window.
@@ -147,7 +147,7 @@ If you close the merged graph, the original graphs will show up again.
 There is no hard limit on the number of graphs you can plot together.
 
 # Macro Menu
-<img width="818" height="497" alt="Macro menu" src="docs/images/macros_custom.png" />
+<img width="802" height="489" alt="Macro menu" src="docs/images/macros_custom.png" />
 
 This program is meant to interact with your electronic projects, the idea is to associate a string sent by your device to an action made by your computer: it can press a key in response to a certain string, send a string to the selected ports in response to a string on the selected ports (to coordinate multiple devices), or run your own C# code.
 
@@ -270,7 +270,7 @@ Click "Select a sequence" to choose the file (from the `sequences` folder), then
 # Interfaces
 An interface is a control panel you draw yourself: buttons, switches, LEDs and numeric fields, made of your own images, that send commands to the ports and show the values they receive.
 
-<img width="814" height="536" alt="Interface" src="docs/images/interface_run.png" />
+<img width="798" height="528" alt="Interface" src="docs/images/interface_run.png" />
 
 The three buttons at the top right of the main window are, from left to right: **edit** an interface, **open** an interface, **new** interface. Interfaces are saved as `.spm` files in the `interfaces` folder; if you associate `.spm` files with the program, double clicking one opens it directly.
 
@@ -299,7 +299,7 @@ In messages, conditions and outputs you can use:
 Conditions compare two values with `>`, `>=`, `<`, `<=`, `==`, for example `{1P4} > 60` or `{enable} == 1`.
 
 ## Editor
-<img width="814" height="536" alt="Interface editor" src="docs/images/interface_editor.png" />
+<img width="798" height="528" alt="Interface editor" src="docs/images/interface_editor.png" />
 
 Drag an element to move it and use the blue square at its bottom right corner to resize it (images keep their proportions; hold Ctrl to stretch them freely). While you move it, the element snaps to:
 - the edges and centers of the other elements (blue guides) and to the edges, margins and center of the window (gray guides);
